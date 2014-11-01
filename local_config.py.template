@@ -1,0 +1,30 @@
+#-----------------------------------------------------------------------------
+# general configuration settings
+
+ORGANIZATION_NAME = "X-university"
+
+GOOGLE_STORAGE_ROOT = "x-univ-data"
+
+STAFF_USERS = ['superman']
+
+DEFAULT_COURSE_SITE = "https://edx.org"
+
+COURSE_SITE_MAP = { '3091-exam': {'match': '.*-exam.*', 'url': 'https://special.edx.edu'},
+                }
+
+
+PROJECT_ID = '99353222151'
+
+MODE = 'mooc'	# mooc or residential (no demographics for residential)
+
+#-----------------------------------------------------------------------------
+# user authentication
+
+CAS_URL = "https://the_cas_server.org"
+
+#-----------------------------------------------------------------------------
+# server (service key) authentication: for unit tests and local server
+
+SERVICE_EMAIL = "99353222151-qqc2e5qgkquvdd2c3g9onip3bn90kc99@developer.gserviceaccount.com"
+SERVICE_KEY_FILE = "../service-account.pem"
+LOCAL_PORT = '8081'

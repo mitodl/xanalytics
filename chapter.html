@@ -1,0 +1,53 @@
+<html>
+<head>
+  <title>Chapter {{chapter_name}} of {{course_id}}</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    tabledata = {% autoescape off %}{{ tabledata }}{% endautoescape %};
+    tablefields = {% autoescape off %}{{ fields }}{% endautoescape %};
+
+$(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              "data": tabledata,
+              "order": [[ 0, "asc" ]],
+    	      "columns": tablefields,
+             });
+} );
+
+</script>
+
+</head>
+<body>
+  <h1>{{orgname}}: Chapter {{chapter_name}} of {{course_id}}</h1>
+
+[ <a href="/course/{{course_id}}">Back to chapter list</a> ]
+
+<h2>Content</h2>
+
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>

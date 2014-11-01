@@ -1,0 +1,32 @@
+<html>
+<head>
+  <title>Dataset: {{dataset}}.{{table}}</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+  
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>{{orgname}}: Dataset {{dataset}}.{{table}}</h2>
+
+{% autoescape off %}{{ tablehtml }}{% endautoescape %}
+
+</body>
+</html>

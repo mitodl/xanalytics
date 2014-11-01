@@ -1,0 +1,178 @@
+<html>
+<head>
+  <title>Course: {{course_id}}</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var stats_table = $('#stats_table').DataTable( {
+            "paging":   false,
+            "ordering": false,
+            "info":     false,
+            "searching":     false,
+	    "columns" : {% autoescape off %}{{ stats_columns }}{% endautoescape %},
+	});
+    });
+
+// Formatting function for row details 
+function format ( d ) {
+    // `d` is the original data object for the row
+    var stats = '<table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">'+
+        '<tr>'+
+            '<th># sequential</th>'+
+            '<th># problem</th>'+
+            '<th># html</th>'+
+            '<th># video</th>'+
+            '<th>module_id</th>'+
+        '</tr>'+
+        '<tr>'+
+            '<td>'+d.n_sequential+'</td>'+
+            '<td>'+d.n_problem+'</td>'+
+            '<td>'+d.n_html+'</td>'+
+            '<td>'+d.n_video+'</td>'+
+            '<td>'+d.module_id+'</td>'+
+        '</tr>'+
+    '</table>';
+    var seqs = '<br/><table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">'+
+        '<tr>'+
+            '<th>index</th>'+
+            '<th>sequential name</th>'+
+            '<th># user views</th>'+
+            '<th>sequential module_id</th>'+
+        '</tr>';
+    var obj = jQuery.parseJSON(d.sequentials);
+    obj.forEach(function(ent){
+          seqs = seqs +         '<tr>'+
+	            '<td>'+ent.index+'</td>'+
+	            '<td>'+ent.name+'</td>'+
+	            '<td>'+ent.nuser_views+'</td>'+
+	            '<td>'+ent.module_id+'</td>'+
+	        '</tr>';
+    });
+    seqs = seqs + '</table>';
+    return stats + seqs;
+}
+
+    tabledata = {% autoescape off %}{{ tabledata }}{% endautoescape %};
+    tablefields = {% autoescape off %}{{ fields }}{% endautoescape %};
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              "data": tabledata,
+              "order": [[ 1, "asc" ]],
+    	      "columns": tablefields,
+             });
+
+    // Add event listener for opening and closing details
+    $('#table_id tbody').on('click', 'td.details-control', function () {
+        var tr = $(this).closest('tr');
+        var row = table.row( tr );
+ 
+        if ( row.child.isShown() ) {
+            // This row is already open - close it
+            row.child.hide();
+            tr.removeClass('shown');
+        }
+        else {
+            // Open this row
+            row.child( format(row.data()) ).show();
+            tr.addClass('shown');
+        }
+    } );
+
+} );
+
+</script>
+
+</head>
+<body>
+  <h1>{{orgname}}: {{course_id}}</h1>
+
+<span style="float:right; color:blue">{{user}}<br/>
+{% autoescape off %}{{ image }}{% endautoescape %} </span>
+
+
+[ <a href="/">Back to course list</a> ]
+
+<h2>Usage statistics</h2>
+
+{% if mode=="mooc" %}
+<table id="usage_stats" class="display" width="80%"></table>
+{% else %}
+<table id="usage_stats" class="display" width="50%"></table>
+{% endif %}
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+
+    var the_columns = [
+            { "data": "registered_sum", "title": "# registered", "class": "dt-center" },
+            { "data": "viewed_sum", "title": "# viewed", "class": "dt-center"  },
+            { "data": "explored_sum", "title": "# explored", "class": "dt-center"  },
+        ];
+
+    {% if mode=="mooc" %}
+        the_columns = the_columns.concat([
+           { "data": "certified_sum", "title": "# certified", "class": "dt-center" },
+           { "data": "n_verified_id", "title": "# verified ID", "class": "dt-center" },
+           { "data": "verified_certified", "title": "# certified & verified", "class": "dt-center" },
+           { "data": "n_male", "title": "# male", "class": "dt-center" },
+           { "data": "n_female", "title": "# female", "class": "dt-center" },
+        ]);
+   {% endif %}
+
+   $('#usage_stats').dataTable( {
+        "ajax": "/get/{{course_id}}/usage_stats",
+            "columns": the_columns,
+            "paging":   false,
+            "ordering": false,
+            "info":     false,
+            "searching":     false,
+    } );
+} );
+</script>
+
+<table style="float:right"><tr><td>
+<ul>
+<li><a href="/table/{{course_id}}/person_course">Person-course table</a></li>
+<li><a href="/table/{{course_id}}/stats_module_usage">Module usage statistics</a></li>
+<li><a href="/table/{{course_id}}/user_info_combo">User information</a></li>
+<li><a href="/axis/{{course_id}}">Course axis</a></li>
+</ul>
+</td></tr></table>
+{% if is_staff %}
+{% endif %}
+
+<h2>Content statistics</h2>
+
+{% autoescape off %}{{ stats_table }}{% endautoescape %}
+
+<h2>Content by chapter</h2>
+
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>

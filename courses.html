@@ -1,0 +1,40 @@
+<html>
+<head>
+  <title>{{orgname}} Analytics Dashboard</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+  
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.10.2.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+  $(document).ready( function () {
+    $('#table_id').DataTable();
+
+    $('#table_id tbody').on('click', 'tr', function () {
+        var name = $('td', this).eq(4).text();
+        window.location.href = "/course/" + name;
+        // alert( 'You clicked on '+name+'\'s row' );
+    } );
+
+} );
+</script>
+
+</head>
+<body>
+  <h1>{{orgname}} Courses</h1>
+
+<span style="float:right; color:blue">{{user}}</span>
+
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>

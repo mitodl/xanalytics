@@ -1,0 +1,11 @@
+#!/usr/bin/python
+
+import os
+from local_config import *
+
+cmd = 'dev_appserver.py --appidentity_email_address %s  --appidentity_private_key_path %s --port %s --admin_port %s .' % (SERVICE_EMAIL,
+                                                                                                                          SERVICE_KEY_FILE,
+                                                                                                                          LOCAL_PORT,
+                                                                                                                          ADMIN_PORT)
+os.system(cmd)
+

@@ -1,0 +1,146 @@
+<html>
+<head>
+  <title>Chapter {{chapter_name}} of {{course_id}}</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+</script>
+
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
+</head>
+<body>
+  <h1>{{orgname}}: Problem {{name}} of {{course_id}}</h1>
+
+[ <a href="/chapter/{{course_id}}/{{cun}}">Back to chapter content list</a> ]
+
+module_id = {{module_id}}
+
+<h2>Problem Stats</h2>
+
+<table id="pstats" class="display"></table>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+    var pstable = $('#pstats').dataTable( {
+        "ajax": "/get/{{course_id}}/{{url_name}}/problem_stats",
+        "columns": [
+            { "data": "avg_grade", "title": "AVG(grade)", "class": "dt-center" },
+            { "data": "max_max_grade", "title": "MAX grade", "class": "dt-center" },
+            { "data": "avg_attempts", "title": "AVG(attempts)", "class": "dt-center"  },
+            { "data": "max_attempts", "title": "MAX attempts", "class": "dt-center"  },
+            { "data": "nsubmissions", "title": "# submissions", "class": "dt-center"  },
+        ],
+            "paging":   false,
+            "ordering": false,
+            "info":     false,
+            "searching":     false,
+	    // "formatNumber": function ( x ) { return x.toFixed(2); },
+           "columnDefs": [
+            {
+                "render": function ( data, type, row ) {
+                    return (eval(data)).toFixed(2);
+                },
+                "targets": [0,1,2]
+            }],
+    } );
+
+// console.log('hello world');
+
+psdata = {};
+
+pstable.on( 'xhr.dt', function ( e, settings, json ) {
+    console.log( 'Ajax event occurred. Returned data: ', json );
+    psdata['data'] = json['data'];
+} );
+
+} );
+</script>
+
+<div id="chart_div"></div>
+
+<div id="chart2_div"></div>
+
+<script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+google.setOnLoadCallback(drawChart);
+
+function drawChart() {
+
+  if (!psdata.data){
+      setTimeout(drawChart, 250);
+      return;
+  }
+
+    // var k;
+    pd = psdata.data[0];
+    var cdata = new google.visualization.DataTable();
+    delta = pd.max_max_grade / 11.0;
+    cdata.addColumn('number','Grade');
+    cdata.addColumn('number','Count');
+    for (k=0;k<11;k++) {
+	console.log("k=", k);
+	cdata.addRow([k*delta, eval(pd['grade_hist_bin' + k.toString()])]);
+    }
+
+  var options = {
+    title: 'Grade Histogram',
+    hAxis: {title: 'Grade', titleTextStyle: {color: 'red'}}
+  };
+
+  var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+
+  chart.draw(cdata, options);
+
+    var adata = new google.visualization.DataTable();
+    delta = pd.max_attempts / 11.0;
+    adata.addColumn('number','Attempts');
+    adata.addColumn('number','Count');
+    for (k=0;k<11;k++) {
+	console.log("k=", k);
+	adata.addRow([k*delta, eval(pd['attempts_hist_bin' + k.toString()])]);
+    }
+
+  var options = {
+    title: 'Attempts Histogram',
+    hAxis: {title: 'Attempts', titleTextStyle: {color: 'blue'}}
+  };
+
+  var chart2 = new google.visualization.ColumnChart(document.getElementById('chart2_div'));
+
+  chart2.draw(adata, options);
+
+}
+    </script>
+
+<h2>Problem page</h2>
+
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+<iframe sandbox="allow-same-origin allow-scripts allow-popups allow-forms" width="1100" height="800" src="{{base}}/courses/{{course_id}}/jump_to_id/{{url_name}}"></iframe>
+
+</body>
+</html>
