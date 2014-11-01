@@ -686,6 +686,7 @@ class MainPage(auth.AuthenticatedHandler):
         stats_table = self.list2table(stats_fields, [counts], tid="stats_table")
 
         def makelink(txt, rdat):
+            txt = txt.encode('utf-8')
             return "<a href='/chapter/{course_id}/{url_name}'>{txt}</a>".format(txt=txt,
                                                                                 course_id=course_id,
                                                                                 url_name=rdat['url_name'])
