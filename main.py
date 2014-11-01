@@ -98,6 +98,7 @@ class MainPage(auth.AuthenticatedHandler):
     ORGNAME = local_config.ORGANIZATION_NAME
     AUTHORIZED_USERS = local_config.STAFF_USERS
     MODE = local_config.MODE
+    USE_LATEST = local_config.DATA_DATE=='latest'	# later: generalize to dataset for specific date
 
     IM_WIDTH = 374/2
     IM_HEIGHT = 200/2
@@ -214,7 +215,7 @@ class MainPage(auth.AuthenticatedHandler):
         '''
         Compute usage stats from studentmodule table for course
         '''
-        dataset = bqutil.course_id2dataset(course_id)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
         sql = """
                 SELECT 
                     module_type, module_id, count(*) as ncount 
@@ -231,7 +232,7 @@ class MainPage(auth.AuthenticatedHandler):
         '''
         Compute problem average grade, attempts
         '''
-        dataset = bqutil.course_id2dataset(course_id)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
         sql = """
                 SELECT '{course_id}' as course_id,
                     PA.problem_url_name as url_name,
@@ -285,7 +286,7 @@ class MainPage(auth.AuthenticatedHandler):
         '''
         Compute usage stats, i.e. # registered, viewed, explored, based on person-course
         '''
-        dataset = bqutil.course_id2dataset(course_id)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
         sql = """
            SELECT course_id,
                    count(*) as registered_sum,
@@ -381,6 +382,7 @@ class MainPage(auth.AuthenticatedHandler):
                     logging.error('oops, bad course_id! line=%s' % k)
                     continue
                 k['course_image'] = self.get_course_image(cid)
+                k['title'] = k['title'].encode('utf8')
 
             html = self.list2table(map(DataTableField, 
                                        [{'field': 'semester', 'title':'Semester'},
@@ -402,6 +404,8 @@ class MainPage(auth.AuthenticatedHandler):
     def get_course_image(self, course_id):
         #  images 374x200
         cdir = course_id.replace('/','__')
+        if self.USE_LATEST:
+            cdir = cdir + "/latest"
         img = '<img width="{width}" height="{height}" src="https://storage.googleapis.com/{gsroot}/{cdir}/course_image.jpg"/>'.format(gsroot=self.GSROOT,
                                                                                                                                         cdir=cdir,
                                                                                                                                         width=self.IM_WIDTH,
@@ -417,7 +421,7 @@ class MainPage(auth.AuthenticatedHandler):
 
         category, index, url_name, name, gformat, due, start, module_id, course_id, path, data.ytid, data.weight, chapter_mid
         '''
-        dataset = bqutil.course_id2dataset(course_id)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
         table = "course_axis"
         key={'name': 'url_name'}
         return self.cached_get_bq_table(dataset, table, key=key, drop=['data'])['data_by_key']
@@ -431,7 +435,7 @@ class MainPage(auth.AuthenticatedHandler):
 
         username, viewed, explored, ip
         '''
-        dataset = bqutil.course_id2dataset(course_id)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
         table = "person_course"
         key = None
         return self.cached_get_bq_table(dataset, table)
@@ -781,7 +785,7 @@ class MainPage(auth.AuthenticatedHandler):
         '''
         if dataset is None:
             course_id = '/'.join([org, number, semester])
-            dataset = bqutil.course_id2dataset(course_id)
+            dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
             if not self.is_user_authorized_for_course(course_id):
                 return self.no_auth_sorry()
         else:

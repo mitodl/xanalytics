@@ -16,6 +16,7 @@ COURSE_SITE_MAP = { '3091-exam': {'match': '.*-exam.*', 'url': 'https://special.
 PROJECT_ID = '99353222151'
 
 MODE = 'mooc'	# mooc or residential (no demographics for residential)
+DATA_DATE = 'latest'
 
 #-----------------------------------------------------------------------------
 # user authentication
