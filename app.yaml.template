@@ -1,5 +1,5 @@
-application: residential-mitx
-version: bq2
+application: x-analytics
+version: xa1
 runtime: python27
 api_version: 1
 threadsafe: true
@@ -10,6 +10,8 @@ handlers:
   upload: favicon\.ico
 - url: /images
   static_dir: images
+- url: /js
+  static_dir: js
 
 - url: .*
   script: main.application
