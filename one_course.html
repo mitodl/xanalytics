@@ -201,7 +201,7 @@ $(document).ready(function() {
         $('#container').highcharts('StockChart', {
 
             rangeSelector : {
-                selected : 4
+                selected : 2
             },
 
             title : {
@@ -209,7 +209,13 @@ $(document).ready(function() {
             },
 
             series : data['series'],
-        });
+        }, function(chartObj) {
+	    // sets initial range zoom location
+            chartObj.xAxis[0].setExtremes(
+		data['start_dt'],
+		data['end_dt']
+            );
+	});
     });
 });
 		</script>

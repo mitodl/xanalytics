@@ -225,6 +225,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
 
+    @staticmethod
+    def datetime2milliseconds(dt):
+        return (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
 
     @auth_required
     def ajax_get_activity_stats(self, org=None, number=None, semester=None):
@@ -242,13 +245,15 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         start_dt = start_dt - datetime.timedelta(days=14)	# start plot 2 weeks before launch
         start_str = start_dt.strftime('%Y-%m-%d')
         logging.info("start_str = %s" % start_str)
+        end_dt = start_dt + datetime.timedelta(days=32*4)	# default position for end selector
+        end_str = end_dt.strftime('%Y-%m-%d')
 
         bqdat = self.compute_activity_by_day(course_id, start=start_str)
         def getrow(x, field, scale):
             #return [x[k] for k in ['date', 'nevents', 'nforum']]
             (y,m,d) = map(int, x['date'].split('-'))
             dt = datetime.datetime(y,m,d)
-            ts = (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
+            ts = self.datetime2milliseconds(dt)  # (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
             cnt = int(x[field]) / scale
             return [ts, cnt]
 
@@ -266,7 +271,10 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         stats = [ getseries(sname) for sname in fields ]
         #stats = [ getseries(sname) for sname in ['nevents'] ]
 
-        data = {'series': stats }
+        data = {'series': stats,
+                'start_dt': self.datetime2milliseconds(start_dt),
+                'end_dt': self.datetime2milliseconds(end_dt),
+        }
 
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
