@@ -18,6 +18,8 @@ PROJECT_ID = '99353222151'
 MODE = 'mooc'	# mooc or residential (no demographics for residential)
 DATA_DATE = 'latest'
 
+SESSION_SECRET_KEY = "dkjasf912lkj8d09"
+
 #-----------------------------------------------------------------------------
 # user authentication
 

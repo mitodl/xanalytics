@@ -639,7 +639,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
 
 config = {}
 config['webapp2_extras.sessions'] = {
-    'secret_key': 'dkjasf912lkj8d09',
+    'secret_key': local_config.SESSION_SECRET_KEY,
 }
 
 application = webapp2.WSGIApplication([
