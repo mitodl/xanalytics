@@ -32,13 +32,6 @@ tr.shown td.details-control {
   <script type='text/javascript'>
 
     $(document).ready( function () {
-	var stats_table = $('#stats_table').DataTable( {
-            "paging":   false,
-            "ordering": false,
-            "info":     false,
-            "searching":     false,
-	    "columns" : {% autoescape off %}{{ stats_columns }}{% endautoescape %},
-	});
     });
 
 // Formatting function for row details 
@@ -80,15 +73,28 @@ function format ( d ) {
     return stats + seqs;
 }
 
-    tabledata = {% autoescape off %}{{ tabledata }}{% endautoescape %};
     tablefields = {% autoescape off %}{{ fields }}{% endautoescape %};
 
     $(document).ready( function () {
 	var table = $('#table_id').DataTable({
-              "data": tabledata,
+              "ajax": "/get/{{course_id}}/course_stats",
               "order": [[ 1, "asc" ]],
     	      "columns": tablefields,
              });
+
+	// event listener for ajax call completion - fill in the stats table
+	$('#table_id') .on('xhr.dt', 
+			   function ( e, settings, json ) { 
+			       $('#stats_div').html(json['stats_table']);
+			       var stats_table = $('#stats_table').DataTable( {
+				   "paging":   false,
+				   "ordering": false,
+				   "info":     false,
+				   "searching":     false,
+				   "columns" : json['stats_columns'],
+			       });
+			   });
+			       
 
     // Add event listener for opening and closing details
     $('#table_id tbody').on('click', 'td.details-control', function () {
@@ -173,7 +179,7 @@ $(document).ready(function() {
 
 <h2>Content statistics</h2>
 
-{% autoescape off %}{{ stats_table }}{% endautoescape %}
+<div id="stats_div">{% autoescape off %}{{ stats_table }}{% endautoescape %}</div>
 
 <h2>Content by chapter</h2>
 
@@ -195,7 +201,7 @@ $(document).ready(function() {
         $('#container').highcharts('StockChart', {
 
             rangeSelector : {
-                selected : 1
+                selected : 4
             },
 
             title : {

@@ -73,7 +73,7 @@ $(document).ready(function() {
 psdata = {};
 
 pstable.on( 'xhr.dt', function ( e, settings, json ) {
-    console.log( 'Ajax event occurred. Returned data: ', json );
+    // console.log( 'Ajax event occurred. Returned data: ', json );
     psdata['data'] = json['data'];
 } );
 

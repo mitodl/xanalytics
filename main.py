@@ -61,40 +61,46 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
 
     #-----------------------------------------------------------------------------
 
+    def get_course_listings(self):
+        dataset = 'courses'
+        table = 'listings'
+        courses = self.cached_get_bq_table(dataset, table, key={'name': 'course_id'})
+
+        for k in courses['data']:
+            cid = k['course_id']
+            if not cid:
+                logging.error('oops, bad course_id! line=%s' % k)
+                continue
+            k['course_image'] = self.get_course_image(cid)
+            k['title'] = k['title'].encode('utf8')
+            (m,d,y) = map(int, k['courses_launch'].split('/'))
+            ldate = "%04d-%02d-%02d" % (y,m,d)
+            k['launch'] = ldate
+            courses['data_by_key'][cid]['launch'] = ldate
+        return courses
+
     @auth_required
     def get_main(self):
         '''
         Main page: show list of all courses
         '''
-        data = None
-        if not data:
-            dataset = 'courses'
-            table = 'listings'
-            courses = self.cached_get_bq_table(dataset, table)
+        courses = self.get_course_listings()
 
-            # logging.info('course listings: %s' % courses['data'])
+        # logging.info('course listings: %s' % courses['data'])
 
-            for k in courses['data']:
-                cid = k['course_id']
-                if not cid:
-                    logging.error('oops, bad course_id! line=%s' % k)
-                    continue
-                k['course_image'] = self.get_course_image(cid)
-                k['title'] = k['title'].encode('utf8')
+        html = self.list2table(map(DataTableField, 
+                                   [{'field': 'launch', 'title':'Course launch'},
+                                    {'field': 'course_number', 'title': 'Course #'}, 
+                                    {'field': 'course_image', 'title': 'Course image'}, 
+                                    {'field': 'title', 'title': 'Course Title'},
+                                    'course_id',
+                                   ]), 
+                               courses['data'])
 
-            html = self.list2table(map(DataTableField, 
-                                       [{'field': 'semester', 'title':'Semester'},
-                                        {'field': 'course_number', 'title': 'Course #'}, 
-                                        {'field': 'course_image', 'title': 'Course image'}, 
-                                        {'field': 'title', 'title': 'Course Title'},
-                                        'course_id',
-                                       ]), 
-                                   courses['data'])
-
-            data = self.common_data
-            data.update({'data': {},
-                         'table': html,
-                     })
+        data = self.common_data
+        data.update({'data': {},
+                     'table': html,
+                 })
         template = JINJA_ENVIRONMENT.get_template('courses.html')
         # template = os.path.join(os.path.dirname(__file__), 'courses.html')
         self.response.out.write(template.render(data))
@@ -157,7 +163,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         # categories = ['registered', 'viewed', 'explored']
         data = {'data': [usdat] }
 
-        logging.info('ajax_get_usage_stats data=%s' % data)
+        # logging.info('ajax_get_usage_stats data=%s' % data)
 
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
@@ -225,11 +231,19 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         '''
         Return activity stats in "series" format for HighCharts
         See http://www.highcharts.com/docs/chart-concepts/series
+
+        Use course listings to determine start date
         '''
-
         course_id = '/'.join([org, number, semester])
+        courses = self.get_course_listings()
+        start = courses['data_by_key'][course_id]['launch']
+        (y,m,d) = map(int, start.split('-'))
+        start_dt = datetime.datetime(y, m, d)
+        start_dt = start_dt - datetime.timedelta(days=14)	# start plot 2 weeks before launch
+        start_str = start_dt.strftime('%Y-%m-%d')
+        logging.info("start_str = %s" % start_str)
 
-        bqdat = self.compute_activity_by_day(course_id)
+        bqdat = self.compute_activity_by_day(course_id, start=start_str)
         def getrow(x, field, scale):
             #return [x[k] for k in ['date', 'nevents', 'nforum']]
             (y,m,d) = map(int, x['date'].split('-'))
@@ -401,12 +415,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         return ''
 
     @auth_required
-    def get_course(self, org=None, number=None, semester=None):
+    def ajax_get_course_stats(self, org=None, number=None, semester=None):
         '''
-        single course analytics view
-
-        - overall statistics (number of components of various categories)
-        - show table of chapters
+        single course analytics view - data only
         '''
         course_id = '/'.join([org, number, semester])
         caxis = self.load_course_axis(course_id)
@@ -437,13 +448,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
             return "<a href='/chapter/{course_id}/{url_name}'>{txt}</a>".format(txt=txt,
                                                                                 course_id=course_id,
                                                                                 url_name=rdat['url_name'])
-
-        # show table with just chapters, and present sequentials as extra information when clicked
-        fields = [ DataTableField(x) for x  in [{'field': 'index', 'title': 'Time index', 'width': '8%', 'class': 'dt-center'}, 
-                                                {'field': 'name', 'title': "Chapter name"},
-                                                {'field': 'start', 'title': "Start date", 'width': '18%'},
-                                                {'field': 'nuser_views', 'title': '# user-views', 'width': '10%', 'class': 'dt-center'},
-                                               ] ]
         def makerow(rdat):
             # row = [rdat['index'], makelink(rdat['name'], rdat), fix_date(rdat['start'])]
             #row = {'index': rdat['index'], 'name': makelink(rdat['name'], rdat), 'start': fix_date(rdat['start'])}
@@ -459,11 +463,35 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
             row['nuser_views'] = self.get_sm_nuser_views(chapter_mid)
             return row
 
+        data = {'data': [ makerow(x) for x in caxis.values() if x['category']=='chapter'],
+                'stats_columns': [ {'className': 'dt-center'}] *len(stats_fields),
+                'stats_table': stats_table
+        }
+        tabledata = json.dumps(data)
+        self.response.out.write(tabledata)
+
+        
+    @auth_required
+    def get_course(self, org=None, number=None, semester=None):
+        '''
+        single course analytics view
+
+        - overall statistics (number of components of various categories)
+        - show table of chapters
+        '''
+        course_id = '/'.join([org, number, semester])
+
+        # show table with just chapters, and present sequentials as extra information when clicked
+        fields = [ DataTableField(x) for x  in [{'field': 'index', 'title': 'Time index', 'width': '8%', 'class': 'dt-center'}, 
+                                                {'field': 'name', 'title': "Chapter name"},
+                                                {'field': 'start', 'title': "Start date", 'width': '18%'},
+                                                {'field': 'nuser_views', 'title': '# user-views', 'width': '10%', 'class': 'dt-center'},
+                                               ] ]
+
         # logging.info('sm_usage:')
         # logging.info(self.bqdata['stats_module_usage']['data_by_key'])
 
         tablehtml = self.list2table([' '] + fields, [])
-        tabledata = json.dumps([ makerow(x) for x in caxis.values() if x['category']=='chapter'])
         tablefields = json.dumps([
             {
                 "class":          'details-control',
@@ -474,12 +502,11 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
             },] +  [x.colinfo() for x in fields])
 
         data = self.common_data
-        data.update({'tabledata': tabledata,
-                     'course_id': course_id,
+        data.update({'course_id': course_id,
                      'fields': tablefields,
                      'table': tablehtml,
-                     'stats_table': stats_table,
-                     'stats_columns': json.dumps([ {'className': 'dt-center'}] *len(stats_fields)),
+                     # 'stats_table': stats_table,
+                     # 'stats_columns': json.dumps([ {'className': 'dt-center'}] *len(stats_fields)),
                      'image': self.get_course_image(course_id),
                  })
         
@@ -565,6 +592,7 @@ application = webapp2.WSGIApplication([
     webapp2.Route('/table/<database>/<table>', handler=MainPage, handler_method='get_table'),
     webapp2.Route('/get/<org>/<number>/<semester>/activity_stats', handler=MainPage, handler_method='ajax_get_activity_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/usage_stats', handler=MainPage, handler_method='ajax_get_usage_stats'),
+    webapp2.Route('/get/<org>/<number>/<semester>/course_stats', handler=MainPage, handler_method='ajax_get_course_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<url_name>/chapter_stats', handler=MainPage, handler_method='ajax_get_chapter_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_stats', handler=MainPage, handler_method='ajax_get_problem_stats'),
 ], debug=True, config=config)

@@ -17,7 +17,10 @@
   <script type='text/javascript'>
 
   $(document).ready( function () {
-    $('#table_id').DataTable();
+    $('#table_id').DataTable({
+         "order": [ 0, 'desc' ],
+  }
+);
 
     $('#table_id tbody').on('click', 'tr', function () {
         var name = $('td', this).eq(4).text();

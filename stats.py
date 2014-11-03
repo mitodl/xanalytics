@@ -140,7 +140,7 @@ class DataStats(object):
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
 
 
-    def compute_activity_by_day(self, course_id):
+    def compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
         '''
         Compute problem average grade, attempts
         '''
@@ -162,11 +162,11 @@ class DataStats(object):
               avg(avg_dt) as avg_dt,
               sum(n_dt) as n_dt,
           FROM (TABLE_DATE_RANGE([{dataset}.pcday_],
-                                  TIMESTAMP('2012-08-20'),
-                                  TIMESTAMP('2015-01-01'))) 
+                                  TIMESTAMP('{start}'),
+                                  TIMESTAMP('{end}'))) 
           group by date
           order by date
-        """.format(dataset=dataset, course_id=course_id)
+        """.format(dataset=dataset, course_id=course_id, start=start, end=end)
 
         table = 'stats_activity_by_day'
         key = None
@@ -236,13 +236,15 @@ class DataStats(object):
 
 
     def cached_get_bq_table(self, dataset, table, sql=None, key=None, drop=None,
-                            logger=None):
+                            logger=None, ignore_cache=False):
         '''
         Get a dataset from BigQuery; use memcache
         '''
+        if logger is None:
+            logger = logging.info
         memset = '%s.%s' % (dataset,table)
         data = mem.get(memset)
-        if not data:
+        if (not data) or ignore_cache:
             data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger)
             if (drop is not None) and drop:
                 for key in drop:
