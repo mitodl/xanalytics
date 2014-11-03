@@ -2,6 +2,7 @@ import unittest
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.ext import testbed
+import json
 
 import pytest
 import StringIO
@@ -12,7 +13,7 @@ from lxml import etree
 
 import local_config
 
-class TestClass(unittest.TestCase):
+class TestBadAuth(unittest.TestCase):
 
     def setUp(self):
         self.testbed = testbed.Testbed()
@@ -40,6 +41,28 @@ class TestClass(unittest.TestCase):
         response = request.get_response(application)
         assert('testuser is not authorized' in response.text)
 
+
+class TestMain(unittest.TestCase):
+
+    def setUp(self):
+        self.testbed = testbed.Testbed()
+        # Then activate the testbed, which prepares the service stubs for use.
+        self.testbed.activate()
+        # Next, declare which service stubs you want to use.
+        self.testbed.init_datastore_v3_stub()
+        self.testbed.init_memcache_stub()
+        self.testbed.init_urlfetch_stub()
+
+        from google.appengine.api.app_identity import app_identity_stub
+        from google.appengine.api.app_identity import app_identity_keybased_stub
+        email_address = local_config.SERVICE_EMAIL
+        private_key_path = local_config.SERVICE_KEY_FILE
+        stub = app_identity_keybased_stub.KeyBasedAppIdentityServiceStub(email_address=email_address,
+                                                                         private_key_path=private_key_path)
+        self.testbed._register_stub(testbed.APP_IDENTITY_SERVICE_NAME, stub)
+        self.setup_main_with_auth()
+        self.course_id = self.get_a_course_id()
+
     def setup_main_with_auth(self):
         from main import MainPage, auth, application
         def AlwaysAuthenticated(self):
@@ -49,7 +72,6 @@ class TestClass(unittest.TestCase):
         self.application = application
 
     def get_a_course_id(self):
-        self.setup_main_with_auth()
         request = webapp2.Request.blank('/')
         response = request.get_response(self.application)
         xml = etree.fromstring(response.text, parser=etree.HTMLParser())
@@ -62,13 +84,36 @@ class TestClass(unittest.TestCase):
         return course_id
 
     def test_main_page_good_auth(self):
-        self.get_a_course_id()
         assert('<table id="table_id" class="display">' in self.response.text)
 
     def test_course_page(self):
-        course_id = self.get_a_course_id()
-        self.setup_main_with_auth()
+        course_id = self.course_id
         request = webapp2.Request.blank('/course/' + course_id)
         response = request.get_response(self.application)
         assert('<h2>Content by chapter</h2>' in response.text)
+
+    def test_course_stats(self):
+        params = {'course_id': self.course_id}
+        request = webapp2.Request.blank('/get/{course_id}/course_stats'.format(**params))
+        response = request.get_response(self.application)
+        data = json.loads(response.text)
+        assert("stats_columns" in data)
+
+    def test_usage_stats(self):
+        params = {'course_id': self.course_id}
+        request = webapp2.Request.blank('/get/{course_id}/usage_stats'.format(**params))
+        response = request.get_response(self.application)
+        # response.encoding = 'utf-8'
+        # data = json.loads(response.text) # response.json
+        data = response.json
+        assert("data" in data)
+
+    def test_activity_stats(self):
+        params = {'course_id': self.course_id}
+        request = webapp2.Request.blank('/get/{course_id}/activity_stats'.format(**params))
+        response = request.get_response(self.application)
+        # response.encoding = 'utf-8'
+        # data = json.loads(response.text) # response.json
+        data = response.json
+        assert("series" in data)
 

@@ -69,7 +69,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         for k in courses['data']:
             cid = k['course_id']
             if not cid:
-                logging.error('oops, bad course_id! line=%s' % k)
+                logging.info('oops, bad course_id! line=%s' % k)
                 continue
             k['course_image'] = self.get_course_image(cid)
             k['title'] = k['title'].encode('utf8')
@@ -566,20 +566,15 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         template = JINJA_ENVIRONMENT.get_template('show_table.html')
         self.response.out.write(template.render(data))
 
-
-    @auth_required
-    def test_plot(self):
-        data = self.common_data
-        template = JINJA_ENVIRONMENT.get_template('test_plot3.html')
-        self.response.out.write(template.render(data))
-        
-
 config = {}
 config['webapp2_extras.sessions'] = {
     'secret_key': 'dkjasf912lkj8d09',
 }
 
 application = webapp2.WSGIApplication([
+
+    # html pages
+
     webapp2.Route('/', handler=MainPage, handler_method='get_main'),
     webapp2.Route('/course/<org>/<number>/<semester>', handler=MainPage, handler_method='get_course'),
     webapp2.Route('/chapter/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_chapter'),
@@ -587,9 +582,11 @@ application = webapp2.WSGIApplication([
     webapp2.Route('/video/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_video'),
     webapp2.Route('/html/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_html'),
     webapp2.Route('/axis/<org>/<number>/<semester>', handler=MainPage, handler_method='get_axis'),
-    webapp2.Route('/plot', handler=MainPage, handler_method='test_plot'),
     webapp2.Route('/table/<org>/<number>/<semester>/<table>', handler=MainPage, handler_method='get_table'),
     webapp2.Route('/table/<database>/<table>', handler=MainPage, handler_method='get_table'),
+
+    # ajax calls
+
     webapp2.Route('/get/<org>/<number>/<semester>/activity_stats', handler=MainPage, handler_method='ajax_get_activity_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/usage_stats', handler=MainPage, handler_method='ajax_get_usage_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/course_stats', handler=MainPage, handler_method='ajax_get_course_stats'),
