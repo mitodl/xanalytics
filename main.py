@@ -168,6 +168,62 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
         
+    @auth_required
+    def ajax_get_enrollment_stats(self, org=None, number=None, semester=None):
+        '''
+        Return enrollment stats in "series" format for HighCharts.
+        Use course listings to determine start date
+        '''
+        course_id = '/'.join([org, number, semester])
+        courses = self.get_course_listings()
+        start = courses['data_by_key'][course_id]['launch']
+
+        (y,m,d) = map(int, start.split('-'))
+        start_dt = datetime.datetime(y, m, d)
+        start_dt = start_dt - datetime.timedelta(days=32*3)	# start plot 3 months before launch
+        start_str = start_dt.strftime('%Y-%m-%d')
+
+        end_dt = start_dt + datetime.timedelta(days=32*1)	# default position for end selector
+        end_str = end_dt.strftime('%Y-%m-%d')
+        logging.info('initial start_dt=%s, end_dt=%s' % (start_dt, end_dt))
+
+        bqdat = self.compute_enrollment_by_day(course_id, start=start_str)
+        dtrange = ['2199-12-31', '1900-01-01']
+
+        def getrow(x, field, scale):
+            dtstr = x['date']
+            if dtstr < dtrange[0]:	# min max dates from actual data
+                dtrange[0] = dtstr
+            if dtstr > dtrange[1]:
+                dtrange[1] = dtstr
+            ts = self.datetime2milliseconds(dtstr=dtstr)  # (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
+            cnt = int(x[field])
+            return [ts, cnt]
+
+        def getseries(field):
+            return {'name': field['name'], 'data': [ getrow(x, field['field'], field['scale']) for x in bqdat['data'] ]}
+
+        def mkf(field, name, scale=1):
+            return {'field': field, 'name': name, 'scale': scale}
+
+        fields = [mkf('nenroll_cum', 'cumulative enrollment')]
+        stats = [ getseries(sname) for sname in fields ]
+
+        dtrange = [ datetime.datetime(*map(int, x.split('-'))) for x in dtrange ]
+        start_dt = max(dtrange[0], start_dt)
+        end_dt =  max(dtrange[0], end_dt)
+        if end_dt == start_dt:
+            end_dt = end_dt + datetime.timedelta(days=32*2)
+        end_dt =  min(dtrange[1], end_dt)
+        logging.info('dtrange=%s, actual start_dt=%s, end_dt=%s' % (dtrange, start_dt, end_dt))
+
+        data = {'series': stats,
+                'start_dt': self.datetime2milliseconds(start_dt),
+                'end_dt': self.datetime2milliseconds(end_dt),
+        }
+
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
         
     def setup_module_info(self, org=None, number=None, semester=None, url_name=None):
         '''
@@ -226,7 +282,14 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         self.response.out.write(json.dumps(data))
 
     @staticmethod
-    def datetime2milliseconds(dt):
+    def datetime2milliseconds(dt=None, dtstr=''):
+        '''
+        Return datetime as milliseconds from epoch (js convention)
+        dtstr may be YYYY-MM-DD
+        '''
+        if dtstr:
+            (y,m,d) = map(int, dtstr.split('-'))
+            dt = datetime.datetime(y,m,d)
         return (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
 
     @auth_required
@@ -596,6 +659,7 @@ application = webapp2.WSGIApplication([
     # ajax calls
 
     webapp2.Route('/get/<org>/<number>/<semester>/activity_stats', handler=MainPage, handler_method='ajax_get_activity_stats'),
+    webapp2.Route('/get/<org>/<number>/<semester>/enrollment_stats', handler=MainPage, handler_method='ajax_get_enrollment_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/usage_stats', handler=MainPage, handler_method='ajax_get_usage_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/course_stats', handler=MainPage, handler_method='ajax_get_course_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<url_name>/chapter_stats', handler=MainPage, handler_method='ajax_get_chapter_stats'),

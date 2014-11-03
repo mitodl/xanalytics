@@ -221,5 +221,40 @@ $(document).ready(function() {
 		</script>
 
 
+<h2>Enrollment</h2>
+
+<div id="enrollment_div" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+
+    $.getJSON('/get/{{course_id}}/enrollment_stats', function(data) {
+
+// console.log('data = ', data)
+
+        // Create the chart
+        $('#enrollment_div').highcharts('StockChart', {
+
+            rangeSelector : {
+                selected : 2
+            },
+
+            title : {
+                text : 'Enrollment by day',
+            },
+
+            series : data['series'],
+        }, function(chartObj) {
+	    // sets initial range zoom location
+            chartObj.xAxis[0].setExtremes(
+		data['start_dt'],
+		data['end_dt']
+            );
+	});
+    });
+});
+		</script>
+
 </body>
 </html>

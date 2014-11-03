@@ -140,11 +140,44 @@ class DataStats(object):
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
 
 
+    def compute_enrollment_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
+        '''
+        Compute enrollment by day, based on enrollday_* tables
+        '''
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        input_dataset = bqutil.course_id2dataset(course_id, 'pcday')
+        sql = """
+          SELECT 
+              '{course_id}' as course_id,
+              date,
+              nenroll,
+              sum(nenroll) over(order by date) as nenroll_cum,
+          FROM (
+                  SELECT 
+                      date(time) as date,
+                      sum(diff_enrollment) as nenroll,
+                  FROM (TABLE_DATE_RANGE([{dataset}.enrollday_],
+                                          TIMESTAMP('{start}'),
+                                          TIMESTAMP('{end}'))) 
+                  group by date
+                  order by date
+        )
+        group by date, nenroll
+        order by date
+        """.format(dataset=input_dataset, course_id=course_id, start=start, end=end)
+
+        table = 'stats_enrollment_by_day'
+        key = None
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        logger=logging.error)
+
+
     def compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
         '''
-        Compute problem average grade, attempts
+        Compute course activity by day, based on person_course_day tables
         '''
-        dataset = bqutil.course_id2dataset(course_id, 'pcday')
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        input_dataset = bqutil.course_id2dataset(course_id, 'pcday')
         sql = """
           SELECT 
               date(last_event) as date,
@@ -166,7 +199,7 @@ class DataStats(object):
                                   TIMESTAMP('{end}'))) 
           group by date
           order by date
-        """.format(dataset=dataset, course_id=course_id, start=start, end=end)
+        """.format(dataset=input_dataset, course_id=course_id, start=start, end=end)
 
         table = 'stats_activity_by_day'
         key = None
