@@ -26,12 +26,11 @@ tr.shown td.details-control {
 
   <script type='text/javascript'>
 
-    tabledata = {% autoescape off %}{{ tabledata }}{% endautoescape %};
     tablefields = {% autoescape off %}{{ fields }}{% endautoescape %};
 
 $(document).ready( function () {
 	var table = $('#table_id').DataTable({
-              "data": tabledata,
+    	      "ajax": "/get/{{course_id}}/{{url_name}}/chapter_stats",
               "order": [[ 0, "asc" ]],
     	      "columns": tablefields,
              });

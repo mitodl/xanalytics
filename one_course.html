@@ -20,9 +20,14 @@ tr.shown td.details-control {
   
 <!-- DataTables -->
 <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+  <script type='text/javascript' src='https://www.google.com/jsapi'></script>
 
-  <script type='text/javascript'
-     src='https://www.google.com/jsapi'></script>
+<!-- highchart -->
+
+<script src="/js/highstock.js"></script>
+<script src="/js/modules/exporting.js"></script>
+
+<!-- table display -->
 
   <script type='text/javascript'>
 
@@ -173,6 +178,36 @@ $(document).ready(function() {
 <h2>Content by chapter</h2>
 
 {% autoescape off %}{{ table }}{% endautoescape %}
+
+<h2>Avtivity</h2>
+
+<div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+
+    $.getJSON('/get/{{course_id}}/activity_stats', function(data) {
+
+// console.log('data = ', data)
+
+        // Create the chart
+        $('#container').highcharts('StockChart', {
+
+            rangeSelector : {
+                selected : 1
+            },
+
+            title : {
+                text : 'Activity by day',
+            },
+
+            series : data['series'],
+        });
+    });
+});
+		</script>
+
 
 </body>
 </html>

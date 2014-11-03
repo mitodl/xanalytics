@@ -20,6 +20,9 @@ import bqutil
 import auth
 import local_config
 
+from auth import auth_required
+from stats import DataStats
+from datatable import DataTableField
 from collections import defaultdict, OrderedDict
 
 import jinja2
@@ -28,7 +31,6 @@ import jinja2
 # from gviz_data_table import Table
 
 from google.appengine.api import memcache
-# from google.appengine.ext.webapp.template import render
 
 mem = memcache.Client()
 
@@ -37,66 +39,15 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     extensions=['jinja2.ext.autoescape'],
     autoescape=True)
 
-class DataTableField(object):
-    '''
-    Info container for javascript datatable field labels and names.
-    
-    Initialize with field being a string (simple case), or a dict, with entries:
-
-    field = data dict key for this data column
-    title = title to display for data column (optional)
-    width = percentage width for data column (optional)
-    '''
-    def __init__(self, field):
-        if type(field)==DataTableField:
-            field = field.field_in
-        self.field_in = field
-        if type(field)==dict:
-            self.field = field['field']
-            self.title = field.get('title', self.field)
-            self.width = field.get('width', None)
-            self.fmtclass = field.get('class', None)
-        else:
-            self.title = str(field)
-            self.field = str(field)
-            self.width = None
-            self.fmtclass = None
-    def __str__(self):
-        return self.title
-    def colinfo(self):
-        ci = {'data': self.field}
-        if self.fmtclass is not None:
-            ci['className'] = self.fmtclass
-        return ci
-
 #-----------------------------------------------------------------------------
 
-def auth_required(handler):
-    """
-    Decorator that checks if there's a user associated with the current session.
-    Will also fail if there's no session present.
-    """
-    def check_login(self, *args, **kwargs):
-        redirect = self.do_auth()
-        if redirect:
-            return redirect()
-        if ('org' in kwargs) and ('number' in kwargs) and ('semester' in kwargs):
-            course_id = '/'.join([kwargs[x] for x in ['org', 'number', 'semester']])
-        else:
-            course_id = None
-        if not self.is_user_authorized_for_course(course_id):
-            return self.no_auth_sorry()
-        return handler(self, *args, **kwargs)
-
-    return check_login
-
-#-----------------------------------------------------------------------------
-
-class MainPage(auth.AuthenticatedHandler):
+class MainPage(auth.AuthenticatedHandler, DataStats):
+    '''
+    Main python class which displays views.
+    '''
 
     GSROOT = local_config.GOOGLE_STORAGE_ROOT
     ORGNAME = local_config.ORGANIZATION_NAME
-    AUTHORIZED_USERS = local_config.STAFF_USERS
     MODE = local_config.MODE
     USE_LATEST = local_config.DATA_DATE=='latest'	# later: generalize to dataset for specific date
 
@@ -107,259 +58,6 @@ class MainPage(auth.AuthenticatedHandler):
     common_data = {'orgname': ORGNAME,
                    'mode': MODE,
     }
-
-    def do_auth(self):
-        user = self.Authenticate()
-        self.user = user
-        self.common_data['user'] = self.user
-        if user is None:
-            return self.do_cas_redirect
-        return None
-
-    def is_superuser(self):
-        return self.user in self.AUTHORIZED_USERS        
-
-    def is_user_authorized_for_course(self, course_id=None):
-        staff_course_table = mem.get('staff_course_table')
-        scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
-        if (not staff_course_table) and (scdt is not None) and (scdt):
-            (dataset, table) = scdt.split('.')
-            staff = self.cached_get_bq_table(dataset, table)['data']
-            staff_course_table = {'user_course': {}, 'user': {}}
-            for k in staff:
-                staff_course_table['user_course'][(k['username'], k['course_id'])] = k
-                staff_course_table['user']['username'] = k
-            mem.set('staff_course_table', staff_course_table, time=3600*12)
-            logging.info('staff_course_table = %s' % staff_course_table.keys())
-        if staff_course_table and course_id and ((self.user, course_id) in staff_course_table['user_course']):
-            return True
-        if staff_course_table and (self.user in staff_course_table['user']):
-            return True
-        if self.is_superuser():
-            return True
-        return False
-
-    def no_auth_sorry(self):
-        self.response.write("Sorry, %s is not authorized to use this service" % self.user)
-
-    def dict2table(self, names, data):
-        '''
-        Return HTML table with headers from names, and entries from data (which is a dict).
-        '''
-        def getent(x):
-            return [x.get(name, None) for name in names]
-        listdata = [getent(x) for x in data.values()]
-        return self.list2table(names, listdata)
-
-    @staticmethod
-    def list2table(names, data, eformat=None, tid="table_id"):
-        '''
-        Return HTML table with headers from names, and entries from data.  
-
-        names = list of strings
-        data = list of lists 
-        '''
-        datatable = '''<table id="{tid}" class="display"><thead>  <tr> '''.format(tid=tid)
-        for k in names:
-            if hasattr(k, 'width') and k.width:
-                fmt = 'width=%s' % k.width
-            else:
-                fmt = ''
-            datatable += '<th {fmt}>{dat}</th>'.format(dat=k, fmt=fmt)
-        datatable += '''</tr></thead>\n'''
-        datatable += '''<tbody>\n'''
-            
-        def map_format(field, row):
-            estr = (row.get(field, '') or '')
-            if eformat is None:
-                return estr
-            elif name in eformat:
-                return eformat[field](estr)
-            return estr
-
-        for k in data:
-            datatable += '<tr>'
-            if type(k) in [dict, OrderedDict, defaultdict]:
-                row = [map_format(DataTableField(name).field, k) for name in names]
-            else:
-                row = k
-            for ent in row:
-                if type(ent) in [str, unicode]:
-                    ent = ent.encode('utf8')
-                datatable += '<td {fmt}>{dat}</td>'.format(dat=ent, fmt=fmt)
-                # datatable += '<td>%s</td>' % ent
-            datatable += '</tr>\n'
-        datatable += '''</tbody></table>\n'''
-        return datatable
-            
-
-    def _bq2geo(self, bqdata):
-        # geodata output for region maps must be in the format region, value.
-        # Assume the query output is in this format, get names from schema.
-        logging.info(bqdata)
-        table = Table()
-        NameGeo = bqdata["schema"]["fields"][0]["name"]
-        NameVal = bqdata["schema"]["fields"][1]["name"]
-        table.add_column(NameGeo, unicode, NameGeo)
-        table.add_column(NameVal, float, NameVal)
-        for row in bqdata["rows"]:
-            table.append(["US-"+row["f"][0]["v"], float(row["f"][1]["v"])])
-        logging.info("FINAL GEODATA---")
-        logging.info(table)
-        return encode(table)
-    # [END bq2geo]
-    
-    #-----------------------------------------------------------------------------
-
-    def compute_sm_usage(self, course_id):
-        '''
-        Compute usage stats from studentmodule table for course
-        '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
-        sql = """
-                SELECT 
-                    module_type, module_id, count(*) as ncount 
-                FROM [{dataset}.studentmodule] 
-                group by module_id, module_type
-                order by module_id
-        """.format(dataset=dataset)
-
-        table = 'stats_module_usage'
-        key = {'name': 'module_id'}
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
-
-    def compute_problem_stats(self, course_id):
-        '''
-        Compute problem average grade, attempts
-        '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
-        sql = """
-                SELECT '{course_id}' as course_id,
-                    PA.problem_url_name as url_name,
-                    avg(PA.attempts) as avg_attempts,
-                    avg(PA.grade) as avg_grade,
-                    max(PA.max_grade) as max_max_grade,
-                    max(PA.grade) as emperical_max_grade,
-                    count(*) as nsubmissions,
-                    min(PA.created) as first_date,
-                    max(PA.created) as last_date,
-                    max(PA.attempts) as max_attempts,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=0 then 1 else 0 end) as grade_hist_bin0,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=1 then 1 else 0 end) as grade_hist_bin1,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=2 then 1 else 0 end) as grade_hist_bin2,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=3 then 1 else 0 end) as grade_hist_bin3,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=4 then 1 else 0 end) as grade_hist_bin4,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=5 then 1 else 0 end) as grade_hist_bin5,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=6 then 1 else 0 end) as grade_hist_bin6,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=7 then 1 else 0 end) as grade_hist_bin7,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=8 then 1 else 0 end) as grade_hist_bin8,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=9 then 1 else 0 end) as grade_hist_bin9,
-                    sum(case when integer(10*PA.grade/PA.max_grade)=10 then 1 else 0 end) as grade_hist_bin10,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=0 then 1 else 0 end) as attempts_hist_bin0,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=1 then 1 else 0 end) as attempts_hist_bin1,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=2 then 1 else 0 end) as attempts_hist_bin2,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=3 then 1 else 0 end) as attempts_hist_bin3,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=4 then 1 else 0 end) as attempts_hist_bin4,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=5 then 1 else 0 end) as attempts_hist_bin5,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=6 then 1 else 0 end) as attempts_hist_bin6,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=7 then 1 else 0 end) as attempts_hist_bin7,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=8 then 1 else 0 end) as attempts_hist_bin8,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=9 then 1 else 0 end) as attempts_hist_bin9,
-                    sum(case when integer(10*PA.attempts/M.max_attempts)=10 then 1 else 0 end) as attempts_hist_bin10,
-                FROM [{dataset}.problem_analysis] PA
-                JOIN 
-                    (SELECT problem_url_name as url_name, 
-                            max(attempts) as max_attempts 
-                     FROM [{dataset}.problem_analysis]
-                     group by url_name) as M
-                ON PA.problem_url_name = M.url_name
-                group by url_name, problem_url_name
-                order by problem_url_name
-        """.format(dataset=dataset, course_id=course_id)
-
-        table = 'stats_for_problems'
-        key = {'name': 'url_name'}
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
-
-
-    def compute_usage_stats(self, course_id):
-        '''
-        Compute usage stats, i.e. # registered, viewed, explored, based on person-course
-        '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
-        sql = """
-           SELECT course_id,
-                   count(*) as registered_sum,
-                   sum(case when viewed then 1 else 0 end) as viewed_sum,
-                   sum(case when explored then 1 else 0 end) as explored_sum,
-                   sum(case when certified then 1 else 0 end) as certified_sum,
-    
-                   sum(case when gender='m' then 1 else 0 end) as n_male,
-                   sum(case when gender='f' then 1 else 0 end) as n_female,
-    
-                   sum(case when mode="verified" then 1 else 0 end) as n_verified_id,
-                   sum(case when (viewed and mode="verified") then 1 else 0 end) as verified_viewed,
-                   sum(case when (explored and mode="verified") then 1 else 0 end) as verified_explored,
-                   sum(case when (certified and mode="verified") then 1 else 0 end) as verified_certified,
-                   avg(case when (mode="verified") then grade else null end) as verified_avg_grade,
-    
-                   sum(case when (gender='m' and mode="verified") then 1 else 0 end) as verified_n_male,
-                   sum(case when (gender='f' and mode="verified") then 1 else 0 end) as verified_n_female,
-    
-                   sum(nplay_video) as nplay_video_sum,
-                   avg(nchapters) as nchapters_avg,
-                   sum(ndays_act) as ndays_act_sum,
-                   sum(nevents) as nevents_sum,
-                   sum(nforum_posts) as nforum_posts_sum,
-                   min(case when certified then grade else null end) as min_gade_certified,
-                   min(start_time) as min_start_time,
-                   max(last_event) as max_last_event,
-                   max(nchapters) as max_nchapters,
-                   sum(nforum_votes) as nforum_votes_sum,
-                   sum(nforum_endorsed) as nforum_endorsed_sum,
-                   sum(nforum_threads) as nforum_threads_sum,
-                   sum(nforum_comments) as nforum_commments_sum,
-                   sum(nforum_pinned) as nforum_pinned_sum,
-    
-                   avg(nprogcheck) as nprogcheck_avg,
-                   avg(case when certified then nprogcheck else null end) as certified_nprogcheck,
-                   avg(case when (mode="verified") then nprogcheck else null end) as verified_nprogcheck,
-    
-                   sum(nshow_answer) as nshow_answer_sum,
-                   sum(nseq_goto) as nseq_goto_sum,
-                   sum(npause_video) as npause_video_sum,
-                   avg(avg_dt) as avg_of_avg_dt,
-                   avg(sum_dt) as avg_of_sum_dt,
-                   avg(case when certified then avg_dt else null end) as certified_avg_dt,
-                   avg(case when certified then sum_dt else null end) as certified_sum_dt,
-                   sum(case when (ip is not null) then 1 else 0 end) as n_have_ip,
-                   sum(case when ((ip is not null) and (cc_by_ip is null)) then 1 else 0 end) as n_missing_cc,
-                FROM [{dataset}.person_course] 
-                group by course_id
-        """.format(dataset=dataset, course_id=course_id)
-
-        table = 'stats_overall'
-        key = None
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
-
-
-    def cached_get_bq_table(self, dataset, table, sql=None, key=None, drop=None):
-        '''
-        Get a dataset from BigQuery; use memcache
-        '''
-        memset = '%s.%s' % (dataset,table)
-        data = mem.get(memset)
-        if not data:
-            data = bqutil.get_bq_table(dataset, table, sql, key=key)
-            if (drop is not None) and drop:
-                for key in drop:
-                    data.pop(key)	# because data can be too huge for memcache ("Values may not be more than 1000000 bytes in length")
-            try:
-                mem.set(memset, data, time=3600*12)
-            except Exception as err:
-                logging.error('error doing mem.set for %s.%s from bigquery' % (dataset, table))
-        self.bqdata[table] = data
-        return data
 
     #-----------------------------------------------------------------------------
 
@@ -439,9 +137,6 @@ class MainPage(auth.AuthenticatedHandler):
         table = "person_course"
         key = None
         return self.cached_get_bq_table(dataset, table)
-
-    def get_sm_nuser_views(self, module_id):
-        return self.bqdata['stats_module_usage']['data_by_key'].get('i4x://' + module_id, {}).get('ncount', '')
 
     def get_base(self, course_id):
         '''
@@ -526,6 +221,44 @@ class MainPage(auth.AuthenticatedHandler):
 
 
     @auth_required
+    def ajax_get_activity_stats(self, org=None, number=None, semester=None):
+        '''
+        Return activity stats in "series" format for HighCharts
+        See http://www.highcharts.com/docs/chart-concepts/series
+        '''
+
+        course_id = '/'.join([org, number, semester])
+
+        bqdat = self.compute_activity_by_day(course_id)
+        def getrow(x, field, scale):
+            #return [x[k] for k in ['date', 'nevents', 'nforum']]
+            (y,m,d) = map(int, x['date'].split('-'))
+            dt = datetime.datetime(y,m,d)
+            ts = (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
+            cnt = int(x[field]) / scale
+            return [ts, cnt]
+
+        def getseries(field):
+            return {'name': field['name'], 'data': [ getrow(x, field['field'], field['scale']) for x in bqdat['data'] ]}
+
+        def mkf(field, name, scale):
+            return {'field': field, 'name': name, 'scale': scale}
+
+        fields = [mkf('nevents', '# events / 10', 10), 
+                  mkf('nforum', '# forum events', 1),
+                  mkf('nvideo', '# video events', 1),
+                  mkf('nproblem_check', '# problem check events', 1),
+                  mkf('nshow_answer', '# show answer events', 1)]
+        stats = [ getseries(sname) for sname in fields ]
+        #stats = [ getseries(sname) for sname in ['nevents'] ]
+
+        data = {'series': stats }
+
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
+
+    @auth_required
     def get_html(self, **kwargs):
         '''
         single html analytics view
@@ -549,19 +282,15 @@ class MainPage(auth.AuthenticatedHandler):
         self.response.out.write(template.render(data))
         
     @auth_required
-    def get_chapter(self, org=None, number=None, semester=None, url_name=None):
+    def ajax_get_chapter_stats(self, org=None, number=None, semester=None, url_name=None):
         '''
-        single chapter analytics view
-
-        - sequentials and problems
+        single chapter analytics view - actual data
         '''
+        
         course_id = '/'.join([org, number, semester])
         caxis = self.load_course_axis(course_id)
-
-        # get chapter info
         the_chapter = caxis[url_name]
         chapter_mid = the_chapter['module_id']
-        chapter_name = the_chapter['name']
 
         # get module usage counts
         self.compute_sm_usage(course_id)
@@ -589,19 +318,6 @@ class MainPage(auth.AuthenticatedHandler):
                     caent['avg_attempts'] = '%6.2f'% float(ps['avg_attempts'])
                     caent['max_attempts'] = ps['max_attempts']
                     caent['nsubmissions'] = ps['nsubmissions']
-
-        fields = [ DataTableField(x) for x  in [{'field': 'index', 'title': 'Time index', 'width': '8%', 'class': 'dt-center'}, 
-                                                {'field': 'category', 'title': "Module category", 'width': '10%'},
-                                                {'field': 'name', 'title': "Module name"},
-                                                {'field': 'nsubmissions', 'title': "# submissions", 'width': '7%', 'class': 'dt-center'},
-                                                {'field': 'avg_grade', 'title': "AVG grade", 'width': '7%', 'class': 'dt-center'},
-                                                {'field': 'max_grade', 'title': "MAX grade", 'width': '7%', 'class': 'dt-center'},
-                                                {'field': 'avg_attempts', 'title': "AVG attempts", 'width': '7%', 'class': 'dt-center'},
-                                                {'field': 'max_attempts', 'title': "MAX attempts", 'width': '7%', 'class': 'dt-center'},
-                                                {'field': 'start', 'title': "Start date", 'width': '12%', 'class': 'dt-center'},
-                                                {'field': 'nuser_views', 'title': '# user views', 'width': '7%', 'class': 'dt-center'},
-                                                # {'field': 'url_name', 'title': 'url_name'},
-                                               ] ]
 
         def makelink(txt, rdat):
             try:
@@ -631,16 +347,47 @@ class MainPage(auth.AuthenticatedHandler):
                 row['name'] = makelink(row['name'], rdat)
             return row
 
+        tabledata = json.dumps({'data': [ makerow(x) for x in ccontents ]})
+        self.response.out.write(tabledata)
+
+    @auth_required
+    def get_chapter(self, org=None, number=None, semester=None, url_name=None):
+        '''
+        single chapter analytics view: container for table data
+
+        - sequentials and problems
+        '''
+        course_id = '/'.join([org, number, semester])
+        caxis = self.load_course_axis(course_id)
+
+        # get chapter info
+        the_chapter = caxis[url_name]
+        chapter_mid = the_chapter['module_id']
+        chapter_name = the_chapter['name']
+
+        fields = [ DataTableField(x) for x  in [{'field': 'index', 'title': 'Time index', 'width': '8%', 'class': 'dt-center'}, 
+                                                {'field': 'category', 'title': "Module category", 'width': '10%'},
+                                                {'field': 'name', 'title': "Module name"},
+                                                {'field': 'nsubmissions', 'title': "# submissions", 'width': '7%', 'class': 'dt-center'},
+                                                {'field': 'avg_grade', 'title': "AVG grade", 'width': '7%', 'class': 'dt-center'},
+                                                {'field': 'max_grade', 'title': "MAX grade", 'width': '7%', 'class': 'dt-center'},
+                                                {'field': 'avg_attempts', 'title': "AVG attempts", 'width': '7%', 'class': 'dt-center'},
+                                                {'field': 'max_attempts', 'title': "MAX attempts", 'width': '7%', 'class': 'dt-center'},
+                                                {'field': 'start', 'title': "Start date", 'width': '12%', 'class': 'dt-center'},
+                                                {'field': 'nuser_views', 'title': '# user views', 'width': '7%', 'class': 'dt-center'},
+                                                # {'field': 'url_name', 'title': 'url_name'},
+                                               ] ]
+
+
         tablehtml = self.list2table(fields, [])
-        tabledata = json.dumps([ makerow(x) for x in ccontents ])
         tablefields = json.dumps([x.colinfo() for x in fields])
 
         data = self.common_data
-        data.update({'tabledata': tabledata,
-                     'fields': tablefields,
+        data.update({'fields': tablefields,
                      'table': tablehtml,
                      'course_id': course_id,
                      'chapter_name': chapter_name,
+                     'url_name': url_name,
                  })
 
         template = JINJA_ENVIRONMENT.get_template('chapter.html')
@@ -762,23 +509,6 @@ class MainPage(auth.AuthenticatedHandler):
         self.response.out.write(template.render(data))
         
 
-    def fix_bq_dates(self, table):
-        '''
-        Using schema information, fix TIMESTAMP fields to display as dates.
-        '''
-        def map_field(idx, name):
-            logging.info('Fixing timestamp for field %s' % name)
-            for row in table['data']:
-                # logging.info('row=%s' % row)
-                if name in row and row[name]:
-                    row[name] = str(datetime.datetime.utcfromtimestamp(float(row[name])))
-
-        for k in range(0, len(table['fields'])):
-            field = table['fields'][k]
-            if field['type']=='TIMESTAMP':
-                map_field(k, field['name'])
-
-
     @auth_required
     def get_table(self, dataset=None, table=None, org=None, number=None,semester=None):
         '''
@@ -809,6 +539,14 @@ class MainPage(auth.AuthenticatedHandler):
         template = JINJA_ENVIRONMENT.get_template('show_table.html')
         self.response.out.write(template.render(data))
 
+
+    @auth_required
+    def test_plot(self):
+        data = self.common_data
+        template = JINJA_ENVIRONMENT.get_template('test_plot3.html')
+        self.response.out.write(template.render(data))
+        
+
 config = {}
 config['webapp2_extras.sessions'] = {
     'secret_key': 'dkjasf912lkj8d09',
@@ -822,8 +560,11 @@ application = webapp2.WSGIApplication([
     webapp2.Route('/video/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_video'),
     webapp2.Route('/html/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_html'),
     webapp2.Route('/axis/<org>/<number>/<semester>', handler=MainPage, handler_method='get_axis'),
+    webapp2.Route('/plot', handler=MainPage, handler_method='test_plot'),
     webapp2.Route('/table/<org>/<number>/<semester>/<table>', handler=MainPage, handler_method='get_table'),
     webapp2.Route('/table/<database>/<table>', handler=MainPage, handler_method='get_table'),
+    webapp2.Route('/get/<org>/<number>/<semester>/activity_stats', handler=MainPage, handler_method='ajax_get_activity_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/usage_stats', handler=MainPage, handler_method='ajax_get_usage_stats'),
+    webapp2.Route('/get/<org>/<number>/<semester>/<url_name>/chapter_stats', handler=MainPage, handler_method='ajax_get_chapter_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_stats', handler=MainPage, handler_method='ajax_get_problem_stats'),
 ], debug=True, config=config)

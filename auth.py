@@ -18,6 +18,10 @@ from google.appengine.ext import webapp
 from google.appengine.ext.ndb import msgprop
 from protorpc import messages 
 
+from google.appengine.api import memcache
+
+mem = memcache.Client()
+
 #-----------------------------------------------------------------------------
 
 class GeneralFunctions(object):
@@ -30,9 +34,66 @@ class GeneralFunctions(object):
 
 #-----------------------------------------------------------------------------
 
+def auth_required(handler):
+    """
+    Decorator that checks if there's a user associated with the current session.
+    Will also fail if there's no session present.
+    """
+    def check_login(self, *args, **kwargs):
+        redirect = self.do_auth()
+        if redirect:
+            return redirect()
+        if ('org' in kwargs) and ('number' in kwargs) and ('semester' in kwargs):
+            course_id = '/'.join([kwargs[x] for x in ['org', 'number', 'semester']])
+        else:
+            course_id = None
+        if not self.is_user_authorized_for_course(course_id):
+            return self.no_auth_sorry()
+        return handler(self, *args, **kwargs)
+
+    return check_login
+
+#-----------------------------------------------------------------------------
+
 class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
     CAS_URL = local_config.CAS_URL
     AUTH_METHOD = local_config.AUTH_METHOD
+    AUTHORIZED_USERS = local_config.STAFF_USERS
+
+    def do_auth(self):
+        user = self.Authenticate()
+        self.user = user
+        self.common_data['user'] = self.user
+        if user is None:
+            return self.do_cas_redirect
+        return None
+
+    def is_superuser(self):
+        return self.user in self.AUTHORIZED_USERS        
+
+    def no_auth_sorry(self):
+        self.response.write("Sorry, %s is not authorized to use this service" % self.user)
+
+
+    def is_user_authorized_for_course(self, course_id=None):
+        staff_course_table = mem.get('staff_course_table')
+        scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
+        if (not staff_course_table) and (scdt is not None) and (scdt):
+            (dataset, table) = scdt.split('.')
+            staff = self.cached_get_bq_table(dataset, table)['data']
+            staff_course_table = {'user_course': {}, 'user': {}}
+            for k in staff:
+                staff_course_table['user_course'][(k['username'], k['course_id'])] = k
+                staff_course_table['user']['username'] = k
+            mem.set('staff_course_table', staff_course_table, time=3600*12)
+            logging.info('staff_course_table = %s' % staff_course_table.keys())
+        if staff_course_table and course_id and ((self.user, course_id) in staff_course_table['user_course']):
+            return True
+        if staff_course_table and (self.user in staff_course_table['user']):
+            return True
+        if self.is_superuser():
+            return True
+        return False
 
     def dispatch(self):
         # Get a session store for this request.
