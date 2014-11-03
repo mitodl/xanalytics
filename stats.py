@@ -268,6 +268,47 @@ class DataStats(object):
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
 
 
+    def compute_geo_stats(self, course_id):
+        '''
+        Compute geographic distributions
+        '''
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        sql = """
+           SELECT '{course_id}' as course_id,
+                   cc_by_ip as cc,
+                   countryLabel as countryLabel,
+                   count(*) as nregistered,
+                   sum(case when viewed then 1 else 0 end) as nviewed,
+                   sum(case when explored then 1 else 0 end) as nexplored,
+                   sum(case when certified then 1 else 0 end) as ncertified,
+    
+                   sum(case when gender='m' then 1 else 0 end) as n_male,
+                   sum(case when gender='f' then 1 else 0 end) as n_female,
+    
+                   sum(case when mode="verified" then 1 else 0 end) as n_verified_id,
+                   sum(case when (certified and mode="verified") then 1 else 0 end) as n_verified_certified,
+
+                   sum(ndays_act) as ndays_act_sum,
+                   sum(nevents) as nevents_sum,
+                   sum(nforum_posts) as nforum_posts_sum,
+    
+                   sum(nshow_answer) as nshow_answer_sum,
+
+                   avg(avg_dt) as avg_of_avg_dt,
+                   avg(sum_dt) as avg_of_sum_dt,
+                   avg(case when certified then avg_dt else null end) as certified_avg_dt,
+                   avg(case when certified then sum_dt else null end) as certified_sum_dt,
+                FROM [{dataset}.person_course] 
+                WHERE cc_by_ip is not null
+                group by cc, countryLabel, course_id
+                order by cc
+        """.format(dataset=dataset, course_id=course_id)
+
+        table = 'stats_geo0'
+        key = None
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
+
+
     def cached_get_bq_table(self, dataset, table, sql=None, key=None, drop=None,
                             logger=None, ignore_cache=False):
         '''

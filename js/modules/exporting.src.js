@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v4.0.4 (2014-09-02)
+ * @license @product.name@ JS v@product.version@ (@product.date@)
  * Exporting module
  *
  * (c) 2010-2014 Torstein Honsi
@@ -244,6 +244,7 @@ extend(Chart.prototype, {
 			height: sourceHeight
 		});
 		options.exporting.enabled = false; // hide buttons in print
+		delete options.data; // #3004
 
 		// prepare for replicating the chart
 		options.series = [];

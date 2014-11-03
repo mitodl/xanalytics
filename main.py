@@ -541,6 +541,32 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         tabledata = json.dumps(data)
         self.response.out.write(tabledata)
 
+
+    @auth_required
+    def ajax_get_geo_stats(self, org=None, number=None, semester=None):
+        '''
+        geographic stats for a course
+        '''
+        course_id = '/'.join([org, number, semester])
+        bqdat = self.compute_geo_stats(course_id)
+
+        def getrow(x):
+            return { 'z': int(x['nregistered']),
+                     'cc': x['cc'],
+                     'name': x['countryLabel'],
+                     'nverified': x['n_verified_id'],
+                     'ncertified': x['ncertified'],
+                     'cert_pct': "%6.1f" % (int(x['ncertified']) / float(x['nregistered']) * 100),
+                     
+                 }
+        series = [ getrow(x) for x in bqdat['data'] ]
+
+        data = {'series': series,
+        }
+
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
         
     @auth_required
     def get_course(self, org=None, number=None, semester=None):
@@ -662,6 +688,7 @@ application = webapp2.WSGIApplication([
     webapp2.Route('/get/<org>/<number>/<semester>/enrollment_stats', handler=MainPage, handler_method='ajax_get_enrollment_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/usage_stats', handler=MainPage, handler_method='ajax_get_usage_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/course_stats', handler=MainPage, handler_method='ajax_get_course_stats'),
+    webapp2.Route('/get/<org>/<number>/<semester>/geo_stats', handler=MainPage, handler_method='ajax_get_geo_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<url_name>/chapter_stats', handler=MainPage, handler_method='ajax_get_chapter_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_stats', handler=MainPage, handler_method='ajax_get_problem_stats'),
 ], debug=True, config=config)

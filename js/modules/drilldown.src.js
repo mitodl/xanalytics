@@ -112,7 +112,7 @@
 		each(oldSeries.chart.series, function (series) {
 			if (series.xAxis === xAxis) {
 				levelSeries.push(series);
-				levelSeriesOptions.push(series.userOptions);
+				levelSeriesOptions.push(series.options);
 				series.levelNumber = series.levelNumber || levelNumber; // #3182
 			}
 		});
@@ -120,7 +120,7 @@
 		// Add a record of properties for each drilldown level
 		level = {
 			levelNumber: levelNumber,
-			seriesOptions: oldSeries.userOptions,
+			seriesOptions: oldSeries.options,
 			levelSeriesOptions: levelSeriesOptions,
 			levelSeries: levelSeries,
 			shapeArgs: point.shapeArgs,
@@ -233,7 +233,7 @@
 			levelNumber = drilldownLevels[drilldownLevels.length - 1].levelNumber,
 			i = drilldownLevels.length,
 			chartSeries = chart.series,
-			seriesI = chartSeries.length,
+			seriesI,
 			level,
 			oldSeries,
 			newSeries,
@@ -241,7 +241,7 @@
 			addSeries = function (seriesOptions) {
 				var addedSeries;
 				each(chartSeries, function (series) {
-					if (series.userOptions === seriesOptions) {
+					if (series.options === seriesOptions) {
 						addedSeries = series;
 					}
 				});
@@ -254,7 +254,7 @@
 					newSeries = addedSeries;
 				}
 			};
-		
+
 		while (i--) {
 
 			level = drilldownLevels[i];
@@ -264,6 +264,7 @@
 				// Get the lower series by reference or id
 				oldSeries = level.lowerSeries;
 				if (!oldSeries.chart) {  // #2786
+					seriesI = chartSeries.length; // #2919
 					while (seriesI--) {
 						if (chartSeries[seriesI].options.id === level.lowerSeriesOptions.id) {
 							oldSeries = chartSeries[seriesI];
@@ -281,7 +282,7 @@
 					newSeries.drilldownLevel = level;
 					newSeries.options.animation = chart.options.drilldown.animation;
 
-					if (oldSeries.animateDrillupFrom) {
+					if (oldSeries.animateDrillupFrom && oldSeries.chart) { // #2919
 						oldSeries.animateDrillupFrom(level);
 					}
 				}
@@ -325,7 +326,9 @@
 				level = newSeries.drilldownLevel;
 
 			each(this.points, function (point) {
-				point.graphic.hide();
+				if (point.graphic) { // #3407
+					point.graphic.hide();
+				}
 				if (point.dataLabel) {
 					point.dataLabel.hide();
 				}
@@ -337,18 +340,22 @@
 
 			// Do dummy animation on first point to get to complete
 			setTimeout(function () {
-				each(newSeries.points, function (point, i) {  
-					// Fade in other points			  
-					var verb = i === (level && level.pointIndex) ? 'show' : 'fadeIn',
-						inherit = verb === 'show' ? true : undefined;
-					point.graphic[verb](inherit);
-					if (point.dataLabel) {
-						point.dataLabel[verb](inherit);
-					}
-					if (point.connector) {
-						point.connector[verb](inherit);
-					}
-				});
+				if (newSeries.points) { // May be destroyed in the meantime, #3389
+					each(newSeries.points, function (point, i) {  
+						// Fade in other points			  
+						var verb = i === (level && level.pointIndex) ? 'show' : 'fadeIn',
+							inherit = verb === 'show' ? true : undefined;
+						if (point.graphic) { // #3407
+							point.graphic[verb](inherit);
+						}
+						if (point.dataLabel) {
+							point.dataLabel[verb](inherit);
+						}
+						if (point.connector) {
+							point.connector[verb](inherit);
+						}
+					});
+				}
 			}, Math.max(this.chart.options.drilldown.animation.duration - 50, 0));
 
 			// Reset
@@ -361,16 +368,17 @@
 		var series = this,
 			drilldownLevels = this.chart.drilldownLevels,
 			animateFrom = this.chart.drilldownLevels[this.chart.drilldownLevels.length - 1].shapeArgs,
-			animationOptions = this.chart.options.drilldown.animation;
+			animationOptions = this.chart.options.drilldown.animation,
+			xAxis = this.xAxis;
 			
 		if (!init) {
 			each(drilldownLevels, function (level) {
-				if (series.userOptions === level.lowerSeriesOptions) {
+				if (series.options === level.lowerSeriesOptions) {
 					animateFrom = level.shapeArgs;
 				}
 			});
 
-			animateFrom.x += (this.xAxis.oldPos - this.xAxis.pos);
+			animateFrom.x += (pick(xAxis.oldPos, xAxis.pos) - xAxis.pos);
 	
 			each(this.points, function (point) {
 				if (point.graphic) {

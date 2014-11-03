@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highcharts JS v4.0.4 (2014-09-02)
+ * @license Highcharts JS v4.0.4-modified ()
  *
  * (c) 2009-2013 Torstein Hønsi
  *
@@ -302,8 +302,8 @@ Highcharts.SVGRenderer.prototype.arc3d = function (shapeArgs) {
 	result.shapeArgs = shapeArgs;	// Store for later use
 
 	result.top = renderer.path(paths.top).attr({zIndex: paths.zTop}).add(result);
-	result.side1 = renderer.path(paths.side2).attr({zIndex: paths.zSide2});
-	result.side2 = renderer.path(paths.side1).attr({zIndex: paths.zSide1});
+	result.side1 = renderer.path(paths.side2).attr({zIndex: paths.zSide1});
+	result.side2 = renderer.path(paths.side1).attr({zIndex: paths.zSide2});
 	result.inn = renderer.path(paths.inn).attr({zIndex: paths.zInn});
 	result.out = renderer.path(paths.out).attr({zIndex: paths.zOut});
 
@@ -1187,13 +1187,14 @@ Highcharts.wrap(Highcharts.seriesTypes.pie.prototype, 'drawDataLabels', function
 			var shapeArgs = point.shapeArgs,
 				r = shapeArgs.r,
 				d = shapeArgs.depth,
-				a1 = shapeArgs.alpha * deg2rad,
+				a1 = (shapeArgs.alpha || series.chart.options.chart.options3d.alpha) * deg2rad, //#3240 issue with datalabels for 0 and null values
 				a2 = (shapeArgs.start + shapeArgs.end) / 2,
 				labelPos = point.labelPos;
 
 			labelPos[1] += (-r * (1 - cos(a1)) * sin(a2)) + (sin(a2) > 0 ? sin(a1) * d : 0);
 			labelPos[3] += (-r * (1 - cos(a1)) * sin(a2)) + (sin(a2) > 0 ? sin(a1) * d : 0);
 			labelPos[5] += (-r * (1 - cos(a1)) * sin(a2)) + (sin(a2) > 0 ? sin(a1) * d : 0);
+
 		});
 	} 
 
@@ -1346,20 +1347,6 @@ Highcharts.VMLRenderer.prototype.arc3d = function (shapeArgs) {
 };
 
 Highcharts.VMLRenderer.prototype.arc3dPath = Highcharts.SVGRenderer.prototype.arc3dPath;
-
-// Draw the series in the reverse order
-Highcharts.Chart.prototype.renderSeries = function () {
-	var serie,
-		i = this.series.length;
-	while (i--) {		
-		serie = this.series[i];
-		serie.translate();
-		if (serie.setTooltipPoints) {
-			serie.setTooltipPoints();
-		}
-		serie.render();	
-	}
-};
 
 Highcharts.wrap(Highcharts.Axis.prototype, 'render', function (proceed) {
 	proceed.apply(this, [].slice.call(arguments, 1));

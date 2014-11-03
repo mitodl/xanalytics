@@ -24,8 +24,51 @@ tr.shown td.details-control {
 
 <!-- highchart -->
 
+
 <script src="/js/highstock.js"></script>
+<script src="/js/highcharts-more.js"></script>
+<script src="/js/modules/map.js"></script> 
+<script src="/js/modules/data.js"></script> 
+<script src="/js/mapdata/world.js"></script>
+
+<!--
+OLD SCRIPTS FOR TESTING
+
+<script src="http://github.highcharts.com/highstock.js"></script>
+<script src="http://github.highcharts.com/highcharts-more.js"></script>
+<script src="http://github.highcharts.com/modules/map.js"></script>
+<script src="http://code.highcharts.com/maps/modules/data.js"></script>
+<script src="http://code.highcharts.com/modules/exporting.js"></script>
+<script src="http://code.highcharts.com/mapdata/countries/us/us-all.js"></script>
+<script src="/js/mapdata/world.js"></script>
+
 <script src="/js/modules/exporting.js"></script>
+
+<script src="http://code.highcharts.com/highstock.js"></script>
+<script src="http://code.highcharts.com/modules/map.js"></script>
+<script src="http://code.highcharts.com/mapdata/index.js?1"></script>
+
+<script src="http://github.highcharts.com/highstock.src.js"></script>
+<script src="http://github.highcharts.com/modules/map.src.js"></script>
+<script src="http://code.highcharts.com/mapdata/index.js?1"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.js"></script>
+<script src="http://www.highcharts.com/samples/maps/demo/all-maps/jquery.combobox.js"></script>
+<script src="http://code.highcharts.com/mapdata/custom/world.js"></script>
+
+<script src="/js/highstock.js"></script>
+<script src="/js/highmaps.js"></script>
+<script src="/js/modules/exporting.js"></script>
+
+<script src="/js/modules/map.js"></script> 
+<script src="/js/modules/data.js"></script> 
+<script src="/js/mapdata/world.js"></script>
+
+<script src="http://code.highcharts.com/mapdata/custom/world.js"></script>
+
+<script src="http://code.highcharts.com/maps/highmaps.js"></script> 
+<script src="http://code.highcharts.com/maps/modules/data.js"></script>
+<script src="http://code.highcharts.com/mapdata/custom/world.js"></script>
+-->
 
 <!-- table display -->
 
@@ -127,6 +170,7 @@ function format ( d ) {
 
 [ <a href="/">Back to course list</a> ]
 
+<!-- ----------------------------------------------------------------------------- -->
 <h2>Usage statistics</h2>
 
 {% if mode=="mooc" %}
@@ -177,6 +221,7 @@ $(document).ready(function() {
 {% if is_staff %}
 {% endif %}
 
+<!-- ----------------------------------------------------------------------------- -->
 <h2>Content statistics</h2>
 
 <div id="stats_div">{% autoescape off %}{{ stats_table }}{% endautoescape %}</div>
@@ -185,6 +230,7 @@ $(document).ready(function() {
 
 {% autoescape off %}{{ table }}{% endautoescape %}
 
+<!-- ----------------------------------------------------------------------------- -->
 <h2>Avtivity</h2>
 
 <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
@@ -221,6 +267,7 @@ $(document).ready(function() {
 		</script>
 
 
+<!-- ----------------------------------------------------------------------------- -->
 <h2>Enrollment</h2>
 <p>(according to tracking logs)</p>
 
@@ -257,6 +304,78 @@ $(document).ready(function() {
     });
 });
 		</script>
+
+<!-- ----------------------------------------------------------------------------- -->
+<h2>Geographic distribution</h2>
+
+<div id="geomap" style="height: 500px; min-width: 310px; max-width: 800px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+
+    $.getJSON('/get/{{course_id}}/geo_stats', function (data) {
+    //$.getJSON('http://www.highcharts.com/samples/data/jsonp.php?filename=world-population.json&callback=?', function (data) {
+
+        var mapData = Highcharts.geojson(Highcharts.maps['custom/world']);
+
+        // Correct UK to GB in data
+        $.each(data, function () {
+            if (this.code === 'UK') {
+                this.code = 'GB';
+            }
+        });
+
+	// console.log(data['series'])
+
+        $('#geomap').highcharts('Map', {
+            chart : {
+                borderWidth : 1
+            },
+
+            title: {
+                text: 'Enrollment and certification by country'
+            },
+	    credits: {  enabled: false  },
+
+            subtitle : {
+                text : 'Bubble size is proportional to registration'
+            },
+
+            legend: {
+                enabled: false
+            },
+
+            mapNavigation: {
+                enabled: true,
+                buttonOptions: {
+                    verticalAlign: 'bottom'
+                }
+            },
+
+            series : [{
+                name: 'Countries',
+                mapData: mapData,
+                color: '#E0E0E0',
+                enableMouseTracking: false
+            }, {
+                type: 'mapbubble',
+                mapData: mapData,
+                name: 'Registration and Certification',
+                joinBy: ['iso-a2', 'cc'],
+                data: data['series'],
+                minSize: 4,
+                maxSize: '12%',
+                tooltip: {
+                    pointFormat: '{point.cc}:  {point.name}<br/>{point.z} registered<br/>{point.ncertified} certified<br/>{point.cert_pct} certification %'
+                }
+            }]
+        });
+
+    });
+});
+</script>
 
 </body>
 </html>
