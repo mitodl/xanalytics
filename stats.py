@@ -167,15 +167,22 @@ class DataStats(object):
                   SELECT 
                       date(time) as date,
                       sum(diff_enrollment) as nenroll,
-                  FROM (TABLE_DATE_RANGE([{dataset}.enrollday_],
-                                          TIMESTAMP('{start}'),
-                                          TIMESTAMP('{end}'))) 
+                  FROM (
+                   # TABLE_DATE_RANGE([{dataset}.enrollday_],
+                   #                       TIMESTAMP('{start}'),
+                   #                       TIMESTAMP('{end}'))) 
+                   TABLE_QUERY({dataset}, 
+                       "integer(regexp_extract(table_id, r'enrollday_([0-9]+)')) BETWEEN {start} and {end}"
+                     )
+                  )
                   group by date
                   order by date
         )
         group by date, nenroll
         order by date
-        """.format(dataset=input_dataset, course_id=course_id, start=start, end=end)
+        """.format(dataset=input_dataset, course_id=course_id, 
+                   start=start.replace('-',''), 
+                   end=end.replace('-',''))
 
         sql_enrollday2 = """
           SELECT 
@@ -191,15 +198,22 @@ class DataStats(object):
                       sum(diff_enrollment_verified) as nenroll_verified,
         	      # and, for backwards compatibility with old enrollday_* :
                       sum(diff_enrollment_honor) + sum(diff_enrollment_audit) + sum(diff_enrollment_verified) as nenroll,
-                  FROM (TABLE_DATE_RANGE([{dataset}.enrollday2_],
-                                          TIMESTAMP('{start}'),
-                                          TIMESTAMP('{end}'))) 
+                  FROM (
+                   # TABLE_DATE_RANGE([{dataset}.enrollday2_],
+                   #                       TIMESTAMP('{start}'),
+                   #                       TIMESTAMP('{end}'))) 
+                   TABLE_QUERY({dataset}, 
+                       "integer(regexp_extract(table_id, r'enrollday2_([0-9]+)')) BETWEEN {start} and {end}"
+                     )
+                  )
                   group by date
                   order by date
         )
         group by date, nenroll
         order by date
-        """.format(dataset=input_dataset, course_id=course_id, start=start, end=end)
+        """.format(dataset=input_dataset, course_id=course_id, 
+                   start=start.replace('-',''), 
+                   end=end.replace('-',''))
 
         # special handling: use new enrollday2_* tables if available, instead of enrollday_* 
         tables = bqutil.get_list_of_table_ids(input_dataset)
