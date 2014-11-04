@@ -3,7 +3,8 @@
   <title>Course: {{course_id}}</title>
 
 <!-- DataTables CSS -->
-<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
   
 <style>
 td.details-control {
@@ -19,8 +20,11 @@ tr.shown td.details-control {
 <script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
   
 <!-- DataTables -->
-<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
-  <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+
+<script type='text/javascript' src='https://www.google.com/jsapi'></script>
 
 <!-- highchart -->
 
@@ -285,7 +289,7 @@ $(document).ready(function() {
         $('#enrollment_div').highcharts('StockChart', {
 
             rangeSelector : {
-                selected : 2
+                selected : 4
             },
 	    credits: {  enabled: false  },
 
@@ -294,13 +298,7 @@ $(document).ready(function() {
             },
 
             series : data['series'],
-        }, function(chartObj) {
-	    // sets initial range zoom location
-            chartObj.xAxis[0].setExtremes(
-		data['start_dt'],
-		data['end_dt']
-            );
-	});
+        });
 
     });
 });
@@ -333,6 +331,7 @@ $(document).ready(function() {
 	// console.log(data['top_by_reg']);
 
 	var table = $('#geo_top').DataTable({
+            dom: 'T<"clear">lfrtip',
 	    "paging":   true,
 	    "ordering": true,
 	    "info":     true,

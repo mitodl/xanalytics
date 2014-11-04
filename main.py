@@ -515,7 +515,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         stats_table = self.list2table(stats_fields, [counts], tid="stats_table")
 
         def makelink(txt, rdat):
-            txt = txt.encode('utf-8')
+            txt = txt.encode('utf8')
             return "<a href='/chapter/{course_id}/{url_name}'>{txt}</a>".format(txt=txt,
                                                                                 course_id=course_id,
                                                                                 url_name=rdat['url_name'])
@@ -635,6 +635,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         course_id = '/'.join([org, number, semester])
         caxis = self.load_course_axis(course_id)
 
+        for row in caxis:
+            caxis[row]['name'] = caxis[row]['name']
+
         if 1:
             tablehtml = self.list2table(['category', 'index', 'url_name', 'name', 'gformat', 'due', 'start', 
                                          'module_id', 'path', 'data_ytid', 'data_weight', 'chapter_mid'],
@@ -667,6 +670,11 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
 
         bqdata = bqutil.get_table_data(dataset, table)
         self.fix_bq_dates(bqdata)
+        
+        if 0:
+            for row in bqdata['data']:
+                for key in row:
+                    row[key] = row[key].encode('utf-8')
 
         tablehtml = self.list2table(bqdata['field_names'],
                                     bqdata['data'])
