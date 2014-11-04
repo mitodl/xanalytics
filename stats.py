@@ -154,9 +154,10 @@ class DataStats(object):
         '''
         Compute enrollment by day, based on enrollday_* tables
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
-        input_dataset = bqutil.course_id2dataset(course_id, 'pcday')
-        sql = """
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)	# where to store result
+        input_dataset = bqutil.course_id2dataset(course_id, 'pcday')				# source data
+
+        sql_enrollday = """
           SELECT 
               '{course_id}' as course_id,
               date,
@@ -175,6 +176,39 @@ class DataStats(object):
         group by date, nenroll
         order by date
         """.format(dataset=input_dataset, course_id=course_id, start=start, end=end)
+
+        sql_enrollday2 = """
+          SELECT 
+              '{course_id}' as course_id,
+              date,
+              nenroll,
+              sum(nenroll) over(order by date) as nenroll_cum,
+          FROM (
+                  SELECT 
+                      date(time) as date,
+                      sum(diff_enrollment_honor) as nenroll_honor,
+                      sum(diff_enrollment_audit) as nenroll_audit,
+                      sum(diff_enrollment_verified) as nenroll_verified,
+        	      # and, for backwards compatibility with old enrollday_* :
+                      sum(diff_enrollment_honor) + sum(diff_enrollment_audit) + sum(diff_enrollment_verified) as nenroll,
+                  FROM (TABLE_DATE_RANGE([{dataset}.enrollday2_],
+                                          TIMESTAMP('{start}'),
+                                          TIMESTAMP('{end}'))) 
+                  group by date
+                  order by date
+        )
+        group by date, nenroll
+        order by date
+        """.format(dataset=input_dataset, course_id=course_id, start=start, end=end)
+
+        # special handling: use new enrollday2_* tables if available, instead of enrollday_* 
+        tables = bqutil.get_list_of_table_ids(input_dataset)
+        prefixes = [x.split('_')[0] for x in tables]
+        if 'enrollday2' in prefixes:
+            sql = sql_enrollday2
+            logging.info('[compute_enrollment_by_day] using enrollday2 for %s' % course_id)
+        else:
+            sql = sql_enrollday
 
         table = 'stats_enrollment_by_day'
         key = None

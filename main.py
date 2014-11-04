@@ -85,6 +85,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
             if not cid:
                 logging.info('oops, bad course_id! line=%s' % k)
                 continue
+            if ('course_number' not in k) and ('Course Number' in k):
+                k['course_number'] = k['Course Number']	# different conventions for BigQuery and Google Spreadsheet
+                
             k['course_image'] = self.get_course_image(cid)
             try:
                 k['title'] = k.get('title', k.get('Title')).encode('utf8')
