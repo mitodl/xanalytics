@@ -273,6 +273,15 @@ $(document).ready(function() {
 
 <!-- ----------------------------------------------------------------------------- -->
 <h2>Enrollment</h2>
+{% if is_staff %}
+<div id="recompute_enroll" style="display:oo">
+  <span style="float:right">
+    <form method="post">
+      <input type="submit" name="action" value="force recompute enrollment"/>
+    </form>
+  </span>
+</div>
+{% endif %}
 <p>(according to tracking logs)</p>
 
 <div id="enrollment_div" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>

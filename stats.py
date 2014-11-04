@@ -215,6 +215,16 @@ class DataStats(object):
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                         logger=logging.error, ignore_cache=False)
 
+    def reset_enrollment_by_day(self, course_id):
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)	# where to store result
+        table = 'stats_enrollment_by_day'
+        logging.info('[reset enrollment by day] removing table %s.%s...' % (dataset, table))
+        memset = '%s.%s' % (dataset,table)
+        mem.delete(memset)
+        try:
+            bqutil.delete_bq_table(dataset, table)
+        except Exception as err:
+            logging.error(err)
 
     def compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
         '''

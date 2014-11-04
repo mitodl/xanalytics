@@ -352,7 +352,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         start_dt = datetime.datetime(y, m, d)
         start_dt = start_dt - datetime.timedelta(days=14)	# start plot 2 weeks before launch
         start_str = start_dt.strftime('%Y-%m-%d')
-        logging.info("start_str = %s" % start_str)
+        # logging.info("start_str = %s" % start_str)
         end_dt = start_dt + datetime.timedelta(days=32*4)	# default position for end selector
         end_str = end_dt.strftime('%Y-%m-%d')
 
@@ -640,6 +640,13 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         '''
         course_id = '/'.join([org, number, semester])
 
+        # handle forced recomputation requests
+        action = self.request.POST.get('action', None)
+        logging.info('post keys = %s' % self.request.POST.keys())
+        logging.info('post action = %s' % action)
+        if action=='force recompute enrollment':
+            self.reset_enrollment_by_day(course_id)
+
         # show table with just chapters, and present sequentials as extra information when clicked
         fields = [ DataTableField(x) for x  in [{'field': 'index', 'title': 'Time index', 'width': '8%', 'class': 'dt-center'}, 
                                                 {'field': 'name', 'title': "Chapter name"},
@@ -664,8 +671,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         data.update({'course_id': course_id,
                      'fields': tablefields,
                      'table': tablehtml,
-                     # 'stats_table': stats_table,
-                     # 'stats_columns': json.dumps([ {'className': 'dt-center'}] *len(stats_fields)),
+                     'is_staff': self.is_superuser(),
                      'image': self.get_course_image(course_id),
                  })
         
