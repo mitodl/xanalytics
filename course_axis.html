@@ -3,7 +3,8 @@
   <title>Course Axis: {{course_id}}</title>
 
 <!-- DataTables CSS -->
-<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
   
 <style>
 td.details-control {
@@ -19,7 +20,8 @@ tr.shown td.details-control {
 <script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
   
 <!-- DataTables -->
-<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
 
   <script type='text/javascript'
      src='https://www.google.com/jsapi'></script>
@@ -28,6 +30,7 @@ tr.shown td.details-control {
 
     $(document).ready( function () {
 	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
               "order": [[ 1, "asc" ]],
              });
 } );

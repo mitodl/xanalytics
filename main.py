@@ -20,6 +20,8 @@ import bqutil
 import auth
 import local_config
 
+from unidecode import unidecode
+
 from auth import auth_required
 from stats import DataStats
 from datatable import DataTableField
@@ -636,7 +638,14 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         caxis = self.load_course_axis(course_id)
 
         for row in caxis:
-            caxis[row]['name'] = caxis[row]['name']
+            try:
+                # caxis[row]['name'] = fix_bad_unicode(caxis[row]['name'])
+                # caxis[row]['name'] = caxis[row]['name']
+                caxis[row]['name'] = unidecode(caxis[row]['name'])	# desparation: perhaps data wasn't encoded properly originally?
+            except Exception as err:
+                print "unicode error for course axis row=%s, name=" % row, repr(caxis[row]['name'])
+                print "type = ", type(caxis[row]['name'])
+                raise
 
         if 1:
             tablehtml = self.list2table(['category', 'index', 'url_name', 'name', 'gformat', 'due', 'start', 
