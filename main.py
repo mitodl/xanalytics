@@ -550,18 +550,35 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         course_id = '/'.join([org, number, semester])
         bqdat = self.compute_geo_stats(course_id)
 
+        def mkpct(a,b):
+            if not b:
+                return ""
+            if int(b)==0:
+                return ""
+            return "%6.1f" % (int(a) / float(b) * 100)
+
         def getrow(x):
+            x['cert_pct'] = mkpct(x['ncertified'], x['nregistered'])
+            x['cert_pct_of_viewed'] = mkpct(x['ncertified'], x['nviewed'])
+            x['verified_cert_pct'] = mkpct(x['n_verified_certified'], x['n_verified_id'])
+            x['avg_hours'] = "%8.1f" % (float(x['avg_of_sum_dt'] or 0)/60/60)	# hours
+            x['avg_hours_certified'] = "%8.1f" % (float(x['certified_sum_dt'] or 0)/60/60)	# hours
             return { 'z': int(x['nregistered']),
                      'cc': x['cc'],
                      'name': x['countryLabel'],
                      'nverified': x['n_verified_id'],
                      'ncertified': x['ncertified'],
-                     'cert_pct': "%6.1f" % (int(x['ncertified']) / float(x['nregistered']) * 100),
+                     'cert_pct': x['cert_pct'],
                      
                  }
+
         series = [ getrow(x) for x in bqdat['data'] ]
 
+        #top_by_reg = sorted(bqdat['data'], key=lambda x: int(x['nregistered']), reverse=True)[:10]
+        # logging.info("top_by_reg = %s" % json.dumps(top_by_reg, indent=4))
+
         data = {'series': series,
+                'table': bqdat['data'],
         }
 
         self.response.headers['Content-Type'] = 'application/json'   

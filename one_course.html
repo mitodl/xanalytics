@@ -301,6 +301,7 @@ $(document).ready(function() {
 		data['end_dt']
             );
 	});
+
     });
 });
 		</script>
@@ -310,6 +311,8 @@ $(document).ready(function() {
 
 <div id="geomap" style="height: 500px; min-width: 310px; max-width: 800px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 
+
+<div><p>Top countries by registration:</p><table id="geo_top"></table></div>
 
 <script type="text/javascript">
 
@@ -325,6 +328,30 @@ $(document).ready(function() {
             if (this.code === 'UK') {
                 this.code = 'GB';
             }
+        });
+
+	// console.log(data['top_by_reg']);
+
+	var table = $('#geo_top').DataTable({
+	    "paging":   true,
+	    "ordering": true,
+	    "info":     true,
+	    "searching":    false,
+            "order": [ 1, 'desc' ],
+	    "data": data['table'],
+	    "columns" : [ {'data': 'countryLabel', 'title': "Country Name", "class": "dt-center" },
+			  {'data': 'nregistered', 'title': "# registered", "class": "dt-center" },
+			  {'data': 'nexplored', 'title': "# explored", "class": "dt-center" },
+			  {'data': 'nviewed', 'title': "# viewed", "class": "dt-center" },
+			  {'data': 'ncertified', 'title': "# certified", "class": "dt-center" },
+			  {'data': 'cert_pct', 'title': "% certified (of registered)", "class": "dt-center" },
+			  {'data': 'cert_pct_of_viewed', 'title': "% certified (of viewed)", "class": "dt-center" },
+			  {'data': 'avg_hours', 'title': "avg hours spent on course (registrants)", "class": "dt-center" },
+			  {'data': 'avg_hours_certified', 'title': "avg hours spent on course (certified)", "class": "dt-center" },
+			  {'data': 'n_verified_id', 'title': "# verified id", "class": "dt-center" },
+			  {'data': 'n_verified_certified', 'title': "# verified id certified", "class": "dt-center" },
+			  {'data': 'verified_cert_pct', 'title': "% certified (of verified)", "class": "dt-center" },
+			  ],
         });
 
 	// console.log(data['series'])
