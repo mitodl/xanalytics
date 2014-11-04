@@ -21,6 +21,11 @@ DATA_DATE = 'latest'
 SESSION_SECRET_KEY = "dkjasf912lkj8d09"
 
 #-----------------------------------------------------------------------------
+# metadata source
+
+COURSE_LISTINGS_TABLE = "courses.listings"
+
+#-----------------------------------------------------------------------------
 # user authentication
 
 CAS_URL = "https://the_cas_server.org"

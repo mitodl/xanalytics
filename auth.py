@@ -9,6 +9,8 @@ import urlparse
 import webapp2
 import local_config
 
+import gsdata
+
 from pytz.gae import pytz
 from webapp2_extras import sessions
 
@@ -74,13 +76,34 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
     def no_auth_sorry(self):
         self.response.write("Sorry, %s is not authorized to use this service" % self.user)
 
+    def get_staff_table(self):
+        '''
+        Get staff user table, a list of dicts.
+        dicts should have "username", "role", and "course_id" as keys.  May also have "notes" key.
+        '''
+        scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
+        m = re.match('docs:([^:]+):([^:]+)', scdt)
+        if m:
+            # staff file is a google doc spreadsheet
+            fname = m.group(1)
+            sheet = m.group(2)
+            return gsdata.cached_get_datasheet(fname, sheet)['data']
+        if scdt is not None:
+            (dataset, table) = scdt.split('.')
+            return self.cached_get_bq_table(dataset, table)['data']        
+        return []
 
     def is_user_authorized_for_course(self, course_id=None):
+        '''
+        Create the local "staff_course_table" which has (username, course_id) in staff_course_table['user_course']
+        and (username) in staff_course_table['user'].
+        '''
+        if self.is_superuser():
+            return True
         staff_course_table = mem.get('staff_course_table')
         scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
         if (not staff_course_table) and (scdt is not None) and (scdt):
-            (dataset, table) = scdt.split('.')
-            staff = self.cached_get_bq_table(dataset, table)['data']
+            staff = self.get_staff_table()
             staff_course_table = {'user_course': {}, 'user': {}}
             for k in staff:
                 staff_course_table['user_course'][(k['username'], k['course_id'])] = k
@@ -90,8 +113,6 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         if staff_course_table and course_id and ((self.user, course_id) in staff_course_table['user_course']):
             return True
         if staff_course_table and (self.user in staff_course_table['user']):
-            return True
-        if self.is_superuser():
             return True
         return False
 

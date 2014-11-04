@@ -11,6 +11,7 @@ import local_config
 import logging
 from collections import defaultdict, OrderedDict
 from datatable import DataTableField
+from unidecode import unidecode
 
 from google.appengine.api import memcache
 
@@ -61,7 +62,15 @@ class DataStats(object):
                 row = k
             for ent in row:
                 if type(ent) in [str, unicode]:
-                    ent = ent.encode('utf8')
+                    try:
+                        ent = ent.encode('utf8')
+                    except:
+                        try:
+                            ent = unidecode(ent)
+                        except Exception as err:
+                            logging.error('[list2table] cannot encode unicode for entry %s' % repr(ent))
+                            raise
+
                 datatable += '<td {fmt}>{dat}</td>'.format(dat=ent, fmt=fmt)
                 # datatable += '<td>%s</td>' % ent
             datatable += '</tr>\n'
@@ -170,7 +179,7 @@ class DataStats(object):
         table = 'stats_enrollment_by_day'
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
-                                        logger=logging.error)
+                                        logger=logging.error, ignore_cache=False)
 
 
     def compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
@@ -320,7 +329,12 @@ class DataStats(object):
         memset = '%s.%s' % (dataset,table)
         data = mem.get(memset)
         if (not data) or ignore_cache:
-            data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger)
+            try:
+                data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger)
+            except Exception as err:
+                logging.error(err)
+                data = {'fields': {}, 'field_names': [], 'data': [], 'data_by_key': {}}
+                return data		# don't cache empty result
             if (drop is not None) and drop:
                 for key in drop:
                     data.pop(key)	# because data can be too huge for memcache ("Values may not be more than 1000000 bytes in length")

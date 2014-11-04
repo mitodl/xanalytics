@@ -16,6 +16,7 @@ import json
 import webapp2
 import datetime
 
+import gsdata
 import bqutil
 import auth
 import local_config
@@ -63,10 +64,21 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
 
     #-----------------------------------------------------------------------------
 
+    def get_data(self, source, key=None):
+        '''
+        Get data from source, and return.
+        source should either be string of the form "dataset.table" specifying a BigQuery source,
+        or "docs:file_name:sheet_name" specifying a Google Spreadsheet source.
+        '''
+        if source.startswith('docs:'):
+            (fname, sheet) = source[5:].split(':',1)
+            return gsdata.cached_get_datasheet(fname, sheet, key=key)
+
+        (dataset, table) = source.split('.')
+        return self.cached_get_bq_table(dataset, table, key=key)
+
     def get_course_listings(self):
-        dataset = 'courses'
-        table = 'listings'
-        courses = self.cached_get_bq_table(dataset, table, key={'name': 'course_id'})
+        courses = self.get_data(local_config.COURSE_LISTINGS_TABLE, key={'name': 'course_id'})
 
         for k in courses['data']:
             cid = k['course_id']
@@ -74,8 +86,12 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
                 logging.info('oops, bad course_id! line=%s' % k)
                 continue
             k['course_image'] = self.get_course_image(cid)
-            k['title'] = k['title'].encode('utf8')
-            (m,d,y) = map(int, k['courses_launch'].split('/'))
+            try:
+                k['title'] = k.get('title', k.get('Title')).encode('utf8')
+            except:
+                logging.error('[get_course_listings] oops, cannot encode title, row=%s' % k)
+                raise
+            (m,d,y) = map(int, k.get('courses_launch', k.get('Course Launch', '')).split('/'))
             ldate = "%04d-%02d-%02d" % (y,m,d)
             k['launch'] = ldate
             courses['data_by_key'][cid]['launch'] = ldate
@@ -105,6 +121,30 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
                  })
         template = JINJA_ENVIRONMENT.get_template('courses.html')
         # template = os.path.join(os.path.dirname(__file__), 'courses.html')
+        self.response.out.write(template.render(data))
+
+    @auth_required
+    def get_admin(self):
+        '''
+        Admin page: show authorized users, clear cache
+        '''
+        if not self.user in self.AUTHORIZED_USERS:	# require superuser
+            return self.no_auth_sorry()
+
+        msg = ""
+        action = self.request.GET.get('action', None)
+        if action=='Flush cache':
+            memcache.flush_all()
+            msg = "Cache flushed"
+
+        stafftable = self.list2table(['username', 'role', 'course_id', 'notes'], self.get_staff_table())
+
+        data = self.common_data
+        data.update({'superusers': self.AUTHORIZED_USERS,
+                     'table': stafftable,
+                     'msg': msg,
+                 })
+        template = JINJA_ENVIRONMENT.get_template('admin.html')
         self.response.out.write(template.render(data))
 
     def get_course_image(self, course_id):
@@ -182,7 +222,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
 
         (y,m,d) = map(int, start.split('-'))
         start_dt = datetime.datetime(y, m, d)
-        start_dt = start_dt - datetime.timedelta(days=32*3)	# start plot 3 months before launch
+        start_dt = start_dt - datetime.timedelta(days=32*9)	# start plot 9 months before launch
         start_str = start_dt.strftime('%Y-%m-%d')
 
         end_dt = start_dt + datetime.timedelta(days=32*1)	# default position for end selector
@@ -707,6 +747,7 @@ application = webapp2.WSGIApplication([
     # html pages
 
     webapp2.Route('/', handler=MainPage, handler_method='get_main'),
+    webapp2.Route('/admin', handler=MainPage, handler_method='get_admin'),
     webapp2.Route('/course/<org>/<number>/<semester>', handler=MainPage, handler_method='get_course'),
     webapp2.Route('/chapter/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_chapter'),
     webapp2.Route('/problem/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_problem'),

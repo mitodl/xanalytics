@@ -1,0 +1,43 @@
+<html>
+<head>
+  <title>{{orgname}} Analytics Dashboard</title>
+
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+
+<script type='text/javascript' src='https://www.google.com/jsapi'></script>
+
+<script type='text/javascript'>
+
+$(document).ready( function () {
+    $('#table_id').DataTable({
+    });
+});
+</script>
+
+</head>
+<body>
+
+<h1>{{orgname}} Admin Page</h1>
+
+{% if msg %}
+<font color="red"><p>{{msg}}</p></font>
+{% endif %}
+
+<h2>Staff</h2>
+
+<span style="float:right; color:blue">{{user}}</span>
+
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+<h2>Actions</h2>
+<form method="get">
+    <input type="submit" name="action" value="Flush cache"/>
+    <input type="submit" name="action" value="Refresh page"/>
+</form>
+
+[ <a href="/">Go to courses page</a> ]
+
+</body>
+</html>

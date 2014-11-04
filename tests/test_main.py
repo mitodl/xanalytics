@@ -13,6 +13,14 @@ from lxml import etree
 
 import local_config
 
+class TestGsData(unittest.TestCase):
+
+    def test_staff_sheet_read(self):
+        from main import MainPage
+        mp = MainPage()
+        data = mp.get_staff_table()
+        assert('username' in data[0])
+
 class TestBadAuth(unittest.TestCase):
 
     def setUp(self):
@@ -37,6 +45,7 @@ class TestBadAuth(unittest.TestCase):
         def AlwaysAuthenticated(self):
             return 'testuser'
         auth.AuthenticatedHandler.Authenticate = AlwaysAuthenticated
+        # auth.AuthenticatedHandler.AUTH_METHOD = 'google'
         request = webapp2.Request.blank('/')
         response = request.get_response(application)
         assert('testuser is not authorized' in response.text)
@@ -69,6 +78,7 @@ class TestMain(unittest.TestCase):
             return 'testuser2'
         MainPage.AUTHORIZED_USERS = ['testuser2']
         auth.AuthenticatedHandler.Authenticate = AlwaysAuthenticated
+        # auth.AuthenticatedHandler.AUTH_METHOD = 'google'
         self.application = application
 
     def get_a_course_id(self):
@@ -116,4 +126,3 @@ class TestMain(unittest.TestCase):
         # data = json.loads(response.text) # response.json
         data = response.json
         assert("series" in data)
-
