@@ -237,7 +237,7 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         if (course_id is None) and (self.user in staff_course_table['user']):
             return True
         
-        for uent in staff_course_table['user'].get(self.user):
+        for uent in staff_course_table['user'].get(self.user, []):
             if 'pm' in uent['role'].split(','):
                 return True
             
