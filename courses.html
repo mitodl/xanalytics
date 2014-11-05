@@ -44,7 +44,11 @@
 <body>
   <h1>{{orgname}} Courses</h1>
 
-<span style="float:right; color:blue">{{user}}</span>
+<span style="float:right; color:blue">{{user}}
+{% if is_staff %}
+[ <a href="/admin">admin page</a> ]
+{% endif %}
+</span>
 
 {% autoescape off %}{{ table }}{% endautoescape %}
 

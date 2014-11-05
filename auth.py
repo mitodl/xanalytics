@@ -13,6 +13,7 @@ import gsdata
 
 from pytz.gae import pytz
 from webapp2_extras import sessions
+from collections import defaultdict
 
 from google.appengine.api import users
 from google.appengine.ext import ndb
@@ -35,6 +36,35 @@ class GeneralFunctions(object):
         return n.astimezone(tz)
 
 #-----------------------------------------------------------------------------
+
+def auth_and_role_required(role=''):
+    def role_required_decorator(handler):
+        """
+        Decorator that checks if there's a user associated with the current session,
+        and that the user has authorization to see the specified course_id content.
+        Will fail if there's no session present.
+
+        Also requires the user to hold a particular role, if specified.
+        """
+        def check_login(self, *args, **kwargs):
+            redirect = self.do_auth()
+            if redirect:
+                return redirect()
+            if ('org' in kwargs) and ('number' in kwargs) and ('semester' in kwargs):
+                course_id = '/'.join([kwargs[x] for x in ['org', 'number', 'semester']])
+            else:
+                course_id = None
+            if not self.is_user_authorized_for_course(course_id):
+                return self.no_auth_sorry()
+
+            if role:
+                if not self.does_user_have_role(role, course_id):
+                    return self.no_auth_sorry()
+
+            return handler(self, *args, **kwargs)
+    
+        return check_login
+    return role_required_decorator
 
 def auth_required(handler):
     """
@@ -82,38 +112,135 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         dicts should have "username", "role", and "course_id" as keys.  May also have "notes" key.
         '''
         scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
+        data = []
         m = re.match('docs:([^:]+):([^:]+)', scdt)
         if m:
             # staff file is a google doc spreadsheet
             fname = m.group(1)
             sheet = m.group(2)
-            return gsdata.cached_get_datasheet(fname, sheet)['data']
-        if scdt is not None:
+            data = gsdata.cached_get_datasheet(fname, sheet)['data']
+        elif scdt is not None:
             (dataset, table) = scdt.split('.')
-            return self.cached_get_bq_table(dataset, table)['data']        
-        return []
+            data = self.cached_get_bq_table(dataset, table)['data']        
+        cnt = 1
+        toremove = []
+        for elem in data:
+            elem['sid'] = cnt 
+            if not elem['username'] or (elem['username'].startswith('-')):	# drop all entris with username starting with dash
+                toremove.append(elem)
+            cnt += 1
+        for elem in toremove:	# remove after labeling all the sid's
+            data.remove(elem)
+        return data
 
-    def is_user_authorized_for_course(self, course_id=None):
+    def disable_staff_table_entry(self, index):
+        '''
+        "delete" (really, disable) a staff table entry by prepending the username with a minnus sign.
+        Works only with the google spreadsheet staff backend.
+        '''
+        scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
+        m = re.match('docs:([^:]+):([^:]+)', scdt)
+        if not m:
+            logging.error('Attempted to disable staff table entry index=%s, but not using google spreadsheet backend!' % index)
+            return
+        fname = m.group(1)
+        sheet = m.group(2)
+        stable = self.get_staff_table()
+        theent = None
+        for ent in stable:
+            if ent['sid']==index:
+                theent = ent
+        if theent is None:
+            logging.error('Attempted to disable non-existent staff entry, or one already disabled, index=%s' % index)
+            return
+        gsdata.modify_datasheet_acell(fname, sheet, "A%d" % (index+1), "-" + theent['username'])
+
+        # flush cache, to force reload
+        memset = 'docs:%s.%s' % (fname, sheet)
+        mem.delete(memset)        
+
+
+    def add_staff_table_entry(self, data):
+        '''
+        Add staff table entry.
+        Works only with the google spreadsheet staff backend.
+        '''
+        scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
+        m = re.match('docs:([^:]+):([^:]+)', scdt)
+        if not m:
+            logging.error('Attempted to add staff table entry %s, but not using google spreadsheet backend!' % data)
+            return
+        fname = m.group(1)
+        sheet = m.group(2)
+        stable = self.get_staff_table()
+        fields = ['username', 'role', 'course_id', 'notes']
+        newrow = [data[x] for x in fields]
+        newpos = stable[-1]['sid']+1
+        gsdata.append_row_to_datasheet(fname, sheet, newrow)
+
+        # flush cache, to force reload
+        memset = 'docs:%s.%s' % (fname, sheet)
+        mem.delete(memset)        
+
+
+    def get_staff_course_table(self):
         '''
         Create the local "staff_course_table" which has (username, course_id) in staff_course_table['user_course']
         and (username) in staff_course_table['user'].
         '''
-        if self.is_superuser():
-            return True
-        staff_course_table = mem.get('staff_course_table')
+        memset = 'staff_course_table'
+        staff_course_table = mem.get(memset)
         scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
         if (not staff_course_table) and (scdt is not None) and (scdt):
             staff = self.get_staff_table()
-            staff_course_table = {'user_course': {}, 'user': {}}
+            staff_course_table = {'user_course': {}, 'user': defaultdict(list)}
             for k in staff:
                 staff_course_table['user_course'][(k['username'], k['course_id'])] = k
-                staff_course_table['user']['username'] = k
-            mem.set('staff_course_table', staff_course_table, time=3600*12)
+                staff_course_table['user'][k['username']].append(k)
+            mem.set(memset, staff_course_table, time=3600*12)
             logging.info('staff_course_table = %s' % staff_course_table.keys())
-        if staff_course_table and course_id and ((self.user, course_id) in staff_course_table['user_course']):
+        return staff_course_table
+
+    def does_user_have_role(self, role, course_id=None):
+        '''
+        Return True if user has specified role.
+        '''
+        if self.is_superuser():
             return True
-        if staff_course_table and (self.user in staff_course_table['user']):
+        staff_course_table = self.get_staff_course_table()
+        users = staff_course_table['user']
+        if not self.user in users:
+            return False
+        for uent in users[self.user]:		# each entry is a dict, with keys course_id, role, and notes
+            if uent['role']==role:
+                if course_id is None:
+                    return True
+                if not uent['course_id']:	# if empty, then role is global across all courses
+                    return True
+                if uent['course_id']==course_id:
+                    return True
+        return False
+
+    def is_user_authorized_for_course(self, course_id=None):
+        '''
+        Return True if user is authorized for the course.
+        '''
+        if self.is_superuser():
             return True
+        staff_course_table = self.get_staff_course_table()
+        # logging.info('user=%s, cid = %s' % (self.user, course_id))
+        # logging.info('sct_user=%s' % staff_course_table['user'])
+        if staff_course_table is None or not staff_course_table:
+            return False
+        if course_id and ((self.user, course_id) in staff_course_table['user_course']):
+            return True
+        if (course_id is None) and (self.user in staff_course_table['user']):
+            return True
+        
+        for uent in staff_course_table['user'].get(self.user):
+            if 'pm' in uent['role'].split(','):
+                return True
+            
         return False
 
     def dispatch(self):

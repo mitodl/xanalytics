@@ -19,6 +19,7 @@ mem = memcache.Client()
 
 SCOPE = 'https://spreadsheets.google.com/feeds https://docs.google.com/feeds'
 credentials = AppAssertionCredentials(scope=SCOPE)
+# logging.info('credentials = ', credentials)
 
 def cached_get_datasheet(fname, sheet, key=None, ignore_cache=False):
     memset = 'docs:%s.%s' % (fname, sheet)
@@ -30,6 +31,16 @@ def cached_get_datasheet(fname, sheet, key=None, ignore_cache=False):
         except Exception as err:
             logging.error('error doing mem.set for %s.%s from google spreadsheet' % (fname, sheet))
     return data
+
+def get_worksheet(fname, sheet):
+    gc = gspread.authorize(credentials)
+
+    try:
+        wks = gc.open(fname).worksheet(sheet)
+    except Exception as err:
+        logging.error("[get_datasehet] oops, failure getting fname=%s, sheet=%s" % (fname, sheet))
+        raise
+    return wks
 
 def get_datasheet(fname, sheet, key=None):
     '''
@@ -43,14 +54,7 @@ def get_datasheet(fname, sheet, key=None):
 
     Assumes first row of spreadsheet is keys to data in rows.
     '''
-    gc = gspread.authorize(credentials)
-
-    try:
-        wks = gc.open(fname).worksheet(sheet)
-    except Exception as err:
-        logging.error("[get_datasehet] oops, failure getting fname=%s, sheet=%s" % (fname, sheet))
-        raise
-
+    wks = get_worksheet(fname, sheet)
     lol = wks.get_all_values()
     fields = lol[0]
 
@@ -76,3 +80,23 @@ def get_datasheet(fname, sheet, key=None):
     # logging.error('[gsdata] ret=%s' % json.dumps(ret, indent=4))
     return ret
            
+def modify_datasheet_acell(fname, sheet, entry, newval):
+    '''
+    change spcified spreadsheet entry to newval
+    '''
+    wks = get_worksheet(fname, sheet)
+    wks.update_acell(entry, newval)
+    
+def append_row_to_datasheet(fname, sheet, newrow):
+    '''
+    append row to spreadsheet
+    '''
+    wks = get_worksheet(fname, sheet)
+    wks.append_row(newrow)
+
+def insert_row_in_datasheet(fname, sheet, newpos, newrow):
+    '''
+    insert row in spreadsheet
+    '''
+    wks = get_worksheet(fname, sheet)
+    wks.insert_row(newrow, index=newpos)

@@ -29,12 +29,32 @@ $(document).ready( function () {
 
 <span style="float:right; color:blue">{{user}}</span>
 
+<form method="post">
 {% autoescape off %}{{ table }}{% endautoescape %}
+</form>
 
 <h2>Actions</h2>
-<form method="get">
-    <input type="submit" name="action" value="Flush cache"/>
+
+<form method="post">
+    <p>Add new staff member</p>
+    <table>
+      <tr><td>Username: </td><td><input type="text" size='40' name='username' /></td></tr>
+      <tr><td>Role(s): </td><td><input type="text" size='40' name='role' /></td></tr>
+      <tr><td>course_id: </td><td><input type="text" size='40' name'course_id' /></td></tr>
+      <tr><td>Notes: </td><td><input type="text" size='80' name='notes' /></td></tr>
+    </table>
+    <p>Roles may be "pm", or "instructor".  Leave course_id empty for global
+       access across all courses.</p>
+    <input type="submit" name="action" value="Add staff"/>
+</form>
+
+<form method="post">
+    <input type="submit" name="action" value="Reload staff table"/>
     <input type="submit" name="action" value="Refresh page"/>
+</form>
+
+<form method="post">
+  Dangerous -- degrads performance: <input type="submit" name="action" value="Flush cache"/>
 </form>
 
 [ <a href="/">Go to courses page</a> ]

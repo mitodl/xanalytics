@@ -46,7 +46,11 @@ class DataStats(object):
         datatable += '''</tr></thead>\n'''
         datatable += '''<tbody>\n'''
             
-        def map_format(field, row):
+        def map_format(name, row):
+            dtf = DataTableField(name)
+            field = dtf.field
+            if dtf.icon == 'delete':
+                return "<button type='submit' name='do-delete' value='%s'><img src='/images/Delete_Icon-small.png'/></button>" % row.get(field, '')
             estr = (row.get(field, '') or '')
             if eformat is None:
                 return estr
@@ -57,7 +61,7 @@ class DataStats(object):
         for k in data:
             datatable += '<tr>'
             if type(k) in [dict, OrderedDict, defaultdict]:
-                row = [map_format(DataTableField(name).field, k) for name in names]
+                row = [map_format(name, k) for name in names]
             else:
                 row = k
             for ent in row:

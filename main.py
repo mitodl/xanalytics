@@ -78,7 +78,16 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         return self.cached_get_bq_table(dataset, table, key=key)
 
     def get_course_listings(self):
-        courses = self.get_data(local_config.COURSE_LISTINGS_TABLE, key={'name': 'course_id'})
+
+        all_courses = self.get_data(local_config.COURSE_LISTINGS_TABLE, key={'name': 'course_id'})
+
+        courses = {'data': [], 'data_by_key': OrderedDict()}
+
+        for course_id, cinfo in all_courses['data_by_key'].items():
+            if not self.is_user_authorized_for_course(course_id):
+                continue
+            courses['data'].append(cinfo)
+            courses['data_by_key'][course_id] = cinfo
 
         for k in courses['data']:
             cid = k['course_id']
@@ -120,6 +129,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
 
         data = self.common_data
         data.update({'data': {},
+                     'is_staff': self.is_superuser(),
                      'table': html,
                  })
         template = JINJA_ENVIRONMENT.get_template('courses.html')
@@ -135,12 +145,31 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
             return self.no_auth_sorry()
 
         msg = ""
-        action = self.request.GET.get('action', None)
+        action = self.request.POST.get('action', None)
+
         if action=='Flush cache':
             memcache.flush_all()
             msg = "Cache flushed"
 
-        stafftable = self.list2table(['username', 'role', 'course_id', 'notes'], self.get_staff_table())
+        elif action=='Reload staff table':
+            memcache.flush_all()
+            msg = "Staff table reloaded"
+
+        elif action=='Add staff':
+            fields = ['username', 'role', 'course_id', 'notes']
+            data = { x: self.request.POST.get(x) for x in fields }
+            self.add_staff_table_entry(data)
+            msg = "New staff %s added" % data
+
+        todelete = self.request.POST.get('do-delete', None)
+        if todelete is not None:
+            self.disable_staff_table_entry(int(todelete))
+            msg = "Deleted staff table row %s" % todelete
+
+        stable = self.get_staff_table()
+
+        stafftable = self.list2table([DataTableField({'icon':'delete', 'field': 'sid', 'title':' '}), 
+                                      'username', 'role', 'course_id', 'notes'], stable)
 
         data = self.common_data
         data.update({'superusers': self.AUTHORIZED_USERS,
@@ -721,6 +750,10 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
             dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
             if not self.is_user_authorized_for_course(course_id):
                 return self.no_auth_sorry()
+            if ('person' in table) or ('track' in table) or ('student' in table):
+                if not self.does_user_have_role('instructor', course_id):
+                    return self.no_auth_sorry()
+                    
         else:
             course_id = None
             if not self.user in self.AUTHORIZED_USERS:
