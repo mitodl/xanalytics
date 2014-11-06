@@ -106,22 +106,18 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
     def no_auth_sorry(self):
         self.response.write("Sorry, %s is not authorized to use this service" % self.user)
 
-    def get_staff_table(self):
+    def get_staff_table(self, reload=False):
         '''
         Get staff user table, a list of dicts.
         dicts should have "username", "role", and "course_id" as keys.  May also have "notes" key.
         '''
-        scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
-        data = []
-        m = re.match('docs:([^:]+):([^:]+)', scdt)
-        if m:
-            # staff file is a google doc spreadsheet
-            fname = m.group(1)
-            sheet = m.group(2)
-            data = gsdata.cached_get_datasheet(fname, sheet)['data']
-        elif scdt is not None:
-            (dataset, table) = scdt.split('.')
-            data = self.cached_get_bq_table(dataset, table)['data']        
+        data = self.get_data('ndb:staff')['data']
+
+        # do initial load if empt
+        if reload or (len(data)==0):
+            self.import_staff_table(overwrite=True)
+            data = self.get_data('ndb:staff')['data']
+
         cnt = 1
         toremove = []
         for elem in data:
@@ -132,6 +128,16 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         for elem in toremove:	# remove after labeling all the sid's
             data.remove(elem)
         return data
+
+    def import_staff_table(self, source=None, overwrite=False):
+        '''
+        Import staff table from specifid source, into this app's NDB StaffUser model set.
+        '''
+        if source is None:
+            source = getattr(local_config, 'STAFF_COURSE_TABLE', None)
+        data = self.get_data(source)['data']
+        self.import_data_to_ndb(data, 'staff', overwrite)
+        
 
     def disable_staff_table_entry(self, index):
         '''

@@ -381,48 +381,6 @@ class DataStats(object):
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
 
 
-    def cached_get_bq_table(self, dataset, table, sql=None, key=None, drop=None,
-                            logger=None, ignore_cache=False):
-        '''
-        Get a dataset from BigQuery; use memcache
-        '''
-        if logger is None:
-            logger = logging.info
-        memset = '%s.%s' % (dataset,table)
-        data = mem.get(memset)
-        if (not data) or ignore_cache:
-            try:
-                data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger)
-            except Exception as err:
-                logging.error(err)
-                data = {'fields': {}, 'field_names': [], 'data': [], 'data_by_key': {}}
-                return data		# don't cache empty result
-            if (drop is not None) and drop:
-                for key in drop:
-                    data.pop(key)	# because data can be too huge for memcache ("Values may not be more than 1000000 bytes in length")
-            try:
-                mem.set(memset, data, time=3600*12)
-            except Exception as err:
-                logging.error('error doing mem.set for %s.%s from bigquery' % (dataset, table))
-        self.bqdata[table] = data
-        return data
-
-    def fix_bq_dates(self, table):
-        '''
-        Using schema information, fix TIMESTAMP fields to display as dates.
-        '''
-        def map_field(idx, name):
-            logging.info('Fixing timestamp for field %s' % name)
-            for row in table['data']:
-                # logging.info('row=%s' % row)
-                if name in row and row[name]:
-                    row[name] = str(datetime.datetime.utcfromtimestamp(float(row[name])))
-
-        for k in range(0, len(table['fields'])):
-            field = table['fields'][k]
-            if field['type']=='TIMESTAMP':
-                map_field(k, field['name'])
-
     def get_sm_nuser_views(self, module_id):
         return self.bqdata['stats_module_usage']['data_by_key'].get('i4x://' + module_id, {}).get('ncount', '')
     

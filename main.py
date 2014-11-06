@@ -12,9 +12,7 @@ import logging
 import os
 
 import re
-import csv
 import json
-import codecs
 import webapp2
 import datetime
 
@@ -28,6 +26,7 @@ from unidecode import unidecode
 from auth import auth_required
 from stats import DataStats
 from datatable import DataTableField
+from datasource import DataSource
 from collections import defaultdict, OrderedDict
 
 import jinja2
@@ -46,7 +45,7 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 #-----------------------------------------------------------------------------
 
-class MainPage(auth.AuthenticatedHandler, DataStats):
+class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
     '''
     Main python class which displays views.
     '''
@@ -63,50 +62,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
     common_data = {'orgname': ORGNAME,
                    'mode': MODE,
     }
-
-    #-----------------------------------------------------------------------------
-
-    def get_datafile(self, fn, key=None):
-        '''
-        Get data from local csv file, and return.
-        '''
-        ret = {'data': []}
-        with codecs.open('data/' + fn) as fp:
-            for cdr in csv.DictReader(fp):
-                ret['data'].append(cdr)
-
-        if key is not None:
-            if type(key)==dict:
-                keyname = key['name']
-            else:
-                keyname = key
-            data_by_key = OrderedDict()
-            for row in ret['data']:
-                the_key = row[keyname]
-                if type(key)=='dict' and "keymap" in key:
-                    the_key = key['keymap'](the_key)
-                data_by_key[the_key] = row
-
-        ret['data_by_key'] = data_by_key
-        ret['fields'] = cdr.keys()
-        ret['field_names'] = cdr.keys()
-        return ret
-
-    def get_data(self, source, key=None):
-        '''
-        Get data from source, and return.
-        source should either be string of the form "dataset.table" specifying a BigQuery source,
-        or "docs:file_name:sheet_name" specifying a Google Spreadsheet source.
-        '''
-        if source.startswith('docs:'):
-            (fname, sheet) = source[5:].split(':',1)
-            return gsdata.cached_get_datasheet(fname, sheet, key=key)
-
-        if source.startswith('file:'):
-            return self.get_datafile(source[5:], key=key)
-
-        (dataset, table) = source.split('.')
-        return self.cached_get_bq_table(dataset, table, key=key)
 
     def get_course_listings(self):
 
@@ -183,12 +138,12 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
             msg = "Cache flushed"
 
         elif action=='Reload staff table':
-            memcache.flush_all()
-            msg = "Staff table reloaded"
+            self.get_staff_table(reload=True)
+            msg = "Staff table reloaded - please refresh this page"
 
         elif action=='Add staff':
             fields = ['username', 'role', 'course_id', 'notes']
-            data = { x: self.request.POST.get(x) for x in fields }
+            data = { x: (self.request.POST.get(x) or '') for x in fields }
             self.add_staff_table_entry(data)
             msg = "New staff %s added" % data
 
