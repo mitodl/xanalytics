@@ -12,7 +12,9 @@ import logging
 import os
 
 import re
+import csv
 import json
+import codecs
 import webapp2
 import datetime
 
@@ -64,6 +66,32 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
 
     #-----------------------------------------------------------------------------
 
+    def get_datafile(self, fn, key=None):
+        '''
+        Get data from local csv file, and return.
+        '''
+        ret = {'data': []}
+        with codecs.open('data/' + fn) as fp:
+            for cdr in csv.DictReader(fp):
+                ret['data'].append(cdr)
+
+        if key is not None:
+            if type(key)==dict:
+                keyname = key['name']
+            else:
+                keyname = key
+            data_by_key = OrderedDict()
+            for row in ret['data']:
+                the_key = row[keyname]
+                if type(key)=='dict' and "keymap" in key:
+                    the_key = key['keymap'](the_key)
+                data_by_key[the_key] = row
+
+        ret['data_by_key'] = data_by_key
+        ret['fields'] = cdr.keys()
+        ret['field_names'] = cdr.keys()
+        return ret
+
     def get_data(self, source, key=None):
         '''
         Get data from source, and return.
@@ -73,6 +101,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
         if source.startswith('docs:'):
             (fname, sheet) = source[5:].split(':',1)
             return gsdata.cached_get_datasheet(fname, sheet, key=key)
+
+        if source.startswith('file:'):
+            return self.get_datafile(source[5:], key=key)
 
         (dataset, table) = source.split('.')
         return self.cached_get_bq_table(dataset, table, key=key)
@@ -99,7 +130,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats):
                 
             k['course_image'] = self.get_course_image(cid)
             try:
-                k['title'] = k.get('title', k.get('Title')).encode('utf8')
+                k['title'] = unidecode(k.get('title', k.get('Title'))).encode('utf8')
             except:
                 logging.error('[get_course_listings] oops, cannot encode title, row=%s' % k)
                 raise
