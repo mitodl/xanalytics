@@ -136,7 +136,7 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         '''
         if source is None:
             source = getattr(local_config, 'STAFF_COURSE_TABLE', None)
-        data = self.get_data(source)['data']
+        data = self.get_data(source, ignore_cache=True)['data']
         self.import_data_to_ndb(data, 'staff', overwrite)
         
 

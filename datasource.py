@@ -24,7 +24,7 @@ class DataSource(object):
 
     #-----------------------------------------------------------------------------
 
-    def get_data(self, source, key=None):
+    def get_data(self, source, key=None, ignore_cache=False):
         '''
         Get data from source, and return.
         source should either be string of the form "dataset.table" specifying a BigQuery source,
@@ -36,13 +36,13 @@ class DataSource(object):
 
         if source.startswith('docs:'):
             (fname, sheet) = source[5:].split(':',1)
-            return gsdata.cached_get_datasheet(fname, sheet, key=key)
+            return gsdata.cached_get_datasheet(fname, sheet, key=key, ignore_cache=ignore_cache)
 
         if source.startswith('file:'):
             return self.get_datafile(source[5:], key=key)
 
         (dataset, table) = source.split('.')
-        return self.cached_get_bq_table(dataset, table, key=key)
+        return self.cached_get_bq_table(dataset, table, key=key, ignore_cache=ignore_cache)
 
     @staticmethod
     def get_ndb_dataset(table):
