@@ -175,7 +175,7 @@ class DataStats(object):
                 order by time
         """.format(dataset=dataset, course_id=course_id, module_id=module_id)
 
-        table = 'problem_check_for_%s' % url_name
+        table = 'problem_check_for_%s' % (url_name.replace(':','__').replace('-','_'))
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
 
