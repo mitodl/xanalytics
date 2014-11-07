@@ -362,7 +362,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
             for k  in keys:	# merge dynamath with actual entry
                 if k.endswith('_dynamath'):
                     aid = k.rsplit('_',1)[0]
-                    if sadat[aid]:
+                    if sadat[aid].strip():
                         sadat[aid] += u' \u21d2 ' + sadat[k]
             for k  in keys:
                 if k.endswith('_dynamath'):
@@ -373,7 +373,8 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                     answer = answer.replace("u'","")
                 if type(answer)==list:
                     answer = str([str(x) for x in answer])
-                histograms[answer_id][answer] += 1
+                if answer.strip():
+                    histograms[answer_id][answer] += 1
                 sastr += "<tr><td>%s:</td><td>%s</td></tr>" % (answer_id, answer)
             sastr += "</table>"
             entry['answer'] = sastr
