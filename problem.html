@@ -102,7 +102,7 @@ function drawChart() {
     cdata.addColumn('number','Grade');
     cdata.addColumn('number','Count');
     for (k=0;k<11;k++) {
-	console.log("k=", k);
+	// console.log("k=", k);
 	cdata.addRow([k*delta, eval(pd['grade_hist_bin' + k.toString()])]);
     }
 
@@ -120,7 +120,7 @@ function drawChart() {
     adata.addColumn('number','Attempts');
     adata.addColumn('number','Count');
     for (k=0;k<11;k++) {
-	console.log("k=", k);
+	// console.log("k=", k);
 	adata.addRow([k*delta, eval(pd['attempts_hist_bin' + k.toString()])]);
     }
 
@@ -136,11 +136,77 @@ function drawChart() {
 }
     </script>
 
+<h2>History of student answers to problem</h2>
+
+<div id="histograms_div"><img src="/images/loading_icon.gif"/></div>
+
+{% if is_instructor %}
+<font color='green'><p>You are an instructor of this course; usernames are displayed below.</p></font>
+{% else %}
+<font color='red'><p>You are NOT an instructor of this course; usernames are not displayed below.</p></font>
+{% endif %}
+
+<p><table id="prob_answers"></table></p>
+
+<script type="text/javascript">
+    $(document).ready( function () {
+	var table = $('#prob_answers').DataTable({
+              "ajax": "/get/{{course_id}}/{{url_name}}/problem_histories",
+              "order": [[ 0, "asc" ]],
+        "columns": [
+            { "data": "time", "title": "time", "class": "dt-center", width: '10%'  },
+{% if is_instructor %}
+            { "data": "username", "title": "username", "class": "dt-center" },
+{% endif %}
+            { "data": "answer", "title": "student answers", "class": "dt-center" },
+            { "data": "attempts", "title": "attempt number", "class": "dt-center", width: '8%' },
+            { "data": "success", "title": "correct / incorrect", "class": "dt-center", width: '10%'  },
+            { "data": "grade", "title": "grade", "class": "dt-center", width: '8%'  },
+        ],
+        });
+
+    // event listener for ajax call completion - fill in the histograms tables
+	$('#prob_answers') .on('xhr.dt', 
+		       function ( e, settings, json ) { 
+			   hdhtml = "<span>"
+			   hdhtml += "<p>Number of items in this problem: " + json['items'].length + "</p>"
+			   hdhtml += "<p>Top 20 responses and frequency of each response for these items:</p>"
+			   hdhtml += "<table border='1' width='100%'><tr>"
+			   $.each(json['items'], function(idx, histname){
+			       hdhtml += "<th align='center'>Item " + histname + "</th>\n"
+			   });
+			   hdhtml += "</tr>"
+			   hdhtml += "<tr>"
+			   $.each(json['items'], function(idx, histname){
+			       hdhtml += "<td><table id='item_" + histname + "'></table></td>\n"
+			   });
+			   hdhtml += "</tr></table>\n"
+			   hdhtml += "</span>"
+			   $('#histograms_div').html(hdhtml);
+
+			   hist_tables = {};
+			   console.log('histograms: ', json['histograms']);
+			   $.each(json['items'], function(idx, histname){
+			       hist_tables[histname] = $('#item_' + histname).DataTable( {
+				   "info":     false,
+				   "searching":     false,
+				   "paging":   false,
+				   "order": [[ 1, "desc" ]],
+				   "columns" : [ { 'title': 'Response' },
+						 { 'title': 'Frequency', 'width': '8%'} ],
+				   "data": json['histograms'][histname],
+			       });
+			   });
+		       });
+
+     });
+</script>
+
 <h2>Problem page</h2>
 
-{% autoescape off %}{{ table }}{% endautoescape %}
-
 <iframe sandbox="allow-same-origin allow-scripts allow-popups allow-forms" width="1100" height="800" src="{{base}}/courses/{{course_id}}/jump_to_id/{{url_name}}"></iframe>
+<!--
+-->
 
 </body>
 </html>

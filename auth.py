@@ -81,6 +81,7 @@ def auth_required(handler):
             course_id = None
         if not self.is_user_authorized_for_course(course_id):
             return self.no_auth_sorry()
+        self.common_data['is_instructor'] = self.does_user_have_role('instructor', course_id)
         return handler(self, *args, **kwargs)
 
     return check_login

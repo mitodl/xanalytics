@@ -341,6 +341,60 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
 
+    @auth_required
+    def ajax_get_problem_answer_histories(self, org=None, number=None, semester=None, problem_url_name=None):
+
+        course_id = '/'.join([org, number, semester])
+
+        pah = self.select_problem_answer_histories(course_id, problem_url_name)
+
+        # reformat student answers to be readable
+        # also compute histogram
+        histograms = defaultdict(lambda: defaultdict(int))
+
+        for entry in pah['data']:
+            entry['time'] = self.fix_date(entry['time'])
+            sa = entry['student_answers']
+            sadat = json.loads(sa)
+            sastr = "<table>"
+            keys = sadat.keys()
+            keys.sort()
+            for k  in keys:	# merge dynamath with actual entry
+                if k.endswith('_dynamath'):
+                    aid = k.rsplit('_',1)[0]
+                    if sadat[aid]:
+                        sadat[aid] += u' \u21d2 ' + sadat[k]
+            for k  in keys:
+                if k.endswith('_dynamath'):
+                    continue
+                answer_id = '_'.join(k.rsplit('_',2)[1:])  # see edx_platform/common/lib/capa/capa/capa_problem.py
+                answer = sadat[k]
+                if type(answer)==str and answer.startswith("[u'choce_"):
+                    answer = answer.replace("u'","")
+                if type(answer)==list:
+                    answer = str([str(x) for x in answer])
+                histograms[answer_id][answer] += 1
+                sastr += "<tr><td>%s:</td><td>%s</td></tr>" % (answer_id, answer)
+            sastr += "</table>"
+            entry['answer'] = sastr
+
+        # chop histogram tables into just top 20
+        for aid, hdat in histograms.items():
+            topitems = hdat.items()
+            topitems.sort(key=lambda(x): x[1], reverse=True)
+            topitems = topitems[:20]
+            histograms[aid] = topitems
+
+        # logging.info(json.dumps(histograms, indent=4))
+
+        data = {'data': pah['data'],
+                'items': histograms.keys(),
+                'histograms': histograms,     # { k: v.items() for (k,v) in histograms.items()},
+        }
+
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
     @staticmethod
     def datetime2milliseconds(dt=None, dtstr=''):
         '''
@@ -466,7 +520,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
 
         def makelink(txt, rdat):
             try:
-                link = "<a href='/{category}/{course_id}/{url_name}'>{txt}</a>".format(txt=txt.encode('utf8'),
+                link = "<a href='/{category}/{course_id}/{url_name}'>{txt}</a>".format(txt=(txt.encode('utf8') or "none"),
                                                                                        course_id=course_id,
                                                                                        category=rdat['category'],
                                                                                        url_name=rdat['url_name'])
@@ -831,4 +885,5 @@ application = webapp2.WSGIApplication([
     webapp2.Route('/get/<org>/<number>/<semester>/<url_name>/chapter_stats', handler=MainPage, handler_method='ajax_get_chapter_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_stats', handler=MainPage, handler_method='ajax_get_problem_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<table>/table_data', handler=MainPage, handler_method='ajax_get_table_data'),
+    webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_histories', handler=MainPage, handler_method='ajax_get_problem_answer_histories'),
 ], debug=True, config=config)

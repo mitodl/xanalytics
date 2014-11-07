@@ -154,6 +154,32 @@ class DataStats(object):
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
 
 
+    def select_problem_answer_histories(self, course_id, url_name):
+        '''
+        Compute table of answers ever submitted for a given problem, as specified by a module_id.
+        '''
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        org, num, semester = course_id.split('/')
+        module_id = '%s/%s/problem/%s' % (org, num, url_name)
+        sql = """
+                SELECT '{course_id}' as course_id,
+                    username,
+                    time,
+                    student_answers,
+                    attempts,
+                    success,
+                    grade,
+                FROM [{dataset}.problem_check]
+                WHERE
+                    module_id = "{module_id}"
+                order by time
+        """.format(dataset=dataset, course_id=course_id, module_id=module_id)
+
+        table = 'problem_check_for_%s' % url_name
+        key = None
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
+
+
     def compute_enrollment_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
         '''
         Compute enrollment by day, based on enrollday_* tables
