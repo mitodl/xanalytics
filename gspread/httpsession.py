@@ -72,7 +72,9 @@ class HTTPSession(object):
         response = self.connections[uri.scheme+uri.netloc].getresponse()
 
         if response.status > 399:
-            raise HTTPError(response)
+            # raise HTTPError(response)
+            msg = "Error accessing spreadsheet, response=%s" % str(response)
+            raise Exception(msg)
         return response
 
     def get(self, url, **kwargs):
