@@ -9,6 +9,7 @@ import logging
 
 import gsdata
 import bqutil
+import datetime
 from collections import defaultdict, OrderedDict
 from google.appengine.api import memcache
 
