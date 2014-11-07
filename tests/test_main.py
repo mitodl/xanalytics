@@ -126,3 +126,11 @@ class TestMain(unittest.TestCase):
         # data = json.loads(response.text) # response.json
         data = response.json
         assert("series" in data)
+
+    def test_ajax_table_data(self):
+        params = {'course_id': self.course_id}
+        data = {'draw': 2, 'start': 10, 'length': 10}
+        request = webapp2.Request.blank('/get/{course_id}/user_info_combo/table_data'.format(**params), POST=data)
+        response = request.get_response(self.application)
+        data = response.json
+        assert("draw" in data and data['draw']==2)
