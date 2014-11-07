@@ -272,6 +272,8 @@ $(document).ready(function() {
 
 
 <!-- ----------------------------------------------------------------------------- -->
+{% if mode=="mooc" %}
+
 <h2>Enrollment</h2>
 {% if is_staff %}
 <div id="recompute_enroll" style="display:oo">
@@ -411,6 +413,8 @@ $(document).ready(function() {
     });
 });
 </script>
+
+{% endif %}
 
 </body>
 </html>
