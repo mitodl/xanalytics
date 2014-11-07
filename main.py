@@ -20,6 +20,7 @@ import gsdata
 import bqutil
 import auth
 import local_config
+import urllib
 
 from unidecode import unidecode
 
@@ -371,8 +372,10 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                 answer = sadat[k]
                 if type(answer)==str and answer.startswith("[u'choce_"):
                     answer = answer.replace("u'","")
-                if type(answer)==list:
+                elif type(answer)==list:
                     answer = str([str(x) for x in answer])
+                elif type(answer) in [str, unicode] and '%20' in answer:
+                    answer = urllib.unquote(answer)
                 if answer.strip():
                     histograms[answer_id][answer] += 1
                 sastr += "<tr><td>%s:</td><td>%s</td></tr>" % (answer_id, answer)
