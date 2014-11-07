@@ -108,17 +108,20 @@ class DataSource(object):
 
 
     def cached_get_bq_table(self, dataset, table, sql=None, key=None, drop=None,
-                            logger=None, ignore_cache=False):
+                            logger=None, ignore_cache=False, startIndex=0, maxResults=1000000):
         '''
         Get a dataset from BigQuery; use memcache
         '''
         if logger is None:
             logger = logging.info
         memset = '%s.%s' % (dataset,table)
+        if startIndex:
+            memset += '-%d-%d' % (startIndex, maxResults)
         data = mem.get(memset)
         if (not data) or ignore_cache:
             try:
-                data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger)
+                data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger,
+                                           startIndex=startIndex, maxResults=maxResults)
             except Exception as err:
                 logging.error(err)
                 data = {'fields': {}, 'field_names': [], 'data': [], 'data_by_key': {}}

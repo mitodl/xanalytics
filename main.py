@@ -727,6 +727,44 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         
 
     @auth_required
+    def ajax_get_table_data(self, org=None, number=None, semester=None, table=None):
+        '''
+        show arbitrary table from bigquery -- mainly for debugging - ajax data 
+        '''
+        course_id = '/'.join([org, number, semester])
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+
+        if ('person' in table) or ('track' in table) or ('student' in table):
+            if not self.does_user_have_role('instructor', course_id):
+                return self.no_auth_sorry()
+
+        # DataTables server-side processing: http://datatables.net/manual/server-side
+
+        draw = int(self.request.POST['draw'])
+        start = int(self.request.POST['start'])
+        length = int(self.request.POST['length'])
+
+        bqdata = self.cached_get_bq_table(dataset, table, startIndex=start, maxResults=length)
+        self.fix_bq_dates(bqdata)
+        
+        logging.info('get draw=%s, start=%s, length=%s' % (draw, start, length))
+
+        if 0:
+            for row in bqdata['data']:
+                for key in row:
+                    row[key] = row[key].encode('utf-8')
+
+        data = self.common_data
+        data.update({'data': bqdata['data'],
+                     'draw': draw,
+                     'recordsTotal': bqdata['numRows'],
+                     'recordsFiltered': bqdata['numRows'],
+                 })
+        
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
+    @auth_required
     def get_table(self, dataset=None, table=None, org=None, number=None,semester=None):
         '''
         show arbitrary table from bigquery -- mainly for debugging
@@ -745,21 +783,19 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
             if not self.user in self.AUTHORIZED_USERS:
                 return self.no_auth_sorry()
 
-        bqdata = bqutil.get_table_data(dataset, table)
-        self.fix_bq_dates(bqdata)
-        
-        if 0:
-            for row in bqdata['data']:
-                for key in row:
-                    row[key] = row[key].encode('utf-8')
+        tableinfo = bqutil.get_bq_table_info(dataset, table)
 
-        tablehtml = self.list2table(bqdata['field_names'],
-                                    bqdata['data'])
+        fields = tableinfo['schema']['fields']
+        field_names = [x['name'] for x in fields]
+
+        tablecolumns = json.dumps([ { 'data': x, 'title': x, 'class': 'dt-center' } for x in field_names ])
+        logging.info(tablecolumns)
 
         data = self.common_data
         data.update({'dataset': dataset,
                      'table': table,
-                     'tablehtml': tablehtml,
+                     'course_id': course_id,
+                     'tablecolumns': tablecolumns,
                  })
         
         template = JINJA_ENVIRONMENT.get_template('show_table.html')
@@ -794,4 +830,5 @@ application = webapp2.WSGIApplication([
     webapp2.Route('/get/<org>/<number>/<semester>/geo_stats', handler=MainPage, handler_method='ajax_get_geo_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<url_name>/chapter_stats', handler=MainPage, handler_method='ajax_get_chapter_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_stats', handler=MainPage, handler_method='ajax_get_problem_stats'),
+    webapp2.Route('/get/<org>/<number>/<semester>/<table>/table_data', handler=MainPage, handler_method='ajax_get_table_data'),
 ], debug=True, config=config)

@@ -18,9 +18,17 @@
 
   <script type='text/javascript'>
 
+    var tc = {% autoescape off %}{{ tablecolumns }}{% endautoescape %};
+
     $(document).ready( function () {
 	var table = $('#table_id').DataTable({
                   dom: 'T<"clear">lfrtip',
+                  "columns": tc,
+                  "pageLength": 200,
+                  searching: false,
+                  ordering: false,
+                  serverSide: true, 
+                  ajax: { url: '/get/{{course_id}}/{{table}}/table_data', type: 'POST' } ,
              });
 } );
 </script>
@@ -33,7 +41,7 @@
 <br/>
 <br/>
 
-{% autoescape off %}{{ tablehtml }}{% endautoescape %}
+<table id="table_id" class="display" width="100%"></table>
 
 </body>
 </html>

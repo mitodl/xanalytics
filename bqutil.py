@@ -95,22 +95,33 @@ def get_list_of_table_ids(dataset_id):
     table_id_list = [ x['tableReference']['tableId'] for x in tables_info ]
     return table_id_list
 
-def get_table_data(dataset_id, table_id, key=None, logger=None, project_id=DEFAULT_PROJECT_ID):
+def get_table_data(dataset_id, table_id, key=None, logger=None, project_id=DEFAULT_PROJECT_ID, 
+                   startIndex=None, maxResults=1000000):
     '''
     Retrieve data from a specific BQ table.  Return as a dict, with
-    fields = schema fields
+
+    fields      = schema fields
     field_names = name of top-level schema fields
-    data = list of data
+    data        = list of data
     data_by_key = dict of data, with key being the value of the fieldname specified as the key arg
 
     Arguments:
 
-      - key: dict with {'name': name_of_field_for_key}
-
+    key         = dict, e.g. {'name': field_name_for_index, 'keymap': function_on_key_values}
+    maxResults  = maximum number of results to return
+    startIndex  = zero-based index of starting row to read; make this negative to return from 
+                  end of table
     '''
-    table_ref = dict(datasetId=dataset_id, projectId=project_id, tableId=table_id)
-    table_ref['maxResults'] = 1000000
     table = get_bq_table_info(dataset_id, table_id)
+    nrows = int(table['numRows'])
+
+    table_ref = dict(datasetId=dataset_id, projectId=project_id, tableId=table_id)
+    table_ref['maxResults'] = maxResults
+    if startIndex is not None:
+        if startIndex < 0:
+            startIndex = nrows + startIndex
+        table_ref['startIndex'] = startIndex
+
     data = tabledata.list(**table_ref).execute()
 
     fields = table['schema']['fields']
@@ -118,6 +129,9 @@ def get_table_data(dataset_id, table_id, key=None, logger=None, project_id=DEFAU
 
     ret = {'fields': fields,
            'field_names': field_names,
+           'numRows': nrows,
+           'creationTime': table['creationTime'],
+           'lastModifiedTime': table['lastModifiedTime'],
            'data': [],
            'data_by_key': OrderedDict(),
            }
@@ -180,16 +194,19 @@ def get_bq_table_info(dataset_id, table_id, project_id=DEFAULT_PROJECT_ID):
 def default_logger(msg):
     print msg
 
-def get_bq_table(dataset, tablename, sql=None, key=None, allow_create=True, force_query=False, logger=default_logger):
+def get_bq_table(dataset, tablename, sql=None, key=None, allow_create=True, force_query=False, logger=default_logger,
+                 startIndex=None, maxResults=1000000):
     '''
     Retrieve data for the specified BQ table if it exists.
     If it doesn't exist, create it, using the provided SQL.
     '''
     if force_query:
         create_bq_table(dataset, tablename, sql, logger=logger)
-        return get_table_data(dataset, tablename, key=key, logger=logger)
+        return get_table_data(dataset, tablename, key=key, logger=logger,
+                              startIndex=startIndex, maxResults=maxResults)
     try:
-        ret = get_table_data(dataset, tablename, key=key, logger=logger)
+        ret = get_table_data(dataset, tablename, key=key, logger=logger,
+                             startIndex=startIndex, maxResults=maxResults)
     except Exception as err:
         if 'Not Found' in str(err) and allow_create and (sql is not None) and sql:
             create_bq_table(dataset, tablename, sql, logger=logger)
