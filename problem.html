@@ -4,6 +4,7 @@
 
 <!-- DataTables CSS -->
 <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
   
 <style>
 td.details-control {
@@ -20,6 +21,7 @@ tr.shown td.details-control {
   
 <!-- DataTables -->
 <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
 
   <script type='text/javascript'
      src='https://www.google.com/jsapi'></script>
@@ -151,6 +153,10 @@ function drawChart() {
 <script type="text/javascript">
     $(document).ready( function () {
 	var table = $('#prob_answers').DataTable({
+              dom: 'T<"clear">lfrtip',
+	    "tableTools": {
+		"aButtons": [ "csv" ]
+	    },
               "ajax": "/get/{{course_id}}/{{url_name}}/problem_histories",
               "order": [[ 0, "asc" ]],
         "columns": [
@@ -188,6 +194,10 @@ function drawChart() {
 			   console.log('histograms: ', json['histograms']);
 			   $.each(json['items'], function(idx, histname){
 			       hist_tables[histname] = $('#item_' + histname).DataTable( {
+                                   dom: 'T<"clear">lfrtip',
+				   "tableTools": {
+				       "aButtons": [ "csv" ]
+				   },
 				   "info":     false,
 				   "searching":     false,
 				   "paging":   false,
