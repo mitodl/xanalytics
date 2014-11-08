@@ -18,7 +18,6 @@ from google.appengine.api import memcache
 mem = memcache.Client()
 
 SCOPE = 'https://spreadsheets.google.com/feeds https://docs.google.com/feeds'
-credentials = AppAssertionCredentials(scope=SCOPE)
 # logging.info('credentials = ', credentials)
 
 def cached_get_datasheet(fname, sheet, key=None, ignore_cache=False):
@@ -33,6 +32,7 @@ def cached_get_datasheet(fname, sheet, key=None, ignore_cache=False):
     return data
 
 def get_worksheet(fname, sheet):
+    credentials = AppAssertionCredentials(scope=SCOPE)
     gc = gspread.authorize(credentials)
 
     try:
