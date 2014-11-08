@@ -74,7 +74,6 @@ class DataStats(object):
                         except Exception as err:
                             logging.error('[list2table] cannot encode unicode for entry %s' % repr(ent))
                             raise
-
                 datatable += '<td {fmt}>{dat}</td>'.format(dat=ent, fmt=fmt)
                 # datatable += '<td>%s</td>' % ent
             datatable += '</tr>\n'

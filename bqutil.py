@@ -147,7 +147,8 @@ def get_table_data(dataset_id, table_id, key=None, logger=None, project_id=DEFAU
             the_key = values[key['name']]
             if 'keymap' in key:
                 the_key = key['keymap'](the_key)
-            ret['data_by_key'][the_key] = values
+            if the_key not in ret['data_by_key']:
+                ret['data_by_key'][the_key] = values
 
     return ret
 
