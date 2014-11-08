@@ -178,7 +178,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         return img
 
 
-    def load_course_axis(self, course_id):
+    def load_course_axis(self, course_id, dtype='data_by_key'):
         '''
         Get course axis table from BQ.  Use memcache.
 
@@ -189,7 +189,8 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
         table = "course_axis"
         key={'name': 'url_name'}
-        return self.cached_get_bq_table(dataset, table, key=key, drop=['data'])['data_by_key']
+        # return self.cached_get_bq_table(dataset, table, key=key, drop=['data'])['data_by_key']
+        return self.cached_get_bq_table(dataset, table, key=key)[dtype]
 
 
     def load_person_course(self, course_id):
@@ -757,22 +758,31 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         show full course axis -- mainly for debugging
         '''
         course_id = '/'.join([org, number, semester])
-        caxis = self.load_course_axis(course_id)
+        caxis = self.load_course_axis(course_id, dtype='data')
 
-        for row in caxis:
+        # logging.info("caxis=%s" % json.dumps(caxis, indent=4))
+
+        for cae in caxis:
             try:
                 # caxis[row]['name'] = fix_bad_unicode(caxis[row]['name'])
-                # caxis[row]['name'] = caxis[row]['name']
-                caxis[row]['name'] = unidecode(caxis[row]['name'])	# desparation: perhaps data wasn't encoded properly originally?
+                #caxis[row]['name'] = caxis[row]['name'].replace('\u2013','-')
+                #caxis[row]['name'] = str(caxis[row]['name'])
+                cae['name'] = unidecode(cae['name'])	# desparation: perhaps data wasn't encoded properly originally?
+                if cae['gformat']:
+                    cae['gformat'] = unidecode(cae['gformat'])	# desparation: perhaps data wasn't encoded properly originally?
+                # cae['name'] = str(cae['name'])
             except Exception as err:
-                print "unicode error for course axis row=%s, name=" % row, repr(caxis[row]['name'])
-                print "type = ", type(caxis[row]['name'])
+                print "unicode error for course axis row=%s, name=" % repr(cae), repr(cae['name'])
+                print "type = ", type(cae['name'])
                 raise
 
         if 1:
-            tablehtml = self.list2table(['category', 'index', 'url_name', 'name', 'gformat', 'due', 'start', 
-                                         'module_id', 'path', 'data_ytid', 'data_weight', 'chapter_mid'],
-                                        caxis.values(),
+            fields = ['category', 'index', 'url_name', 'name', 'gformat', 'due', 'start', 
+                      'module_id', 'path', 'data_ytid', 'data_weight', 'chapter_mid']
+            #fields = ['category', 'index', 'name', 'due', 'start', 
+            #          'module_id', 'path', 'data_ytid', 'data_weight', 'chapter_mid']
+            tablehtml = self.list2table(fields,
+                                        caxis,
                                         eformat={'due': self.fix_date, 'start': self.fix_date}, )
 
         data = self.common_data
@@ -781,6 +791,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                  })
         
         template = JINJA_ENVIRONMENT.get_template('course_axis.html')
+        self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         self.response.out.write(template.render(data))
         
 

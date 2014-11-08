@@ -38,7 +38,11 @@ tr.shown td.details-control {
 
 </head>
 <body>
-  <h2>{{orgname}}: {{course_id}}</h2>
+  <h2>{{orgname}}: Course axis for {{course_id}}</h2>
+
+[ <a href="/">Back to course list</a>  | <a href="/course/{{course_id}}">Back to chapter list</a> ]
+<br/>
+<br/>
 
 {% autoescape off %}{{ table }}{% endautoescape %}
 
