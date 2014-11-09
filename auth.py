@@ -26,6 +26,22 @@ from google.appengine.api import memcache
 mem = memcache.Client()
 
 #-----------------------------------------------------------------------------
+# BigQuery authentication
+
+def build_bq_client():
+    
+    from googleapiclient.discovery import build
+    from oauth2client.appengine import AppAssertionCredentials
+    import httplib2
+
+    SCOPE = 'https://www.googleapis.com/auth/bigquery'
+    credentials = AppAssertionCredentials(scope=SCOPE)
+    http = credentials.authorize(httplib2.Http())
+    bigquery_service = build('bigquery', 'v2', http=http)
+
+    return bigquery_service
+
+#-----------------------------------------------------------------------------
 
 class GeneralFunctions(object):
 

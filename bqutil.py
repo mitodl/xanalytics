@@ -10,21 +10,21 @@ import sys
 import time
 import json
 import datetime
-import local_config
 
-from googleapiclient.discovery import build
-from oauth2client.appengine import AppAssertionCredentials
-import httplib2
+try:
+    import getpass
+except:
+    pass
+
+try:
+    from edx2bigquery_config import PROJECT_ID as DEFAULT_PROJECT_ID
+except:
+    from local_config import PROJECT_ID as DEFAULT_PROJECT_ID
+
+import auth
 from collections import OrderedDict
 
-SCOPE = 'https://www.googleapis.com/auth/bigquery'
-DEFAULT_PROJECT_ID = local_config.PROJECT_ID
-
-credentials = AppAssertionCredentials(scope=SCOPE)
-http = credentials.authorize(httplib2.Http())
-bigquery_service = build('bigquery', 'v2', http=http)
-
-service = bigquery_service
+service = auth.build_bq_client() 
 
 projects = service.projects()
 datasets = service.datasets()
@@ -58,6 +58,9 @@ def course_id2dataset(course_id, dtype=None, use_dataset_latest=False):
         dataset += "_latest"
     return dataset		# default dataset for SQL data
 
+def delete_dataset(dataset, project_id=DEFAULT_PROJECT_ID, delete_contents=False):
+      datasets.delete(datasetId=dataset, projectId=project_id, deleteContents=delete_contents).execute()
+
 def create_dataset_if_nonexistent(dataset, project_id=DEFAULT_PROJECT_ID):
 
   if dataset not in get_list_of_datasets():
@@ -83,15 +86,17 @@ def get_projects(project_id=DEFAULT_PROJECT_ID):
         if (project['id'] == project_id):
             print 'Found %s: %s' % (project_id, project['friendlyName'])
 
-def get_tables(dataset_id, project_id=DEFAULT_PROJECT_ID):
+def get_tables(dataset_id, project_id=DEFAULT_PROJECT_ID, verbose=False):
     table_list = tables.list(datasetId=dataset_id, projectId=project_id, maxResults=1000).execute()
-    if 0:
+    if verbose:
         for current in table_list['tables']:
             print "table: ", current
+    if 'tables' not in table_list:
+        print "[bqutil] get_tables: oops! dataset=%s, no table info in %s" % (dataset_id, json.dumps(table_list, indent=4))
     return table_list
 
 def get_list_of_table_ids(dataset_id):
-    tables_info = get_tables(dataset_id)['tables']
+    tables_info = get_tables(dataset_id).get('tables', [])
     table_id_list = [ x['tableReference']['tableId'] for x in tables_info ]
     return table_id_list
 
@@ -179,6 +184,32 @@ def get_bq_table_size_rows(dataset_id, table_id):
         return int(tinfo['numRows'])
     return None
 
+def bq_timestamp_milliseconds_to_datetime(timestamp):
+    '''
+    Convert a millisecond timestamp to a python datetime object
+    '''
+    if timestamp:
+        return datetime.datetime.utcfromtimestamp(float(timestamp)/1000.0)
+    return None
+
+def get_bq_table_creation_datetime(dataset_id, table_id):
+    '''
+    Retrieve datetime of table creation
+    '''
+    tinfo = get_bq_table_info(dataset_id, table_id)
+    if tinfo is not None:
+        return tinfo['creationTime']
+    return None
+
+def get_bq_table_last_modified_datetime(dataset_id, table_id):
+    '''
+    Retrieve datetime of table last modification
+    '''
+    tinfo = get_bq_table_info(dataset_id, table_id)
+    if tinfo is not None:
+        return tinfo['lastModifiedTime']
+    return None
+
 def get_bq_table_info(dataset_id, table_id, project_id=DEFAULT_PROJECT_ID):
     '''
     Retrieve metadata about a specific BQ table.
@@ -190,6 +221,8 @@ def get_bq_table_info(dataset_id, table_id, project_id=DEFAULT_PROJECT_ID):
         if 'Not Found' in str(err):
             raise
         table = None
+    table['lastModifiedTime'] = bq_timestamp_milliseconds_to_datetime(table['lastModifiedTime'])
+    table['creationTime'] = bq_timestamp_milliseconds_to_datetime(table['creationTime'])
     return table
 
 def default_logger(msg):
@@ -211,7 +244,8 @@ def get_bq_table(dataset, tablename, sql=None, key=None, allow_create=True, forc
     except Exception as err:
         if 'Not Found' in str(err) and allow_create and (sql is not None) and sql:
             create_bq_table(dataset, tablename, sql, logger=logger)
-            return get_table_data(dataset, tablename, key=key, logger=logger)
+            return get_table_data(dataset, tablename, key=key, logger=logger,
+                                  startIndex=startIndex, maxResults=maxResults)
         else:
             raise
     return ret
@@ -226,12 +260,12 @@ def create_bq_table(dataset_id, table_id, sql, verbose=False, overwrite=False, w
     project_ref = dict(projectId=project_id)
     table_ref = dict(datasetId=dataset_id, projectId=output_project_id, tableId=table_id)
 
-    if overwrite:
-        wd = "WRITE_TRUNCATE"
-    elif overwrite in ["append", 'APPEND']:
+    if overwrite in ["append", 'APPEND']:
         wd = "WRITE_APPEND"
-    else:
+    elif overwrite==True:
         wd = "WRITE_TRUNCATE"
+    else:
+        wd = "WRITE_EMPTY"	
 
     config = {'query': { 'query': sql,
                          'destinationTable': table_ref,
@@ -251,7 +285,20 @@ def create_bq_table(dataset_id, table_id, sql, verbose=False, overwrite=False, w
     if verbose:
         print job
 
-    job = jobs.insert(body=job, **project_ref).execute()
+    for k in range(10):
+        try:
+            jobret = jobs.insert(body=job, **project_ref).execute()
+            break
+        except Exception as err:
+            print "[bqutil] oops!  Failed to insert job=%s" % job
+            if (k==9):
+                raise
+            if 'HttpError 500' in str(err):
+                print err
+                print "--> 500 error, retrying in 30 sec"
+                time.sleep(30)
+                continue
+            raise
 
     if verbose:
         print "job=", json.dumps(job, indent=4)
@@ -263,8 +310,20 @@ def create_bq_table(dataset_id, table_id, sql, verbose=False, overwrite=False, w
     if not wait:
         return
 
-    while job['status']['state'] <> 'DONE':
-        job = jobs.get(**job_ref).execute()
+    ecnt = 0
+    while job.get('status', {}).get('state', None) <> 'DONE':
+        if 'status' not in job:
+            ecnt += 1
+            if (ecnt > 2):
+                logger("[bqutil] Error!  no job status?  job ret = %s" % job)
+            if (ecnt > 5):
+                raise Exception('BQ Error getting job status')
+        else:
+            ecnt = 0
+        try:
+            job = jobs.get(**job_ref).execute()
+        except Exception as err:
+            print "[bqutil] oops!  Failed to execute jobs.get=%s" % (job_ref)
 
     status = job['status']
     logger( "[bqutil] job status: %s" % status )
@@ -285,23 +344,24 @@ def create_bq_table(dataset_id, table_id, sql, verbose=False, overwrite=False, w
         logger( "[bqutil] Job run time: %8.2f seconds" % dt)
 
         # Patch the table to add a description
-        try:
-            me = getpass.getuser()
-        except Exception as err:
-            me = "gae"
-        txt = 'Computed by %s / bqutil at %s processing %s bytes in %8.2f sec\nwith this SQL: %s' % (me, datetime.datetime.now(), 
-                                                                                                     nbytes,
-                                                                                                     dt,
-                                                                                                     sql)
-        project_name = get_project_name(project_id)
-        output_project_name = get_project_name(output_project_id)
-
-        txt += '\n'
-        txt += 'see job: https://bigquery.cloud.google.com/results/%s:%s\n' % (project_name, job_id)
-        txt += 'see table: https://bigquery.cloud.google.com/table/%s:%s.%s\n' % (output_project_name, dataset_id, table_id)
-        logger(txt)
-
-        add_description_to_table(dataset_id, table_id, txt, project_id=output_project_id)
+        if not wd=='WRITE_APPEND':
+            try:
+                me = getpass.getuser()
+            except Exception as err:
+                me = "gae"
+            txt = 'Computed by %s / bqutil at %s processing %s bytes in %8.2f sec\nwith this SQL: %s' % (me, datetime.datetime.now(), 
+                                                                                                         nbytes,
+                                                                                                         dt,
+                                                                                                         sql)
+            project_name = get_project_name(project_id)
+            output_project_name = get_project_name(output_project_id)
+    
+            txt += '\n'
+            txt += 'see job: https://bigquery.cloud.google.com/results/%s:%s\n' % (project_name, job_id)
+            txt += 'see table: https://bigquery.cloud.google.com/table/%s:%s.%s\n' % (output_project_name, dataset_id, table_id)
+            logger(txt)
+    
+            add_description_to_table(dataset_id, table_id, txt, project_id=output_project_id)
 
     return job
     
@@ -365,11 +425,22 @@ def load_data_to_table(dataset_id, table_id, gsfn, schema, wait=True, verbose=Fa
     if verbose:
         print job
 
-    try:
-        job = jobs.insert(body=job, **project_ref).execute()
-    except Exception as err:
-        print "[bqutil] oops!  Failed to insert job=%s" % job
-        raise
+    for k in range(10):
+        try:
+            jobret = jobs.insert(body=job, **project_ref).execute()
+            break
+        except Exception as err:
+            print "[bqutil] oops!  Failed to insert job=%s" % job
+            if (k==9):
+                raise
+            if 'HttpError 500' in str(err):
+                print err
+                print "--> 500 error, retrying in 30 sec"
+                time.sleep(30)
+                continue
+            raise
+
+    job = jobret
 
     if verbose:
         print "job=", json.dumps(job, indent=4)
@@ -478,3 +549,73 @@ def extract_table_to_gs(dataset_id, table_id, gsfn, format=None, do_gzip=False, 
         print "[bqutil] ERROR!  ", status['errors']
         print "job = ", json.dumps(job, indent=4)
         raise Exception('BQ Error creating table')
+
+#-----------------------------------------------------------------------------
+# unit tests, using py.test
+#
+# assumes live credentials are available (may need GAE stubs)
+
+def test_get_project_name():
+    name = get_project_name()
+    print name
+    assert(name is not None and type(name)==unicode)
+
+def test_course_id2dataset():
+    dataset = course_id2dataset('the/course.123', use_dataset_latest=True)
+    assert(dataset=='the__course_123_latest')
+    dataset = course_id2dataset('the/course.123', use_dataset_latest=False)
+    assert(dataset=='the__course_123')
+    dataset = course_id2dataset('the/course.123', 'logs', use_dataset_latest=True)
+    assert(dataset=='the__course_123_logs')
+
+def test_create_dataset():
+    dataset = "test_dataset"
+    create_dataset_if_nonexistent(dataset)
+    dlist = get_list_of_datasets()
+    assert(dataset in dlist)
+    delete_dataset(dataset, delete_contents=True)
+    dlist = get_list_of_datasets()
+    assert(dataset not in dlist)
+    
+def test_create_table():
+    dataset = "test_dataset"
+    create_dataset_if_nonexistent(dataset)
+
+    table = "test_table"
+    sql = "select word, corpus from [publicdata:samples.shakespeare]"
+    data = get_bq_table(dataset, table, sql=sql, key={'name': 'corpus'})
+    print 'data_by_key len: ', len(data['data_by_key'])
+    print 'data len: ', len(data['data'])
+    assert(type(data['creationTime'])==datetime.datetime)
+    assert(len(data['data'])>0)
+    assert(len(data['data_by_key'])>0 and len(data['data_by_key'])<100)	# multiple words in a single corpus
+
+    tinfo = get_tables(dataset)
+    print "tinfo = ", tinfo
+    assert('tables' in tinfo)
+
+    tables = get_list_of_table_ids(dataset)
+    assert(table in tables)
+    
+    cdt = get_bq_table_creation_datetime(dataset, table)
+    assert((cdt - datetime.datetime.now()).days < 1)
+
+    cdt = get_bq_table_last_modified_datetime(dataset, table)
+    assert((cdt - datetime.datetime.now()).days < 1)
+
+    add_description_to_table(dataset, table, 'hello world')
+    tinfo = get_bq_table_info(dataset, table)
+    desc = tinfo['description']
+    assert(desc.count('hello world')==1)
+
+    add_description_to_table(dataset, table, 'hello world', append=True)
+    tinfo = get_bq_table_info(dataset, table)
+    desc = tinfo['description']
+    assert(desc.count('hello world')==2)
+
+    delete_bq_table(dataset, table)
+    tables = get_list_of_table_ids(dataset)
+    assert(table not in tables)
+    
+    
+

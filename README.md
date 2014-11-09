@@ -6,4 +6,11 @@ Provides analytics for edX platform courses, based on SQL and tracking logs data
 See https://github.com/mitodl/edx2bigquery
 
 
+To run unit tests:
+
+   ./run_test.py
+
+and
+
+   py.test --with-gae tests/test_bqutil.py
 
