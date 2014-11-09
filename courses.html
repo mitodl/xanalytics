@@ -44,6 +44,11 @@
 <body>
   <h1>{{orgname}} Courses</h1>
 
+{% if is_staff %}
+[ <a href="/dashboard">Cross-Course dashboard</a> ]
+<br/>
+{% endif %}
+
 <span style="float:right; color:blue">{{user}}
 {% if is_staff %}
 [ <a href="/admin">admin page</a> ]

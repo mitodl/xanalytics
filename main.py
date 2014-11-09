@@ -28,6 +28,7 @@ from auth import auth_required
 from stats import DataStats
 from datatable import DataTableField
 from datasource import DataSource
+from dashboard import DashboardRoutes
 from collections import defaultdict, OrderedDict
 
 import jinja2
@@ -50,51 +51,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
     '''
     Main python class which displays views.
     '''
-
-    GSROOT = local_config.GOOGLE_STORAGE_ROOT
-    ORGNAME = local_config.ORGANIZATION_NAME
-    MODE = local_config.MODE
-    USE_LATEST = local_config.DATA_DATE=='latest'	# later: generalize to dataset for specific date
-
-    IM_WIDTH = 374/2
-    IM_HEIGHT = 200/2
-    bqdata = {}
-
-    common_data = {'orgname': ORGNAME,
-                   'mode': MODE,
-    }
-
-    def get_course_listings(self):
-
-        all_courses = self.get_data(local_config.COURSE_LISTINGS_TABLE, key={'name': 'course_id'})
-
-        courses = {'data': [], 'data_by_key': OrderedDict()}
-
-        for course_id, cinfo in all_courses['data_by_key'].items():
-            if not self.is_user_authorized_for_course(course_id):
-                continue
-            courses['data'].append(cinfo)
-            courses['data_by_key'][course_id] = cinfo
-
-        for k in courses['data']:
-            cid = k['course_id']
-            if not cid:
-                logging.info('oops, bad course_id! line=%s' % k)
-                continue
-            if ('course_number' not in k) and ('Course Number' in k):
-                k['course_number'] = k['Course Number']	# different conventions for BigQuery and Google Spreadsheet
-                
-            k['course_image'] = self.get_course_image(cid)
-            try:
-                k['title'] = unidecode(k.get('title', k.get('Title'))).encode('utf8')
-            except:
-                logging.error('[get_course_listings] oops, cannot encode title, row=%s' % k)
-                raise
-            (m,d,y) = map(int, k.get('courses_launch', k.get('Course Launch', '')).split('/'))
-            ldate = "%04d-%02d-%02d" % (y,m,d)
-            k['launch'] = ldate
-            courses['data_by_key'][cid]['launch'] = ldate
-        return courses
 
     @auth_required
     def get_main(self):
@@ -120,7 +76,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                      'table': html,
                  })
         template = JINJA_ENVIRONMENT.get_template('courses.html')
-        # template = os.path.join(os.path.dirname(__file__), 'courses.html')
         self.response.out.write(template.render(data))
 
     @auth_required
@@ -165,57 +120,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                  })
         template = JINJA_ENVIRONMENT.get_template('admin.html')
         self.response.out.write(template.render(data))
-
-    def get_course_image(self, course_id):
-        #  images 374x200
-        cdir = course_id.replace('/','__')
-        if self.USE_LATEST:
-            cdir = cdir + "/latest"
-        img = '<img width="{width}" height="{height}" src="https://storage.googleapis.com/{gsroot}/{cdir}/course_image.jpg"/>'.format(gsroot=self.GSROOT,
-                                                                                                                                        cdir=cdir,
-                                                                                                                                        width=self.IM_WIDTH,
-                                                                                                                                        height=self.IM_HEIGHT,)
-        return img
-
-
-    def load_course_axis(self, course_id, dtype='data_by_key'):
-        '''
-        Get course axis table from BQ.  Use memcache.
-
-        The course axis has these fields:
-
-        category, index, url_name, name, gformat, due, start, module_id, course_id, path, data.ytid, data.weight, chapter_mid
-        '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
-        table = "course_axis"
-        key={'name': 'url_name'}
-        # return self.cached_get_bq_table(dataset, table, key=key, drop=['data'])['data_by_key']
-        return self.cached_get_bq_table(dataset, table, key=key)[dtype]
-
-
-    def load_person_course(self, course_id):
-        '''
-        Get person_course table from BQ.  Use memcache.
-
-        The person_course table has these relevant fields (among many):
-
-        username, viewed, explored, ip
-        '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
-        table = "person_course"
-        key = None
-        return self.cached_get_bq_table(dataset, table)
-
-    def get_base(self, course_id):
-        '''
-        Return base url (e.g. edx.org) for access to given course_id
-        '''
-        csm = getattr(local_config, 'COURSE_SITE_MAP', None)
-        if csm is not None and csm:
-            for key, val in csm.iteritems():
-                if re.match(val['match'], course_id):
-                    return val['url']
-        return local_config.DEFAULT_COURSE_SITE
 
     @auth_required
     def ajax_get_usage_stats(self, org=None, number=None, semester=None):
@@ -399,17 +303,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
 
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
-
-    @staticmethod
-    def datetime2milliseconds(dt=None, dtstr=''):
-        '''
-        Return datetime as milliseconds from epoch (js convention)
-        dtstr may be YYYY-MM-DD
-        '''
-        if dtstr:
-            (y,m,d) = map(int, dtstr.split('-'))
-            dt = datetime.datetime(y,m,d)
-        return (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
 
     @auth_required
     def ajax_get_activity_stats(self, org=None, number=None, semester=None):
@@ -597,13 +490,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         template = JINJA_ENVIRONMENT.get_template('chapter.html')
         self.response.out.write(template.render(data))
         
-
-    @staticmethod
-    def fix_date(x):
-        if x:
-            return str(datetime.datetime.utcfromtimestamp(float(x)))
-        return ''
-
     @auth_required
     def ajax_get_course_stats(self, org=None, number=None, semester=None):
         '''
@@ -875,7 +761,7 @@ config['webapp2_extras.sessions'] = {
     'secret_key': local_config.SESSION_SECRET_KEY,
 }
 
-application = webapp2.WSGIApplication([
+ROUTES = [
 
     # html pages
 
@@ -901,4 +787,9 @@ application = webapp2.WSGIApplication([
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_stats', handler=MainPage, handler_method='ajax_get_problem_stats'),
     webapp2.Route('/get/<org>/<number>/<semester>/<table>/table_data', handler=MainPage, handler_method='ajax_get_table_data'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_histories', handler=MainPage, handler_method='ajax_get_problem_answer_histories'),
-], debug=True, config=config)
+    webapp2.Route('/get/dashboard/geo_stats', handler=MainPage, handler_method='ajax_dashboard_get_geo_stats'),
+]
+
+ROUTES += DashboardRoutes
+
+application = webapp2.WSGIApplication(ROUTES, debug=True, config=config)
