@@ -138,6 +138,7 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
             source = getattr(local_config, 'STAFF_COURSE_TABLE', None)
         data = self.get_data(source, ignore_cache=True)['data']
         self.import_data_to_ndb(data, 'staff', overwrite)
+        self.get_staff_course_table(ignore_cache=True)		# reload, to refill cache
         
 
     def disable_staff_table_entry(self, index):
@@ -190,7 +191,7 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         mem.delete(memset)        
 
 
-    def get_staff_course_table(self):
+    def get_staff_course_table(self, ignore_cache=False):
         '''
         Create the local "staff_course_table" which has (username, course_id) in staff_course_table['user_course']
         and (username) in staff_course_table['user'].
@@ -198,7 +199,7 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         memset = 'staff_course_table'
         staff_course_table = mem.get(memset)
         scdt = getattr(local_config, 'STAFF_COURSE_TABLE', None)
-        if (not staff_course_table) and (scdt is not None) and (scdt):
+        if (ignore_cache) or ((not staff_course_table) and (scdt is not None) and (scdt)):
             staff = self.get_staff_table()
             staff_course_table = {'user_course': {}, 'user': defaultdict(list)}
             for k in staff:
