@@ -110,8 +110,62 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
         data = {'series': series,
                 'table': bqdat['data'],
                 'totals': totals,
+                'last_updated': str(bqdat['lastModifiedTime']).rsplit(':',1)[0],
         }
 
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
+    @auth_required
+    def ajax_dashboard_get_courses_by_time(self):
+        '''
+        Return data for number of courses by time, showing
+        when courses open for registration, when they start,
+        and when they end.
+        '''
+        courses = self.get_course_listings()
+
+        def d2ms(datestr):
+            datestr = datestr.strip()
+            if not datestr:
+                return None
+            if '-' in datestr:
+                (y,m,d) = map(int, datestr.split('-'))
+            elif '/' in datestr:
+                (m,d,y) = map(int, datestr.split('/'))
+            else:
+                raise Exception('unknown datestr %s!' % datestr)
+            dt = datetime.datetime(y,m,d)
+            ts = self.datetime2milliseconds(dt)  # (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
+            return ts
+
+        def mkcum(field):
+            cnt = 0
+            dates = [{'date': x[field], 'num': x['Course Number'], 
+                      'title': x['Title'],
+                      'course_id': x['course_id'],
+                      'ms': d2ms(x[field])} for x in courses['data']]
+            #logging.info(dates)
+            dates.sort(key=lambda x: x['ms'])
+            data = []
+            flags = []
+            for x in dates:
+                xms = x['ms']
+                if xms is None:
+                    continue
+                data.append([ xms, cnt ])	# step function at this date
+                cnt += 1
+                data.append([ xms, cnt ])
+                flags.append({'x': xms, 'title': x['num'], 'text': '%s: %s' % (x['course_id'], x['title'])})
+            return data, flags
+
+        # registration opening
+        rodat, roflags = mkcum('Registration Open')
+
+        data = {'series': [ {'name': 'Registration Open', 'id': 'reg_open', 'data': rodat},
+                            {'type': 'flags', 'data': roflags, 'onSeries': 'reg_open'},
+                        ],
+        }
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
 
@@ -123,4 +177,5 @@ DashboardRoutes = [
 
 # ajax routes
     webapp2.Route('/dashboard/get/geo_stats', handler=Dashboard, handler_method='ajax_dashboard_get_geo_stats'),
+    webapp2.Route('/dashboard/get/courses_by_time', handler=Dashboard, handler_method='ajax_dashboard_get_courses_by_time'),
 ]

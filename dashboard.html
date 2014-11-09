@@ -215,7 +215,7 @@ $(document).ready(function() {
             },
 
             title: {
-                text: 'Enrollment and certification by country'
+                text: 'Enrollment and certification by country (updated ' + data['last_updated']  + ')'
             },
 	    credits: {  enabled: false  },
 
@@ -259,7 +259,52 @@ $(document).ready(function() {
 
 
 <h2>Course Listings: Total {{ncourses}}</h2>
-Courses which have opened for registration on edX.org:
+
+<h3>Number of courses offered versus time:</h3>
+(click and drag to zoom)
+
+<div id="cbytime" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+
+    $.getJSON('/dashboard/get/courses_by_time', function(data) {
+
+        // Create the chart
+//        $('#cbytime').highcharts('StockChart', {
+        $('#cbytime').highcharts({
+
+	    chart: { type: 'spline',  zoomType: 'x' },
+            rangeSelector : {
+                selected : 5
+            },
+	    credits: {  enabled: false  },
+            title : {
+                text : 'Number of courses over time (by registration opening date)',
+            },
+
+	    xAxis: {
+		type: 'datetime',
+		dateTimeLabelFormats: { // don't display the dummy year
+                    month: '%e. %b',
+                    year: '%b'
+		},
+		title: {
+                    text: 'Date'
+		}
+            },
+
+            series : data['series'],
+        }, function(chartObj) {
+	});
+    });
+});
+</script>
+
+
+<h3>Courses which have opened for registration on edX.org:</h3>
+
 {% autoescape off %}{{ table }}{% endautoescape %}
 
 </body>
