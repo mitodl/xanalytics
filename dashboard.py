@@ -184,10 +184,18 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
                 net_ver.append( [ dtms, x ])
 
         # average new enrollment per day
-        enroll_rate_avg = (cum_reg[-1][1] - cum_reg[0][1]) * 1.0 / ((cum_reg[-1][0] - cum_reg[0][0])/1000.0/60/60/24)
+        try:
+            enroll_rate_avg = (cum_reg[-1][1] - cum_reg[0][1]) * 1.0 / ((cum_reg[-1][0] - cum_reg[0][0])/1000.0/60/60/24)
+        except Exception as err:
+            logging.error("error computing enroll_rate_avg, cum_reg=%s, err=%s" % ( cum_reg, err))
+            enroll_rate_avg = 0
 
         # average new verified ID per day
-        verified_rate_avg = (cum_ver[-1][1] - cum_ver[0][1]) * 1.0 / ((cum_ver[-1][0] - cum_ver[0][0])/1000.0/60/60/24)
+        try:
+            verified_rate_avg = (cum_ver[-1][1] - cum_ver[0][1]) * 1.0 / ((cum_ver[-1][0] - cum_ver[0][0])/1000.0/60/60/24)
+        except Exception as err:
+            logging.error("error computing verified_rate_avg, cum_ver=%s, err=%s" % ( cum_ver, err))
+            verified_rate_avg = 0
 
         logging.info("enroll_rate_avg = %s" % enroll_rate_avg)
 

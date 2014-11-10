@@ -558,15 +558,19 @@ class DataStats(object):
         if dt is None and not dtstr:
             return None
         if dtstr:
-            if '-' in dtstr:
-                (y,m,d) = map(int, dtstr.split('-'))
-            elif '/' in dtstr:
-                (m,d,y) = map(int, dtstr.split('/'))
-            else:
-                y = int(dtstr[:4])
-                m = int(dtstr[4:6])
-                d = int(dtstr[6:])
-                (m,d,y) = map(int, dtstr.split('/'))
+            try:
+                if '-' in dtstr:
+                    (y,m,d) = map(int, dtstr.split('-'))
+                elif '/' in dtstr:
+                    (m,d,y) = map(int, dtstr.split('/'))
+                else:
+                    y = int(dtstr[:4])
+                    m = int(dtstr[4:6])
+                    d = int(dtstr[6:])
+                    (m,d,y) = map(int, dtstr.split('/'))
+            except Exception as err:
+                logging.error("[datetime2milliseconds] cannot parse %s, err=%s" % (dtstr, err))
+                return None
             dt = datetime.datetime(y,m,d)
         return (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
 
