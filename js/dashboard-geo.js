@@ -110,6 +110,7 @@ var get_geo = function() {
     /* Apply the tooltips */
     table.$('tr').tooltip( {
         'content': function () {   return $(this).prop('title'); },
+	'html': true,
         "delay": 0,
         // "track": true,
         // "fade": 250
