@@ -250,12 +250,12 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
         ver_series = [ [x[0], x[3]] for x in all_series ]
 
         all_courses = [ x[0] for x in all_series ]
-        all_enrollment = {'Certified': [],
-                          'Only Explored': [],
-                          'Only Viewed': [],
-                          'Only Registered': [],
-                          # 'Verified ID': []
-                      }
+        all_enrollment = OrderedDict([[ 'Certified', [] ],
+                                      [ 'Only Explored', [] ],
+                                      [ 'Only Viewed',  [] ],
+                                      [ 'Only Registered',  [] ],
+                                      # 'Verified ID': []
+                                  ])
 
         # logging.info('dbc=%s' % data_by_cid.keys())
         # logging.info('all=%s' % all_courses)
