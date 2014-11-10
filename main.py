@@ -62,11 +62,11 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         # logging.info('course listings: %s' % courses['data'])
 
         html = self.list2table(map(DataTableField, 
-                                   [{'field': 'launch', 'title':'Course launch'},
-                                    {'field': 'course_number', 'title': 'Course #'}, 
+                                   [{'field': 'launch', 'title':'Course launch', 'width': '12%'},
+                                    {'field': 'course_number', 'title': 'Course #', 'width': '5%'}, 
                                     {'field': 'course_image', 'title': 'Course image'}, 
-                                    {'field': 'title', 'title': 'Course Title'},
-                                    'course_id',
+                                    {'field': 'title', 'title': 'Course Title', 'width': '40%'},
+                                    {'field': 'course_id', 'title': 'course ID', 'width': '12%'},
                                    ]), 
                                courses['data'])
 
