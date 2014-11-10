@@ -46,11 +46,29 @@ class TestDashboard(unittest.TestCase):
     def test_dashboard_page(self):
         request = webapp2.Request.blank('/dashboard')
         response = request.get_response(self.application)
-        assert('Analytics: Cross-Course Dashboard' in response.text)
+        assert('Cross-Course Dashboard' in response.text)
 
     def test_dashboard_geo_stats(self):
         request = webapp2.Request.blank('/dashboard/get/geo_stats')
         response = request.get_response(self.application)
         data = response.json
         assert("totals" in data)
+
+    def test_dashboard_broad_stats(self):
+        request = webapp2.Request.blank('/dashboard/get/broad_stats')
+        response = request.get_response(self.application)
+        data = response.json
+        assert("table" in data)
+
+    def test_dashboard_enrollment(self):
+        request = webapp2.Request.blank('/dashboard/get/enrollment_by_time')
+        response = request.get_response(self.application)
+        data = response.json
+        assert("series" in data)
+
+    def test_dashboard_courses_by_time(self):
+        request = webapp2.Request.blank('/dashboard/get/courses_by_time')
+        response = request.get_response(self.application)
+        data = response.json
+        assert("series" in data)
 
