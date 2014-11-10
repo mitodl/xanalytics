@@ -23,6 +23,14 @@ tr.shown td.details-control {
 <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.3/js/jquery.dataTables.js"></script>
 <script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
 
+<!-- bootstrap -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap-theme.min.css">
+<!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> -->
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/docs.min.js"></script>
+<link href="/css/theme.css" rel="stylesheet">
+
   <script type='text/javascript'
      src='https://www.google.com/jsapi'></script>
 
@@ -33,12 +41,44 @@ tr.shown td.details-control {
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
 </head>
-<body>
-  <h1>{{orgname}}: Problem {{name}} of {{course_id}}</h1>
+  <body role="document">
 
-[  <a href="/">Back to course list</a>  | <a href="/course/{{course_id}}">Back to chapter list</a> | <a href="/chapter/{{course_id}}/{{cun}}">Back to chapter content list</a> ]
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">{{orgname}} Analytics</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+	    <li><a href="/course/{{course_id}}">Course Overview</a> </li> 
+	    <li><a href="/chapter/{{course_id}}/{{cun}}">Chapter Overview</a></li>
+	    <li class="active"><a href="#">One Problem</a></li>
+	    {% if is_staff %}
+            <li ><a href="/dashboard">Cross-Course dashboard</a></li>
+	    {% endif %}
 
-module_id = {{module_id}}
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li><p class="navbar-text">{{user}}</p></li>
+	    {% if is_staff %}
+            <li><a href="/admin">Admin Page</a></li>
+	    {% endif %}
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+<div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
+  <h1>Problem: {{name}}</h1>
+<h3>{{course_id}}</h3>
+<h3>module_id = {{module_id}}</h3>
 
 <h2>Problem Stats</h2>
 

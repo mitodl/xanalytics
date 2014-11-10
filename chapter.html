@@ -23,6 +23,14 @@ tr.shown td.details-control {
 <script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
 <script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
 
+<!-- bootstrap -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap-theme.min.css">
+<!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> -->
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/docs.min.js"></script>
+<link href="/css/theme.css" rel="stylesheet">
+
   <script type='text/javascript'
      src='https://www.google.com/jsapi'></script>
 
@@ -43,10 +51,42 @@ $(document).ready( function () {
 </script>
 
 </head>
-<body>
-  <h1>{{orgname}}: Chapter {{chapter_name}} of {{course_id}}</h1>
 
-[  <a href="/">Back to course list</a>  | <a href="/course/{{course_id}}">Back to chapter list</a> ]
+  <body role="document">
+
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">{{orgname}} Analytics</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+	    <li><a href="/course/{{course_id}}">Course Overview</a> </li>
+	    <li class="active"><a href="#">Chapter Overview</a></li>
+	    {% if is_staff %}
+            <li ><a href="/dashboard">Cross-Course dashboard</a></li>
+	    {% endif %}
+
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li><p class="navbar-text">{{user}}</p></li>
+	    {% if is_staff %}
+            <li><a href="/admin">Admin Page</a></li>
+	    {% endif %}
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+<div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
+  <h1>Chapter: {{chapter_name}} of {{course_id}}</h1>
 
 <h2>Content</h2>
 
