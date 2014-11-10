@@ -110,7 +110,8 @@ class DataStats(object):
 
         table = 'stats_module_usage'
         key = {'name': 'module_id'}
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=['%s.studentmodule' % dataset])
 
     def compute_problem_stats(self, course_id):
         '''
@@ -163,7 +164,8 @@ class DataStats(object):
 
         table = 'stats_for_problems'
         key = {'name': 'url_name'}
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=['%s.problem_analysis' % dataset])
 
 
     def select_problem_answer_histories(self, course_id, url_name):
@@ -189,7 +191,8 @@ class DataStats(object):
 
         table = 'problem_check_for_%s' % (url_name.replace(':','__').replace('-','_'))
         key = None
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=['%s.problem_check' % dataset])
 
 
     def compute_enrollment_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
@@ -375,7 +378,8 @@ class DataStats(object):
 
         table = 'stats_overall'
         key = None
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=['%s.person_course' % dataset])
 
 
     def compute_geo_stats(self, course_id):
@@ -416,7 +420,38 @@ class DataStats(object):
 
         table = 'stats_geo0'
         key = None
-        return self.cached_get_bq_table(dataset, table, sql=sql, key=key)
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=['%s.person_course' % dataset])
+
+
+    def compute_overall_enrollment_by_day(self):
+        '''
+        Compute enrollment by day from enrollday_sql, over all courses
+        '''
+        sql = """
+           SELECT  date,
+                   sum(nregistered_ever) as nregistered_ever_sum,
+                   sum(nregistered_ever_sum) over (order by date) as nregistered_ever_cum,
+
+                   sum(nregistered_net) as nregistered_net_sum,
+                   sum(nregistered_net_sum) over (order by date) as nregistered_net_cum,
+
+                   sum(nverified_ever) as nverified_ever_sum,
+                   sum(nverified_ever_sum) over (order by date) as nverified_ever_cum,
+
+                   sum(nverified_net) as nverified_net_sum,
+                   sum(nverified_net_sum) over (order by date) as nverified_net_cum,
+
+                FROM [course_report_latest.enrollday_sql] 
+                group by date
+                order by date
+        """
+
+        dataset = "course_report_latest"
+        table = 'stats_overall_enrollment'
+        key = None
+        return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=['course_report_latest.enrollday_sql'])
 
 
     def get_sm_nuser_views(self, module_id):
@@ -518,8 +553,19 @@ class DataStats(object):
         Return datetime as milliseconds from epoch (js convention)
         dtstr may be YYYY-MM-DD
         '''
+        dtstr = dtstr.strip()
+        if dt is None and not dtstr:
+            return None
         if dtstr:
-            (y,m,d) = map(int, dtstr.split('-'))
+            if '-' in dtstr:
+                (y,m,d) = map(int, dtstr.split('-'))
+            elif '/' in dtstr:
+                (m,d,y) = map(int, dtstr.split('/'))
+            else:
+                y = int(dtstr[:4])
+                m = int(dtstr[4:6])
+                d = int(dtstr[6:])
+                (m,d,y) = map(int, dtstr.split('/'))
             dt = datetime.datetime(y,m,d)
         return (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
 

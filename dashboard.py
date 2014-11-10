@@ -125,26 +125,12 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
         '''
         courses = self.get_course_listings()
 
-        def d2ms(datestr):
-            datestr = datestr.strip()
-            if not datestr:
-                return None
-            if '-' in datestr:
-                (y,m,d) = map(int, datestr.split('-'))
-            elif '/' in datestr:
-                (m,d,y) = map(int, datestr.split('/'))
-            else:
-                raise Exception('unknown datestr %s!' % datestr)
-            dt = datetime.datetime(y,m,d)
-            ts = self.datetime2milliseconds(dt)  # (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
-            return ts
-
         def mkcum(field):
             cnt = 0
             dates = [{'date': x[field], 'num': x['Course Number'], 
                       'title': x['Title'],
                       'course_id': x['course_id'],
-                      'ms': d2ms(x[field])} for x in courses['data']]
+                      'ms': self.datetime2milliseconds(dtstr=x[field])} for x in courses['data']]
             #logging.info(dates)
             dates.sort(key=lambda x: x['ms'])
             data = []
@@ -169,6 +155,40 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
 
+
+    @auth_required
+    def ajax_dashboard_get_enrollment_by_time(self):
+        '''
+        Return data for enrollment by time.
+        '''
+        ebyday = self.compute_overall_enrollment_by_day()
+
+        cum_reg = []
+        net_reg = []
+
+        for row in ebyday['data']:
+            dtms = self.datetime2milliseconds(dtstr=row['date'])
+            nec = int(row['nregistered_ever_cum'])
+            if nec > 0:
+                cum_reg.append( [ dtms, nec ])
+            nnc = int(row['nregistered_net_cum'])
+            if nnc > 0:
+                net_reg.append( [ dtms, nnc ])
+
+        # average new enrollment per day
+        enroll_rate_avg = (cum_reg[-1][1] - cum_reg[0][1]) * 1.0 / ((cum_reg[-1][0] - cum_reg[0][0])/1000.0/60/60/24)
+
+        logging.info("enroll_rate_avg = %s" % enroll_rate_avg)
+
+        data = {'series': [ {'name': 'Cumulative Registration', 'id': 'cum_reg', 'data': cum_reg},
+                            {'name': 'Net Registration (includes un-registration)', 'id': 'net_reg', 'data': net_reg},
+                            # {'type': 'flags', 'data': roflags, 'onSeries': 'reg_open'},
+                        ],
+                'enroll_rate_avg': "%9.1f" % enroll_rate_avg,
+        }
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
         
 
 DashboardRoutes = [
@@ -178,4 +198,5 @@ DashboardRoutes = [
 # ajax routes
     webapp2.Route('/dashboard/get/geo_stats', handler=Dashboard, handler_method='ajax_dashboard_get_geo_stats'),
     webapp2.Route('/dashboard/get/courses_by_time', handler=Dashboard, handler_method='ajax_dashboard_get_courses_by_time'),
+    webapp2.Route('/dashboard/get/enrollment_by_time', handler=Dashboard, handler_method='ajax_dashboard_get_enrollment_by_time'),
 ]

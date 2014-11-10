@@ -108,9 +108,16 @@ class DataSource(object):
 
 
     def cached_get_bq_table(self, dataset, table, sql=None, key=None, drop=None,
-                            logger=None, ignore_cache=False, startIndex=0, maxResults=1000000):
+                            logger=None, ignore_cache=False, 
+                            depends_on=None,
+                            force_query=False,
+                            startIndex=0, maxResults=1000000):
         '''
-        Get a dataset from BigQuery; use memcache
+        Get a dataset from BigQuery; use memcache.
+
+        If "depends_on" is provided (as a list of strings), and if the desired table
+        already exists, then check to make sure it is newer than any of the tables
+        listed in "depends_on".
         '''
         if logger is None:
             logger = logging.info
@@ -118,10 +125,40 @@ class DataSource(object):
         if startIndex:
             memset += '-%d-%d' % (startIndex, maxResults)
         data = mem.get(memset)
+
+        if depends_on is not None:
+            # get the latest mod time of tables in depends_on:
+            modtimes = [ bqutil.get_bq_table_last_modified_datetime(*(x.split('.',1))) for x in depends_on]
+            latest = max([x for x in modtimes if x is not None])
+            
+            if not latest:
+                raise Exception("[datasource.cached_get_bq_table] Cannot get last mod time for %s (got %s), needed by %s.%s" % (depends_on, modtimes, dataset, table))
+
+            if data and data.get('lastModifiedTime', None):
+                # data has a mod time, let's see if that has expired
+                if data.get('lastModifiedTime', None) < latest:
+                    ignore_cache = True
+
+            # get the mod time of the computed table, if it exists
+            try:
+                table_date = bqutil.get_bq_table_last_modified_datetime(dataset, table)
+            except Exception as err:
+                if 'Not Found' in str(err):
+                    table_date = None
+                else:
+                    raise
+
+            if table_date and table_date < latest:
+                force_query = True
+                logging.info("[datasource.cached_get_bq_table] Forcing query recomputation of %s.%s, table_date=%s, lates=%s" % (dataset, table,
+                                                                                                                                 table_date, latest))
+
         if (not data) or ignore_cache:
             try:
                 data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger,
-                                           startIndex=startIndex, maxResults=maxResults)
+                                           force_query=force_query,
+                                           startIndex=startIndex, 
+                                           maxResults=maxResults)
             except Exception as err:
                 logging.error(err)
                 data = {'fields': {}, 'field_names': [], 'data': [], 'data_by_key': {}}
