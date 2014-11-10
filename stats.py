@@ -5,6 +5,7 @@
 # AJAX calls themselves should go elsewhere.
 #
 
+import re
 import datetime
 import bqutil
 import local_config
