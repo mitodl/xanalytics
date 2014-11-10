@@ -573,6 +573,12 @@ class DataStats(object):
     def get_report_geo_stats(self):
         table = 'geographic_distributions'
         dataset = 'course_report_latest'
-        key = None
         return self.cached_get_bq_table(dataset, table)
         
+    def get_report_broad_stats(self):
+        table = 'broad_stats_by_course'
+        dataset = 'course_report_latest'
+        key = None
+        tableinfo = bqutil.get_bq_table_info(dataset, table)
+        data = self.cached_get_bq_table(dataset, table, key=key)
+        return (data, tableinfo)

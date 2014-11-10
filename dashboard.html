@@ -12,6 +12,7 @@
 -->
 <link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
 <link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.fixedColumns.css">
   
 <!-- jQuery -->
 <script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.10.2.min.js"></script>
@@ -54,7 +55,7 @@ body {
 <!-- DataTables -->
 <script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
 <script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
-
+<script src="/js/dataTables.fixedColumns.js"></script>
 
 <!-- highchart -->
 
@@ -103,7 +104,7 @@ body {
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">{{orgname}} Analytics</a>
+          <a class="navbar-brand" href="/">{{orgname}} Analytics</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
@@ -122,7 +123,7 @@ body {
     </nav>
 
 <div  class="container theme-showcase" role="main" data-target="#navbar">
-    <h1>{{orgname}} Analytics: Cross-Course Dashboard</h1>
+    <h1>Cross-Course Dashboard</h1>
 
     <h2 id="geography">Geographic Distribution</h2>
 
@@ -201,6 +202,9 @@ $(document).ready(function() {
 
 <div id="enrollbytime" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 
+<h3>ID Verified  by day: <span id="enrollavg"></span></h3>
+<div id="verifiedbytime" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+
 <script type="text/javascript">
 
 $(document).ready(function() {
@@ -237,15 +241,42 @@ $(document).ready(function() {
             series : data['series'],
         }, function(chartObj) {
 	});
-    });
 
-    $('[data-spy="scroll"]').each(function () {
-	var $spy = $(this).scrollspy('refresh')
+        // Create the chart
+        $('#verifiedbytime').highcharts({
+	    chart: { type: 'spline',  zoomType: 'x' },
+            rangeSelector : { selected : 5 },
+	    credits: {  enabled: false  },
+	    yAxis: {min: 0},
+            title : { text : 'ID Verified Program Registration by day', },
+
+	    xAxis: {
+		type: 'datetime',
+		dateTimeLabelFormats: { // don't display the dummy year
+                    month: '%e. %b',
+                    year: '%b'
+		},
+		title: {
+                    text: 'Date'
+		}
+            },
+            series : data['series_ver'],
+        }, function(chartObj) {
+	});
+
+	$('[data-spy="scroll"]').each(function () {
+	    var $spy = $(this).scrollspy('refresh')
+	});
     });
 
 });
 </script>
 
+<h2 id="enrollment">Cross-course comparison statistics</h2>
+
+<div id="cross-course" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+
+<script type="text/javascript" src="/js/dashboard-cc.js"></script>
 
 </div> <!-- main -->
 </body>

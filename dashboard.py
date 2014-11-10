@@ -165,6 +165,8 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
 
         cum_reg = []
         net_reg = []
+        cum_ver = []
+        net_ver = []
 
         for row in ebyday['data']:
             dtms = self.datetime2milliseconds(dtstr=row['date'])
@@ -174,9 +176,18 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
             nnc = int(row['nregistered_net_cum'])
             if nnc > 0:
                 net_reg.append( [ dtms, nnc ])
+            x= int(row['nverified_ever_cum'])
+            if x > 0:
+                cum_ver.append( [ dtms, x ])
+            x = int(row['nverified_net_cum'])
+            if x > 0:
+                net_ver.append( [ dtms, x ])
 
         # average new enrollment per day
         enroll_rate_avg = (cum_reg[-1][1] - cum_reg[0][1]) * 1.0 / ((cum_reg[-1][0] - cum_reg[0][0])/1000.0/60/60/24)
+
+        # average new verified ID per day
+        verified_rate_avg = (cum_ver[-1][1] - cum_ver[0][1]) * 1.0 / ((cum_ver[-1][0] - cum_ver[0][0])/1000.0/60/60/24)
 
         logging.info("enroll_rate_avg = %s" % enroll_rate_avg)
 
@@ -184,8 +195,89 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
                             {'name': 'Net Registration (includes un-registration)', 'id': 'net_reg', 'data': net_reg},
                             # {'type': 'flags', 'data': roflags, 'onSeries': 'reg_open'},
                         ],
+                'series_ver': [ {'name': 'Cumulative ID Verified Signups', 'id': 'cum_ver', 'data': cum_ver},
+                                {'name': 'Net ID Verified Signups (includes un-registration)', 'id': 'net_ver', 'data': net_ver},
+                                # {'type': 'flags', 'data': roflags, 'onSeries': 'reg_open'},
+                        ],
                 'enroll_rate_avg': "%9.1f" % enroll_rate_avg,
+                'verified_rate_avg': "%9.1f" % verified_rate_avg,
         }
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
+    @auth_required
+    def ajax_dashboard_get_broad_stats(self):
+        '''
+        broad comparison stats across courses.
+        '''
+        courses = self.get_course_listings()
+        (bqdata, tableinfo) = self.get_report_broad_stats()
+        self.fix_bq_dates(bqdata)
+
+        # keep only courses in the course listings table
+        known_course_ids = [x['course_id'] for x in courses['data']]
+        data_by_cid = OrderedDict()
+
+        for row in bqdata['data']:
+            cid = row['course_id']
+            if cid in known_course_ids:
+                data_by_cid[cid] = row
+
+        fields = tableinfo['schema']['fields']
+        field_names = [x['name'] for x in fields]
+
+        tablecolumns = json.dumps([ { 'data': x, 'title': x, 'class': 'dt-center' } for x in field_names ])
+
+        # get list of course_id's sorted by decreasing registration
+        all_series = [ [ x['course_id'], 
+                         int(x['registered_sum']), 
+                         int(x['certified_sum']),
+                         int(x['n_verified_id']),
+                     ] for x in data_by_cid.values() ]
+            
+        all_series.sort(key=lambda x: x[1], reverse=True)
+            
+        reg_series = [ [x[0], x[1]] for x in all_series ]
+        cert_series = [ [x[0], x[2]] for x in all_series ]
+        ver_series = [ [x[0], x[3]] for x in all_series ]
+
+        all_courses = [ x[0] for x in all_series ]
+        all_enrollment = {'Certified': [],
+                          'Only Explored': [],
+                          'Only Viewed': [],
+                          'Only Registered': [],
+                          # 'Verified ID': []
+                      }
+
+        # logging.info('dbc=%s' % data_by_cid.keys())
+        # logging.info('all=%s' % all_courses)
+
+        for course_id in all_courses:
+            row = data_by_cid[course_id]
+            nreg = int(row['registered_sum'])
+            nviewed = int(row['viewed_sum'])
+            nexpl = int(row['explored_sum'])
+            ncert = int(row['certified_sum'])
+            nver = int(row['n_verified_id'])
+            only_reg = nreg - nviewed
+            only_viewed = nviewed - nexpl
+            only_explored = nexpl - ncert
+            all_enrollment['Certified'].append(ncert)
+            all_enrollment['Only Registered'].append(only_reg)
+            all_enrollment['Only Viewed'].append(only_viewed)
+            all_enrollment['Only Explored'].append(only_explored)
+            # all_enrollment['Verified ID'].append(nver)
+
+        data = {'table': data_by_cid.values(),
+                'tablecolumns': tablecolumns,
+                'last_updated': str(bqdata['lastModifiedTime']).rsplit(':',1)[0],
+                'all_enrollment_series': [ {'name': x, 'data': y} for (x,y) in all_enrollment.items() ],
+                'enrollment_courses': all_courses,
+                # 'enrollment_series': [ {'name': 'Registrants', 'id': 'reg', 'data': reg_series} ],
+                # 'certified_series': [ {'name': 'Certified', 'id': 'cert', 'data': cert_series} ],
+                # 'verified_series': [ {'name': 'Verified', 'id': 'ver', 'data': ver_series} ],
+        }
+
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
 
@@ -199,4 +291,5 @@ DashboardRoutes = [
     webapp2.Route('/dashboard/get/geo_stats', handler=Dashboard, handler_method='ajax_dashboard_get_geo_stats'),
     webapp2.Route('/dashboard/get/courses_by_time', handler=Dashboard, handler_method='ajax_dashboard_get_courses_by_time'),
     webapp2.Route('/dashboard/get/enrollment_by_time', handler=Dashboard, handler_method='ajax_dashboard_get_enrollment_by_time'),
+    webapp2.Route('/dashboard/get/broad_stats', handler=Dashboard, handler_method='ajax_dashboard_get_broad_stats'),
 ]
