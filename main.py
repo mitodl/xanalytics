@@ -239,7 +239,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
 
         ps = self.compute_problem_stats(course_id)
         # logging.info('problem url_name = %s' % problem_url_name)
-        pstats = ps['data_by_key'][problem_url_name]
+        pstats = ps['data_by_key'].get(problem_url_name, [])
         # logging.info('pstats = %s' % pstats)
 
         data = {'data': [ pstats ] }
