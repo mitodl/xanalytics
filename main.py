@@ -73,6 +73,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         data = self.common_data
         data.update({'data': {},
                      'is_staff': self.is_superuser(),
+                     'is_pm': self.is_pm(),
                      'table': html,
                  })
         template = JINJA_ENVIRONMENT.get_template('courses.html')
@@ -632,6 +633,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                      'fields': tablefields,
                      'table': tablehtml,
                      'is_staff': self.is_superuser(),
+                     'is_pm': self.is_pm(),
                      'image': self.get_course_image(course_id),
                  })
         

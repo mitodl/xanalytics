@@ -225,6 +225,12 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
             logging.info('staff_course_table = %s' % staff_course_table.keys())
         return staff_course_table
 
+    def is_pm(self):
+        '''
+        pm = project manager
+        '''
+        return self.does_user_have_role('pm')
+
     def does_user_have_role(self, role, course_id=None):
         '''
         Return True if user has specified role.
