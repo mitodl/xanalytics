@@ -476,6 +476,12 @@ class DataStats(object):
         '''
         Compute enrollment by day from enrollday_sql, over all courses
         '''
+        dataset = "course_report"
+        if self.USE_LATEST:
+            dataset += '_latest'
+        else:
+            dataset += '_' + self.ORGNAME
+
         sql = """
            SELECT  date,
                    sum(nregistered_ever) as nregistered_ever_sum,
@@ -495,7 +501,6 @@ class DataStats(object):
                 order by date
         """
 
-        dataset = "course_report_latest"
         table = 'stats_overall_enrollment'
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,

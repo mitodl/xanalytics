@@ -185,7 +185,7 @@ function drawChart() {
 <font color='red'><p>You are NOT an instructor of this course; usernames are not displayed below.</p></font>
 {% endif %}
 
-<p><table id="prob_answers"></table></p>
+<p id="activity_date"></p><p><table id="prob_answers"></table></p>
 
 <script type="text/javascript">
     $(document).ready( function () {
@@ -211,7 +211,11 @@ function drawChart() {
     // event listener for ajax call completion - fill in the histograms tables
 	$('#prob_answers') .on('xhr.dt', 
 		       function ( e, settings, json ) { 
+
+			   $('#activity_date').html('<h4>Data computed from logs through ' + json['data_date'] + '</h4>');
+
 			   hdhtml = "<span>"
+			   hdhtml += "<p>Responses extracted from logs through: " + json['data_date'] + "</p>"
 			   hdhtml += "<p>Number of items in this problem: " + json['items'].length + "</p>"
 			   hdhtml += "<p>Top 20 responses and frequency of each response for these items:</p>"
 			   hdhtml += "<table border='1' width='100%'><tr>"

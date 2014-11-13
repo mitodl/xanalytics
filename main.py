@@ -259,8 +259,12 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         # also compute histogram
         histograms = defaultdict(lambda: defaultdict(int))
 
+        latest_date = "0"
+
         for entry in pah['data']:
             entry['time'] = self.fix_date(entry['time'])
+            if entry['time'] > latest_date:
+                latest_date = entry['time']
             sa = entry['student_answers']
             sadat = json.loads(sa)
             sastr = "<table>"
@@ -300,6 +304,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         data = {'data': pah['data'],
                 'items': histograms.keys(),
                 'histograms': histograms,     # { k: v.items() for (k,v) in histograms.items()},
+                'data_date': latest_date[:16],
         }
 
         self.response.headers['Content-Type'] = 'application/json'   
