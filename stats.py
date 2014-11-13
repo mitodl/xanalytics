@@ -196,7 +196,7 @@ class DataStats(object):
                                         depends_on=['%s.problem_check' % dataset])
 
 
-    def compute_enrollment_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
+    def compute_enrollment_by_day(self, course_id, start="2012-08-20", end="2115-01-01"):
         '''
         Compute enrollment by day, based on enrollday_* tables
         '''
@@ -261,18 +261,57 @@ class DataStats(object):
                    start=start.replace('-',''), 
                    end=end.replace('-',''))
 
-        # special handling: use new enrollday2_* tables if available, instead of enrollday_* 
-        tables = bqutil.get_list_of_table_ids(input_dataset)
-        prefixes = [x.split('_')[0] for x in tables]
-        if 'enrollday2' in prefixes:
-            sql = sql_enrollday2
-            logging.info('[compute_enrollment_by_day] using enrollday2 for %s' % course_id)
-        else:
-            sql = sql_enrollday
+        sql_enrollday_all = """
+          SELECT 
+              '{course_id}' as course_id,
+              date,
+              nenroll,
+              sum(nenroll) over(order by date) as nenroll_cum,
+          FROM (
+                  SELECT 
+                      date(time) as date,
+                      sum(diff_enrollment_honor) as nenroll_honor,
+                      sum(diff_enrollment_audit) as nenroll_audit,
+                      sum(diff_enrollment_verified) as nenroll_verified,
+                      sum(diff_enrollment_honor) + sum(diff_enrollment_audit) + sum(diff_enrollment_verified) as nenroll,
+                  FROM {dataset}.enrollday_all
+                  group by date
+                  order by date
+        )
+        group by date, nenroll
+        order by date
+        """.format(dataset=dataset, course_id=course_id)
 
+        # special handling: use new enrollday_all tables if available, instead of enrollday* in *_pcday dataset
+        tables = bqutil.get_list_of_table_ids(dataset)
+        if 'enrollday_all' in tables:
+            sql = sql_enrollday_all
+            logging.info('[compute_enrollment_by_day] using enrollday_all for %s' % course_id)
+            depends_on = [ "%s.enrollday_all" % dataset ]
+        else:
+            # old special handling: use new enrollday2_* tables if available, instead of enrollday_* 
+            tables = bqutil.get_list_of_table_ids(input_dataset)
+            prefixes = [x.split('_')[0] for x in tables]
+            if 'enrollday2' in prefixes:
+                sql = sql_enrollday2
+                logging.info('[compute_enrollment_by_day] using enrollday2 for %s' % course_id)
+                tpre = 'enrollday2'
+            else:
+                sql = sql_enrollday
+                tpre = 'enrollday'
+    
+            latest_table = None
+            for k in tables:
+                if k.startswith('%s_' % tpre):
+                    if latest_table is None or k > latest_table:
+                        latest_table = k
+            depends_on = ['%s.%s' % (input_dataset, latest_table)]
+
+        logging.info('enrollment_day depends_on=%s' % depends_on)
         table = 'stats_enrollment_by_day'
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=depends_on,
                                         logger=logging.error, ignore_cache=False)
 
     def reset_enrollment_by_day(self, course_id):
@@ -315,9 +354,17 @@ class DataStats(object):
           order by date
         """.format(dataset=input_dataset, course_id=course_id, start=start, end=end)
 
+        pcday_tables = bqutil.get_list_of_table_ids(input_dataset)
+        last_pcday = None
+        for k in pcday_tables:
+            if k.startswith('pcday_'):
+                if last_pcday is None or k > last_pcday:
+                    last_pcday = k
+
         table = 'stats_activity_by_day'
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                        depends_on=['%s.%s' % (input_dataset, last_pcday)],
                                         logger=logging.error)
 
 

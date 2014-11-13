@@ -275,6 +275,8 @@ $(document).ready(function() {
 <!-- ----------------------------------------------------------------------------- -->
 <h2>Activity</h2>
 
+<div id="activity_date"></div>
+
 <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 
 <script type="text/javascript">
@@ -284,6 +286,8 @@ $(document).ready(function() {
     $.getJSON('/get/{{course_id}}/activity_stats', function(data) {
 
 // console.log('data = ', data)
+
+        $('#activity_date').html('<h3>Data computed from logs through ' + data['data_date'] + '</h3>');
 
         // Create the chart
         $('#container').highcharts('StockChart', {
@@ -357,6 +361,8 @@ $(document).ready(function() {
 <!-- ----------------------------------------------------------------------------- -->
 <h2>Geographic distribution</h2>
 
+<div id="geodat_info"></div>
+
 <div id="geomap" style="height: 500px; min-width: 310px; max-width: 800px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 
 
@@ -379,6 +385,8 @@ $(document).ready(function() {
         });
 
 	// console.log(data['top_by_reg']);
+
+        $('#geodat_info').html('<h3>Data computed ' + data['data_date'] + '</h3>');
 
 	var table = $('#geo_top').DataTable({
             dom: 'T<"clear">lfrtip',

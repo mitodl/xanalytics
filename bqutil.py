@@ -87,7 +87,7 @@ def get_projects(project_id=DEFAULT_PROJECT_ID):
             print 'Found %s: %s' % (project_id, project['friendlyName'])
 
 def get_tables(dataset_id, project_id=DEFAULT_PROJECT_ID, verbose=False):
-    table_list = tables.list(datasetId=dataset_id, projectId=project_id, maxResults=1000).execute()
+    table_list = tables.list(datasetId=dataset_id, projectId=project_id, maxResults=10000).execute()
     if verbose:
         for current in table_list['tables']:
             print "table: ", current

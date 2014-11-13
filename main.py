@@ -319,12 +319,19 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         (y,m,d) = map(int, start.split('-'))
         start_dt = datetime.datetime(y, m, d)
         start_dt = start_dt - datetime.timedelta(days=14)	# start plot 2 weeks before launch
-        start_str = start_dt.strftime('%Y-%m-%d')
+
         # logging.info("start_str = %s" % start_str)
         end_dt = start_dt + datetime.timedelta(days=32*4)	# default position for end selector
         end_str = end_dt.strftime('%Y-%m-%d')
 
-        bqdat = self.compute_activity_by_day(course_id, start=start_str)
+        if start_dt >= end_dt:
+            start_dt = datetime.datetime(2014, 9, 1)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        the_end = '2015-01-01'
+        if end_str > '2015-01-01':
+            the_end = end_str
+
+        bqdat = self.compute_activity_by_day(course_id, start=start_str, end=the_end)
         def getrow(x, field, scale):
             #return [x[k] for k in ['date', 'nevents', 'nforum']]
             (y,m,d) = map(int, x['date'].split('-'))
@@ -350,6 +357,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         data = {'series': stats,
                 'start_dt': self.datetime2milliseconds(start_dt),
                 'end_dt': self.datetime2milliseconds(end_dt),
+                'data_date': bqdat.get('depends_on', ['.'])[0].split('.',1)[1],
         }
 
         self.response.headers['Content-Type'] = 'application/json'   
@@ -575,7 +583,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                      'nverified': x['n_verified_id'],
                      'ncertified': x['ncertified'],
                      'cert_pct': x['cert_pct'],
-                     
                  }
 
         series = [ getrow(x) for x in bqdat['data'] ]
@@ -585,6 +592,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
 
         data = {'series': series,
                 'table': bqdat['data'],
+                'data_date': str(bqdat['lastModifiedTime'])[:16],
         }
 
         self.response.headers['Content-Type'] = 'application/json'   

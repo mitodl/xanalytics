@@ -163,6 +163,7 @@ class DataSource(object):
                 logging.error(err)
                 data = {'fields': {}, 'field_names': [], 'data': [], 'data_by_key': {}}
                 return data		# don't cache empty result
+            data['depends_on'] = depends_on
             if (drop is not None) and drop:
                 for key in drop:
                     data.pop(key)	# because data can be too huge for memcache ("Values may not be more than 1000000 bytes in length")
