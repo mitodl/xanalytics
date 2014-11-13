@@ -331,7 +331,21 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         if end_str > '2015-01-01':
             the_end = end_str
 
-        bqdat = self.compute_activity_by_day(course_id, start=start_str, end=the_end)
+        try:
+            bqdat = self.compute_activity_by_day(course_id, start=start_str, end=the_end)
+        except Exception as err:
+            logging.error("failed in calling compute_activity_by_day, err=%s" % str(err))
+            data = {'series': [], 
+                    'start_dt': self.datetime2milliseconds(start_dt),
+                    'end_dt': self.datetime2milliseconds(end_dt),
+                    'data_date': '',
+            }
+
+            self.response.headers['Content-Type'] = 'application/json'   
+            self.response.out.write(json.dumps(data))
+            return
+
+
         def getrow(x, field, scale):
             #return [x[k] for k in ['date', 'nevents', 'nforum']]
             (y,m,d) = map(int, x['date'].split('-'))
