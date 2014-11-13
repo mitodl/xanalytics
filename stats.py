@@ -112,7 +112,7 @@ class DataStats(object):
         table = 'stats_module_usage'
         key = {'name': 'module_id'}
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
-                                        depends_on=['%s.studentmodule' % dataset])
+                                        depends_on=['%s.studentmodule' % dataset, '%s.course_axis' % dataset ])
 
     def compute_problem_stats(self, course_id):
         '''
