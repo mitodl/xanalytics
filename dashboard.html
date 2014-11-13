@@ -130,6 +130,7 @@ body {
 <div  class="container theme-showcase" role="main" data-target="#navbar">
     <h1>Cross-Course Dashboard</h1>
 
+{% if mode=="mooc" %}
     <h2 id="geography">Geographic Distribution</h2>
 
     <a id="btn-geo-show" class="btn btn-lg btn-primary" href="#" role="button">Show Map »</a>
@@ -145,9 +146,11 @@ body {
 
       <script src="/js/dashboard-geo.js"></script>
     </div>
+{% endif %}
 
 <h2 id="listings">Course Listings: Total {{ncourses}}</h2>
 
+{% if mode=="mooc" %}
 <h3>Number of courses offered versus time:</h3>
 (click and drag to zoom)
 
@@ -193,9 +196,10 @@ $(document).ready(function() {
     });
 });
 </script>
+{% endif %}
 
 
-<h3>Courses which have opened for registration on edX.org:</h3>
+<h3>Courses which have opened for registration on {{orgname}}:</h3>
 
 {% autoescape off %}{{ table }}{% endautoescape %}
 
@@ -207,8 +211,10 @@ $(document).ready(function() {
 
 <div id="enrollbytime" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 
-<h3>ID Verified  by day: <span id="enrollavg"></span></h3>
+{% if mode=="mooc" %}
+<h3>ID Verified  by day: <span id="veravg"></span></h3>
 <div id="verifiedbytime" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+{% endif %}
 
 <script type="text/javascript">
 
@@ -247,6 +253,10 @@ $(document).ready(function() {
         }, function(chartObj) {
 	});
 
+{% if mode=="mooc" %}
+
+	$('#veravg').html('Average of ' + data[verified_rate_avg'] + ' new verified ID registrations per day');
+
         // Create the chart
         $('#verifiedbytime').highcharts({
 	    chart: { type: 'spline',  zoomType: 'x' },
@@ -268,6 +278,7 @@ $(document).ready(function() {
             series : data['series_ver'],
         }, function(chartObj) {
 	});
+{% endif %}
 
 	$('[data-spy="scroll"]').each(function () {
 	    var $spy = $(this).scrollspy('refresh')

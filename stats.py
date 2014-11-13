@@ -472,15 +472,20 @@ class DataStats(object):
                                         depends_on=['%s.person_course' % dataset])
 
 
-    def compute_overall_enrollment_by_day(self):
-        '''
-        Compute enrollment by day from enrollday_sql, over all courses
-        '''
+    def get_course_report_dataset(self):
         dataset = "course_report"
         if self.USE_LATEST:
             dataset += '_latest'
         else:
-            dataset += '_' + self.ORGNAME
+            dataset += '_' + self.ORGNAME.split(' ')[-1]
+        return dataset
+
+    def compute_overall_enrollment_by_day(self):
+        '''
+        Compute enrollment by day from enrollday_sql, over all courses
+        '''
+        dataset = self.get_course_report_dataset()
+        logging.info('enrollment by day dataset=%s' % dataset)
 
         sql = """
            SELECT  date,
@@ -496,15 +501,15 @@ class DataStats(object):
                    sum(nverified_net) as nverified_net_sum,
                    sum(nverified_net_sum) over (order by date) as nverified_net_cum,
 
-                FROM [course_report_latest.enrollday_sql] 
+                FROM [{dataset}.enrollday_sql] 
                 group by date
                 order by date
-        """
+        """.format(dataset=dataset)
 
         table = 'stats_overall_enrollment'
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
-                                        depends_on=['course_report_latest.enrollday_sql'])
+                                        depends_on=['%s.enrollday_sql' % dataset])
 
 
     def get_sm_nuser_views(self, module_id):
@@ -628,12 +633,12 @@ class DataStats(object):
 
     def get_report_geo_stats(self):
         table = 'geographic_distributions'
-        dataset = 'course_report_latest'
+        dataset = self.get_course_report_dataset()
         return self.cached_get_bq_table(dataset, table)
         
     def get_report_broad_stats(self):
         table = 'broad_stats_by_course'
-        dataset = 'course_report_latest'
+        dataset = self.get_course_report_dataset()
         key = None
         tableinfo = bqutil.get_bq_table_info(dataset, table)
         data = self.cached_get_bq_table(dataset, table, key=key)
