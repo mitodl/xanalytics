@@ -6,6 +6,7 @@
 # retrieve data from google spreadsheet, using service account
 
 import sys
+import time
 import json
 import gspread
 import logging
@@ -24,7 +25,23 @@ def cached_get_datasheet(fname, sheet, key=None, ignore_cache=False):
     memset = 'docs:%s.%s' % (fname, sheet)
     data = mem.get(memset)
     if (not data) or ignore_cache:
-        data = get_datasheet(fname, sheet, key)
+        cnt = 0
+        data = None
+        while (cnt < 10):
+            try:
+                data = get_datasheet(fname, sheet, key)
+                if cnt:
+                    cnt += 1
+                    logging.error('[gsdata.cached_get_dataset] (attempt=%d) succeeded getting %s.%s' % (cnt, fname, sheet))
+                break
+            except Exception as err:
+                cnt += 1
+                logging.error('[gsdata.cached_get_dataset] (attempt %d) failed getting %s.%s, err=%s' % (cnt, fname, sheet, err))
+                time.sleep(0.2)
+        if data is None:
+            msg = '[gsdata.cached_get_dataset] failed getting %s.%s!' % (fname, sheet)
+            logging.error(msg)
+            raise Exception(msg)
         try:
             mem.set(memset, data, time=3600*12)
         except Exception as err:
