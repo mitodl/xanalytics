@@ -96,7 +96,11 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
 
         elif action=='Reload staff table':
             self.get_staff_table(reload=True)
-            msg = "Staff table reloaded - please refresh this page"
+            msg = "Staff table reloaded"
+
+        elif action=='Reload course listings':
+            self.get_course_listings(ignore_cache=True)
+            msg = "Course listings reloaded"
 
         elif action=='Add staff':
             fields = ['username', 'role', 'course_id', 'notes']
@@ -118,6 +122,8 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         data.update({'superusers': self.AUTHORIZED_USERS,
                      'table': stafftable,
                      'msg': msg,
+                     'listings_source': local_config.COURSE_LISTINGS_TABLE,
+                     'staff_source': local_config.STAFF_COURSE_TABLE,
                  })
         template = JINJA_ENVIRONMENT.get_template('admin.html')
         self.response.out.write(template.render(data))

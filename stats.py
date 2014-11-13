@@ -567,9 +567,11 @@ class DataStats(object):
                     return val['url']
         return local_config.DEFAULT_COURSE_SITE
 
-    def get_course_listings(self):
+    def get_course_listings(self, ignore_cache=False):
 
-        all_courses = self.get_data(local_config.COURSE_LISTINGS_TABLE, key={'name': 'course_id'})
+        all_courses = self.get_data(local_config.COURSE_LISTINGS_TABLE, 
+                                    key={'name': 'course_id'},
+                                    ignore_cache=ignore_cache)
 
         courses = {'data': [], 'data_by_key': OrderedDict()}
 
