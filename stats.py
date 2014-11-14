@@ -364,7 +364,8 @@ class DataStats(object):
         table = 'stats_activity_by_day'
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
-                                        depends_on=['%s.%s' % (input_dataset, last_pcday)],
+                                        depends_on=['%s.%s' % (input_dataset, last_pcday),
+                                                    '%s.person_course' % dataset ],
                                         logger=logging.error)
 
 
