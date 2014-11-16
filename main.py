@@ -29,6 +29,7 @@ from stats import DataStats
 from datatable import DataTableField
 from datasource import DataSource
 from dashboard import DashboardRoutes
+from developer import DeveloperRoutes
 from collections import defaultdict, OrderedDict
 
 import jinja2
@@ -827,5 +828,6 @@ ROUTES = [
 ]
 
 ROUTES += DashboardRoutes
+ROUTES += DeveloperRoutes
 
 application = webapp2.WSGIApplication(ROUTES, debug=True, config=config)
