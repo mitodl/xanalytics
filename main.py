@@ -575,7 +575,8 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
 
         data = {'data': [ makerow(x) for x in caxis.values() if x['category']=='chapter'],
                 'stats_columns': [ {'className': 'dt-center'}] *len(stats_fields),
-                'stats_table': stats_table
+                'stats_table': stats_table,
+                'data_date': str(self.course_axis['lastModifiedTime'])[:16],
         }
         tabledata = json.dumps(data)
         self.response.out.write(tabledata)

@@ -140,6 +140,7 @@ function format ( d ) {
 	// event listener for ajax call completion - fill in the stats table
 	$('#table_id') .on('xhr.dt', 
 			   function ( e, settings, json ) { 
+			       $('#caxis_date').html("Data from course axis of date " + json['data_date']);
 			       $('#stats_div').html(json['stats_table']);
 			       var stats_table = $('#stats_table').DataTable( {
 				   "paging":   false,
@@ -270,6 +271,7 @@ $(document).ready(function() {
 
 <h2>Content by chapter</h2>
 
+<p id="caxis_date"></p>
 {% autoescape off %}{{ table }}{% endautoescape %}
 
 <!-- ----------------------------------------------------------------------------- -->

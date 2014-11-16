@@ -541,7 +541,10 @@ class DataStats(object):
         table = "course_axis"
         key={'name': 'url_name'}
         # return self.cached_get_bq_table(dataset, table, key=key, drop=['data'])['data_by_key']
-        return self.cached_get_bq_table(dataset, table, key=key)[dtype]
+        bqdat = self.cached_get_bq_table(dataset, table, key=key,
+                                        depends_on=['%s.%s' % (dataset, table)])
+        self.course_axis = bqdat
+        return bqdat[dtype]
 
 
     def load_person_course(self, course_id):
