@@ -150,7 +150,7 @@ class DataSource(object):
 
             if table_date and table_date < latest:
                 force_query = True
-                logging.info("[datasource.cached_get_bq_table] Forcing query recomputation of %s.%s, table_date=%s, lates=%s" % (dataset, table,
+                logging.info("[datasource.cached_get_bq_table] Forcing query recomputation of %s.%s, table_date=%s, latest=%s" % (dataset, table,
                                                                                                                                  table_date, latest))
 
         if (not data) or ignore_cache:
