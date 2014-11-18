@@ -383,7 +383,8 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         data = {'series': stats,
                 'start_dt': self.datetime2milliseconds(start_dt),
                 'end_dt': self.datetime2milliseconds(end_dt),
-                'data_date': bqdat.get('depends_on', ['.'])[0].split('.',1)[1],
+                # 'data_date': bqdat.get('depends_on', ['.'])[0].split('.',1)[1],
+                'data_date': bqdat['data'][-1]['date'],
         }
 
         self.response.headers['Content-Type'] = 'application/json'   

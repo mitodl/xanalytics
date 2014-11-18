@@ -325,9 +325,51 @@ class DataStats(object):
         except Exception as err:
             logging.error(err)
 
+
     def compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
         '''
-        Compute course activity by day, based on person_course_day tables
+        Compute course activity by day, based on person_course_day table
+        
+        TBD: make start and end work
+        '''
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        tables = bqutil.get_list_of_table_ids(dataset)
+        if 'person_course_day' not in tables:
+            logging.info('--> Warning: using old *_pcday tables for activity_by_day for %s' % course_id)
+            return self.OLD_compute_activity_by_day(course_id, start=start, end=end)
+
+        sql = """
+          SELECT 
+              date(last_event) as date,
+              sum(nevents) as nevents,
+              sum(nvideo) as nvideo,
+              sum(nshow_answer) as nshow_answer,
+              sum(nproblem_check) as nproblem_check,
+              sum(nforum) as nforum,
+              sum(ntranscript) as ntranscript,
+              sum(nseq_goto) as nseq_goto,
+              sum(nseek_video) as nseek_video,
+              sum(nprogcheck) as nprogcheck,
+              sum(npause_video) as npause_video,
+              sum(sum_dt) as sum_dt,
+              avg(avg_dt) as avg_dt,
+              sum(n_dt) as n_dt,
+          FROM [{dataset}.person_course_day]
+          group by date
+          order by date
+        """.format(dataset=dataset, course_id=course_id, start=start, end=end)
+
+        table = 'stats_activity_by_day'
+        key = None
+        ret = self.cached_get_bq_table(dataset, table, sql=sql, key=key,
+                                       depends_on=['%s.person_course_day' % dataset ],
+                                       logger=logging.error)
+        return ret
+
+
+    def OLD_compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
+        '''
+        Compute course activity by day, based on *_pcday tables (DEPRECATED)
         '''
         dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
         input_dataset = bqutil.course_id2dataset(course_id, 'pcday')
