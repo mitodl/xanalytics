@@ -504,7 +504,7 @@ class DataStats(object):
                    avg(case when certified then avg_dt else null end) as certified_avg_dt,
                    avg(case when certified then sum_dt else null end) as certified_sum_dt,
                 FROM [{dataset}.person_course] 
-                WHERE cc_by_ip is not null
+                # WHERE cc_by_ip is not null
                 group by cc, countryLabel, course_id
                 order by cc
         """.format(dataset=dataset, course_id=course_id)

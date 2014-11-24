@@ -600,6 +600,8 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
             return "%6.1f" % (int(a) / float(b) * 100)
 
         def getrow(x):
+            if not x['countryLabel']:
+                x['countryLabel'] = 'Unknown'
             x['cert_pct'] = mkpct(x['ncertified'], x['nregistered'])
             x['cert_pct_of_viewed'] = mkpct(x['ncertified'], x['nviewed'])
             x['verified_cert_pct'] = mkpct(x['n_verified_certified'], x['n_verified_id'])
