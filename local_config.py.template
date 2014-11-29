@@ -16,14 +16,21 @@ COURSE_SITE_MAP = { '3091-exam': {'match': '.*-exam.*', 'url': 'https://special.
 PROJECT_ID = '99353222151'
 
 MODE = 'mooc'	# mooc or residential (no demographics for residential)
-DATA_DATE = 'latest'
+DEFAULT_COLLECTION = 'latest'
 
 SESSION_SECRET_KEY = "dkjasf912lkj8d09"
 
 #-----------------------------------------------------------------------------
-# metadata source
+# collections
 
-COURSE_LISTINGS_TABLE = "courses.listings"
+COLLECTIONS = {'year2': {'COURSE_LISTINGS_TABLE': "docs:X Analytics:Year 2 Course Listings",
+                         'END_DATE': '2014-09-21',
+                         },
+               'MyXSeries': {'COURSE_LISTINGS_TABLE': "docs:X Analytics:MyXSeries Courses",
+                             'COURSE_REPORT_TABLE': "course_report_chinax",
+                             'dataset_latest': False,
+                             },
+               }
 
 #-----------------------------------------------------------------------------
 # user authentication

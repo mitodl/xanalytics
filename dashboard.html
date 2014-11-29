@@ -116,6 +116,7 @@ body {
             <li class="active"><a href="#geography">Geography</a></li>
             <li><a href="#listings">Course listings</a></li>
             <li><a href="#enrollment">Enrollment</a></li>
+
           </ul>
           <ul class="nav navbar-nav navbar-right">
             <li><p class="navbar-text">{{user}}</p></li>
@@ -129,6 +130,35 @@ body {
 
 <div  class="container theme-showcase" role="main" data-target="#navbar">
     <h1>Cross-Course Dashboard</h1>
+
+
+{% if is_staff %}
+
+<span style="float:right">
+  <div class="dropdown">
+    <button id="switch-dataset" type="button" data-toggle="dropdown" aria-haspopup="true" role="button" aria-expanded="false">
+      Current Dataset Collection: {{collection_name}}
+      <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+      {% for cname in collections_available %}
+          <li {% if cname==collection_name %} class="active" {% endif %}><a href='#'>{{cname}}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+</span>
+<script type="text/javascript">
+$(document).on('click', '.dropdown-menu li a', function(){
+    selection = $(this).text();
+    console.log("Selected Option:"+selection);
+    $.getJSON('/get/switch_collection', {'selection': selection}, function(data) {
+        console.log(data);
+        location.reload();
+    });
+});
+</script>
+
+{% endif %}
 
 {% if mode=="mooc" %}
     <h2 id="geography">Geographic Distribution</h2>
@@ -207,7 +237,7 @@ $(document).ready(function() {
 <h2 id="enrollment">Enrollment</h2>
 
 <h3>Enrollment by day: <span id="enrollavg"></span></h3>
-(data from student_enrollment table: <font color='red'>Note: missing about 95k learner records from 2012 course records</font>)
+(data from student_enrollment table)
 
 <div id="enrollbytime" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 

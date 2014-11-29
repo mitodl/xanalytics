@@ -52,8 +52,12 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
         data.update({'is_staff': self.is_superuser(),
                      'courses': courses,
                      'table': html,
+                     'collection_name': self.current_collection(),
+                     'collections_available': self.collections_available(),
                      'ncourses': len(courses['data']),
                  })
+        logging.info('session: %s' % dict(self.session))
+        logging.info('================================================== dataset_latest=%s' % self.use_dataset_latest())
         template = JINJA_ENVIRONMENT.get_template('dashboard.html')
         self.response.out.write(template.render(data))
 

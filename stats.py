@@ -21,7 +21,6 @@ mem = memcache.Client()
 class DataStats(object):
 
     GSROOT = local_config.GOOGLE_STORAGE_ROOT
-    USE_LATEST = local_config.DATA_DATE=='latest'	# later: generalize to dataset for specific date
     IM_WIDTH = 374/2
     IM_HEIGHT = 200/2
     bqdata = {}
@@ -32,6 +31,68 @@ class DataStats(object):
     common_data = {'orgname': ORGNAME,
                    'mode': MODE,
     }
+
+    def set_current_collection(self, collection):
+        '''
+        Set the current collection to that specified, if it exists.
+        '''
+        if collection not in self.collections_available():
+            logging.error('[set_current_collection] Unknown dataset collection %s!' % collection)
+            return
+        self.session['current_collection'] = collection
+
+    def get_collection_metadata(self, parameter, default=None):
+        '''
+        Return metadata parameter value for current collection
+        Example: parameter = 'COURSE_LISTINGS_TABLE'
+        '''
+        return self.current_collection(asdict=True).get(parameter, default)
+
+    def add_collection_name_prefix(self, name):
+        '''
+        if current collection is not "latest" then add the collection name
+        as a prefix to name.
+        '''
+        collection = self.current_collection()
+        if not collection == 'latest':
+            name = '%s_%s' % (collection, name)
+        return name
+
+    def current_collection(self, asdict=False):
+        '''
+        Return the string naming the current collection being used
+        Defaults to 'latest' if DEFAULT_COLLECTION is empty 
+        '''
+        collection = self.session.get('current_collection', None)
+        if collection is None:
+            try:
+                collection = local_config.DEFAULT_COLLECTION
+            except:
+                collection = 'latest'
+        if collection not in self.collections_available():
+            logging.error('[current_collection] Unknown dataset collection %s!' % collection)
+        if not asdict:
+            return collection
+        return local_config.COLLECTIONS[collection]
+
+    def collections_available(self):
+        '''
+        Return list of strings naming the available collections of datasets
+        '''
+        return local_config.COLLECTIONS.keys()
+
+    def use_dataset_latest(self):
+        '''
+        The "latest" dataset have the most recent data.
+        The non-latest dataset is fixed at a specific end date,
+        determined by how data were loaded using edx2bigquery.
+
+        This function returns True if the latest dataset is to be
+        used.  The default value is determined by the 'dataset_latest'
+        configuration parameter within the collections definitions.
+        '''
+        USE_LATEST = self.get_collection_metadata('dataset_latest', True)
+        return USE_LATEST
 
     def dict2table(self, names, data):
         '''
@@ -100,7 +161,7 @@ class DataStats(object):
         '''
         Compute usage stats from studentmodule table for course
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         sql = """
                 SELECT 
                     module_type, module_id, count(*) as ncount 
@@ -118,7 +179,7 @@ class DataStats(object):
         '''
         Compute problem average grade, attempts
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         sql = """
                 SELECT '{course_id}' as course_id,
                     PA.problem_url_name as url_name,
@@ -173,7 +234,7 @@ class DataStats(object):
         '''
         Compute table of answers ever submitted for a given problem, as specified by a module_id.
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         org, num, semester = course_id.split('/')
         module_id = '%s/%s/problem/%s' % (org, num, url_name)
         sql = """
@@ -200,8 +261,11 @@ class DataStats(object):
         '''
         Compute enrollment by day, based on enrollday_* tables
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)	# where to store result
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())	# where to store result
         input_dataset = bqutil.course_id2dataset(course_id, 'pcday')				# source data
+
+        end = self.get_collection_metadata('END_DATE', end)
+        start = self.get_collection_metadata('START_DATE', start)
 
         sql_enrollday = """
           SELECT 
@@ -275,12 +339,13 @@ class DataStats(object):
                       sum(diff_enrollment_verified) as nenroll_verified,
                       sum(diff_enrollment_honor) + sum(diff_enrollment_audit) + sum(diff_enrollment_verified) as nenroll,
                   FROM {dataset}.enrollday_all
+                  WHERE date(time) <= "{end}" AND  date(time) >= "{start}"
                   group by date
                   order by date
         )
         group by date, nenroll
         order by date
-        """.format(dataset=dataset, course_id=course_id)
+        """.format(dataset=dataset, course_id=course_id, start=start, end=end)
 
         # special handling: use new enrollday_all tables if available, instead of enrollday* in *_pcday dataset
         tables = bqutil.get_list_of_table_ids(dataset)
@@ -308,14 +373,14 @@ class DataStats(object):
             depends_on = ['%s.%s' % (input_dataset, latest_table)]
 
         logging.info('enrollment_day depends_on=%s' % depends_on)
-        table = 'stats_enrollment_by_day'
+        table = self.add_collection_name_prefix('stats_enrollment_by_day')
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                         depends_on=depends_on,
                                         logger=logging.error, ignore_cache=False)
 
     def reset_enrollment_by_day(self, course_id):
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)	# where to store result
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())	# where to store result
         table = 'stats_enrollment_by_day'
         logging.info('[reset enrollment by day] removing table %s.%s...' % (dataset, table))
         memset = '%s.%s' % (dataset,table)
@@ -332,7 +397,7 @@ class DataStats(object):
         
         TBD: make start and end work
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         tables = bqutil.get_list_of_table_ids(dataset)
         if 'person_course_day' not in tables:
             logging.info('--> Warning: using old *_pcday tables for activity_by_day for %s' % course_id)
@@ -371,7 +436,7 @@ class DataStats(object):
         '''
         Compute course activity by day, based on *_pcday tables (DEPRECATED)
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         input_dataset = bqutil.course_id2dataset(course_id, 'pcday')
         sql = """
           SELECT 
@@ -415,7 +480,7 @@ class DataStats(object):
         '''
         Compute usage stats, i.e. # registered, viewed, explored, based on person-course
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         sql = """
            SELECT course_id,
                    count(*) as registered_sum,
@@ -477,7 +542,7 @@ class DataStats(object):
         '''
         Compute geographic distributions
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         sql = """
            SELECT '{course_id}' as course_id,
                    cc_by_ip as cc,
@@ -517,18 +582,22 @@ class DataStats(object):
 
     def get_course_report_dataset(self):
         dataset = "course_report"
-        if self.USE_LATEST:
+        if self.use_dataset_latest():
             dataset += '_latest'
         else:
             dataset += '_' + self.ORGNAME.split(' ')[-1]
+        dataset = self.get_collection_metadata('COURSE_REPORT_TABLE', dataset)	# overridden by config if specified
         return dataset
 
-    def compute_overall_enrollment_by_day(self):
+    def compute_overall_enrollment_by_day(self, start="2012-08-20", end="2115-01-01"):
         '''
         Compute enrollment by day from enrollday_sql, over all courses
         '''
         dataset = self.get_course_report_dataset()
         logging.info('enrollment by day dataset=%s' % dataset)
+
+        end = self.get_collection_metadata('END_DATE', end)
+        start = self.get_collection_metadata('START_DATE', start)
 
         sql = """
            SELECT  date,
@@ -545,11 +614,12 @@ class DataStats(object):
                    sum(nverified_net_sum) over (order by date) as nverified_net_cum,
 
                 FROM [{dataset}.enrollday_sql] 
+                WHERE date <= "{end}" AND  date >= "{start}"
                 group by date
                 order by date
-        """.format(dataset=dataset)
+        """.format(dataset=dataset, start=start, end=end)
 
-        table = 'stats_overall_enrollment'
+        table = self.add_collection_name_prefix('stats_overall_enrollment')
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                         depends_on=['%s.enrollday_sql' % dataset])
@@ -562,7 +632,7 @@ class DataStats(object):
     def get_course_image(self, course_id):
         #  images 374x200
         cdir = course_id.replace('/','__')
-        if self.USE_LATEST:
+        if self.use_dataset_latest():
             cdir = cdir + "/latest"
         img = '<img width="{width}" height="{height}" src="https://storage.googleapis.com/{gsroot}/{cdir}/course_image.jpg"/>'.format(gsroot=self.GSROOT,
                                                                                                                                         cdir=cdir,
@@ -579,7 +649,7 @@ class DataStats(object):
 
         category, index, url_name, name, gformat, due, start, module_id, course_id, path, data.ytid, data.weight, chapter_mid
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         table = "course_axis"
         key={'name': 'url_name'}
         # return self.cached_get_bq_table(dataset, table, key=key, drop=['data'])['data_by_key']
@@ -597,7 +667,7 @@ class DataStats(object):
 
         username, viewed, explored, ip
         '''
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
         table = "person_course"
         key = None
         return self.cached_get_bq_table(dataset, table)
@@ -615,7 +685,9 @@ class DataStats(object):
 
     def get_course_listings(self, ignore_cache=False):
 
-        all_courses = self.get_data(local_config.COURSE_LISTINGS_TABLE, 
+        course_listings_source = self.get_collection_metadata('COURSE_LISTINGS_TABLE')
+
+        all_courses = self.get_data(course_listings_source, 
                                     key={'name': 'course_id'},
                                     ignore_cache=ignore_cache)
 

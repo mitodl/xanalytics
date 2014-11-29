@@ -120,14 +120,39 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                                       'username', 'role', 'course_id', 'notes'], stable)
 
         data = self.common_data
+        course_listings_source = self.get_collection_metadata('COURSE_LISTINGS_TABLE')
         data.update({'superusers': self.AUTHORIZED_USERS,
                      'table': stafftable,
                      'msg': msg,
-                     'listings_source': local_config.COURSE_LISTINGS_TABLE,
+                     'listings_source': course_listings_source,
                      'staff_source': local_config.STAFF_COURSE_TABLE,
                  })
         template = JINJA_ENVIRONMENT.get_template('admin.html')
         self.response.out.write(template.render(data))
+
+    @auth_required
+    def ajax_switch_collection(self):
+        '''
+        Switch collection to that specified.
+        '''
+        selection = self.request.GET.get('selection', None)
+        if selection is None:
+            selection = self.request.POST.get('selection', None)
+
+        if selection is None:
+            logging.error("[ajax_switch_selection] Error! selection=%s" % selection)
+
+        collection = selection.split('Option:', 1)[-1]
+        logging.info("="*50 + " collection=%s, selection=%s" % (collection, selection))
+        self.set_current_collection(collection)
+
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps({'ok': True, 
+                                            'dataset_latest': self.use_dataset_latest(),
+                                            'collection_name': self.current_collection(),
+                                            'collections_available': self.collections_available(),
+                                            }))
+        # self.session_store.save_sessions(self.response)
 
     @auth_required
     def ajax_get_usage_stats(self, org=None, number=None, semester=None):
@@ -727,7 +752,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         show arbitrary table from bigquery -- mainly for debugging - ajax data 
         '''
         course_id = '/'.join([org, number, semester])
-        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
 
         if ('person' in table) or ('track' in table) or ('student' in table):
             if not self.does_user_have_role('instructor', course_id):
@@ -766,7 +791,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         '''
         if dataset is None:
             course_id = '/'.join([org, number, semester])
-            dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.USE_LATEST)
+            dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
             if not self.is_user_authorized_for_course(course_id):
                 return self.no_auth_sorry()
             if ('person' in table) or ('track' in table) or ('student' in table):
@@ -828,6 +853,8 @@ ROUTES = [
     webapp2.Route('/get/<org>/<number>/<semester>/<table>/table_data', handler=MainPage, handler_method='ajax_get_table_data'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_histories', handler=MainPage, handler_method='ajax_get_problem_answer_histories'),
     webapp2.Route('/get/dashboard/geo_stats', handler=MainPage, handler_method='ajax_dashboard_get_geo_stats'),
+
+    webapp2.Route('/get/switch_collection', handler=MainPage, handler_method='ajax_switch_collection'),
 ]
 
 ROUTES += DashboardRoutes
