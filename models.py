@@ -11,3 +11,13 @@ class StaffUser(ndb.Model):
     notes = ndb.StringProperty(indexed=False, default='')
     enabled = ndb.BooleanProperty(indexed=False, default=True)
 
+class LogLine(ndb.Model):
+    """
+    access log entry line
+    """
+    username = ndb.StringProperty(indexed=True)
+    created = ndb.DateTimeProperty(indexed=True, auto_now_add=True)
+    course_id = ndb.StringProperty(indexed=True)
+    url = ndb.StringProperty(indexed=False, default='')
+    ipaddr = ndb.StringProperty(indexed=False, default='')
+

@@ -14,6 +14,7 @@ import gsdata
 from pytz.gae import pytz
 from webapp2_extras import sessions
 from collections import defaultdict
+from logger import LogAccess
 
 from google.appengine.api import users
 from google.appengine.ext import ndb
@@ -77,6 +78,7 @@ def auth_and_role_required(role=''):
                 if not self.does_user_have_role(role, course_id):
                     return self.no_auth_sorry()
 
+            LogAccess(self.user, self.request, course_id)
             return handler(self, *args, **kwargs)
     
         return check_login
@@ -98,6 +100,8 @@ def auth_required(handler):
         if not self.is_user_authorized_for_course(course_id):
             return self.no_auth_sorry()
         self.common_data['is_instructor'] = self.does_user_have_role('instructor', course_id)
+        if not self.request.path == '/get/LogEntries':
+            LogAccess(self.user, self.request, course_id)
         return handler(self, *args, **kwargs)
 
     return check_login

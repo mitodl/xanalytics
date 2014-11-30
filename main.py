@@ -23,6 +23,7 @@ import local_config
 import urllib
 
 from unidecode import unidecode
+from logger import GetRecentLogLines
 
 from auth import auth_required
 from stats import DataStats
@@ -125,10 +126,29 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         self.response.out.write(template.render(data))
 
     @auth_required
+    def ajax_log_entries(self):
+        '''
+        Return recent log entries
+        '''
+        if not self.user in self.AUTHORIZED_USERS:	# require superuser
+            return self.no_auth_sorry()
+
+        rll = GetRecentLogLines(100)
+        self.response.headers['Content-Type'] = 'application/json'   
+        def fix_dt(y):
+            y['created'] = str(y['created'])[:19]
+            return y
+        loglines = [ fix_dt(x.to_dict()) for x in rll ]
+        self.response.out.write(json.dumps({'loglines': loglines}))
+
+    @auth_required
     def ajax_switch_collection(self):
         '''
         Switch collection to that specified.
         '''
+        if not self.user in self.AUTHORIZED_USERS:	# require superuser
+            return self.no_auth_sorry()
+
         selection = self.request.GET.get('selection', None)
         if selection is None:
             selection = self.request.POST.get('selection', None)
@@ -849,6 +869,7 @@ ROUTES = [
     webapp2.Route('/get/dashboard/geo_stats', handler=MainPage, handler_method='ajax_dashboard_get_geo_stats'),
 
     webapp2.Route('/get/switch_collection', handler=MainPage, handler_method='ajax_switch_collection'),
+    webapp2.Route('/get/LogEntries', handler=MainPage, handler_method='ajax_log_entries'),
 ]
 
 ROUTES += DashboardRoutes

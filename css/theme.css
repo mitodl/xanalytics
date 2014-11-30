@@ -16,3 +16,10 @@ body {
 .theme-showcase .navbar .container {
   width: auto;
 }
+
+body .modal-dialog {
+    /* new custom width */
+    width: 1400px;
+    /* must be half of the width, minus scrollbar on the left (30px) */
+    /* margin-left: -375px; */
+}
