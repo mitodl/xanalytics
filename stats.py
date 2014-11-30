@@ -177,7 +177,7 @@ class DataStats(object):
                 order by module_id
         """.format(dataset=dataset)
 
-        table = 'stats_module_usage'
+        table = self.add_collection_name_prefix('stats_module_usage')
         key = {'name': 'module_id'}
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                         depends_on=['%s.studentmodule' % dataset, '%s.course_axis' % dataset ])
@@ -231,7 +231,7 @@ class DataStats(object):
                 order by problem_url_name
         """.format(dataset=dataset, course_id=course_id)
 
-        table = 'stats_for_problems'
+        table = self.add_collection_name_prefix('stats_for_problems')
         key = {'name': 'url_name'}
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                         depends_on=['%s.problem_analysis' % dataset])
@@ -388,7 +388,7 @@ class DataStats(object):
 
     def reset_enrollment_by_day(self, course_id):
         dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())	# where to store result
-        table = 'stats_enrollment_by_day'
+        table = self.add_collection_name_prefix('stats_enrollment_by_day')
         logging.info('[reset enrollment by day] removing table %s.%s...' % (dataset, table))
         memset = '%s.%s' % (dataset,table)
         mem.delete(memset)
@@ -401,10 +401,12 @@ class DataStats(object):
     def compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
         '''
         Compute course activity by day, based on person_course_day table
-        
-        TBD: make start and end work
         '''
         dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
+
+        end = self.get_collection_metadata('END_DATE', end)
+        start = self.get_collection_metadata('START_DATE', start)
+
         tables = bqutil.get_list_of_table_ids(dataset)
         if 'person_course_day' not in tables:
             logging.info('--> Warning: using old *_pcday tables for activity_by_day for %s' % course_id)
@@ -427,11 +429,12 @@ class DataStats(object):
               avg(avg_dt) as avg_dt,
               sum(n_dt) as n_dt,
           FROM [{dataset}.person_course_day]
+          WHERE date <= "{end}" AND  date >= "{start}"
           group by date
           order by date
         """.format(dataset=dataset, course_id=course_id, start=start, end=end)
 
-        table = 'stats_activity_by_day'
+        table = self.add_collection_name_prefix('stats_activity_by_day')
         key = None
         ret = self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                        depends_on=['%s.person_course_day' % dataset ],
@@ -539,7 +542,7 @@ class DataStats(object):
                 group by course_id
         """.format(dataset=dataset, course_id=course_id)
 
-        table = 'stats_overall'
+        table = self.add_collection_name_prefix('stats_overall')
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                         depends_on=['%s.person_course' % dataset])
@@ -581,7 +584,7 @@ class DataStats(object):
                 order by cc
         """.format(dataset=dataset, course_id=course_id)
 
-        table = 'stats_geo0'
+        table = self.add_collection_name_prefix('stats_geo0')
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
                                         depends_on=['%s.person_course' % dataset])
@@ -633,7 +636,8 @@ class DataStats(object):
 
 
     def get_sm_nuser_views(self, module_id):
-        return self.bqdata['stats_module_usage']['data_by_key'].get('i4x://' + module_id, {}).get('ncount', '')
+        table = self.add_collection_name_prefix('stats_module_usage')
+        return self.bqdata[table]['data_by_key'].get('i4x://' + module_id, {}).get('ncount', '')
     
 
     def get_course_image(self, course_id):

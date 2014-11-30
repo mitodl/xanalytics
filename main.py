@@ -358,7 +358,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         if start_dt >= end_dt:
             start_dt = datetime.datetime(2014, 9, 1)
         start_str = start_dt.strftime('%Y-%m-%d')
-        the_end = '2015-01-01'
+        the_end = self.get_collection_metadata('END_DATE', '2015-01-01')
         if end_str > '2015-01-01':
             the_end = end_str
 
