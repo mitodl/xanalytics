@@ -277,6 +277,9 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         # Get a session store for this request.
         self.session_store = sessions.get_store(request=self.request)
 
+        if hasattr(self, 'common_init'):
+            self.common_init()
+
         try:
             # Dispatch the request.
             webapp2.RequestHandler.dispatch(self)

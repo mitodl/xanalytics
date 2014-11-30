@@ -133,31 +133,7 @@ body {
 
 
 {% if is_staff %}
-
-<span style="float:right">
-  <div class="dropdown">
-    <button id="switch-dataset" type="button" data-toggle="dropdown" aria-haspopup="true" role="button" aria-expanded="false">
-      Current Dataset Collection: {{collection_name}}
-      <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
-      {% for cname in collections_available %}
-          <li {% if cname==collection_name %} class="active" {% endif %}><a href='#'>{{cname}}</a></li>
-      {% endfor %}
-    </ul>
-  </div>
-</span>
-<script type="text/javascript">
-$(document).on('click', '.dropdown-menu li a', function(){
-    selection = $(this).text();
-    console.log("Selected Option:"+selection);
-    $.getJSON('/get/switch_collection', {'selection': selection}, function(data) {
-        console.log(data);
-        location.reload();
-    });
-});
-</script>
-
+    {% include "collections_selector.html" %}
 {% endif %}
 
 {% if mode=="mooc" %}

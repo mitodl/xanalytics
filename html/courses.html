@@ -86,6 +86,10 @@
 <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
   <h1>{{orgname}} Courses</h1>
 
+{% if is_staff %}
+    {% include "collections_selector.html" %}
+{% endif %}
+
 <h3>Click on a row in the table below to see detailed course information</h3>
 
 {% autoescape off %}{{ table }}{% endautoescape %}

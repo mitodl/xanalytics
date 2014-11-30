@@ -11,8 +11,6 @@ import logging
 import webapp2
 import json
 
-import jinja2
-
 import gsdata
 import bqutil
 import auth
@@ -23,16 +21,12 @@ from collections import defaultdict, OrderedDict
 from stats import DataStats
 from datatable import DataTableField
 from datasource import DataSource
+from templates import JINJA_ENVIRONMENT
 
 from auth import auth_required, auth_and_role_required
 
 # from google.appengine.api import memcache
 # mem = memcache.Client()
-
-JINJA_ENVIRONMENT = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
-    extensions=['jinja2.ext.autoescape'],
-    autoescape=True)
 
 class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
     '''
@@ -52,8 +46,6 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
         data.update({'is_staff': self.is_superuser(),
                      'courses': courses,
                      'table': html,
-                     'collection_name': self.current_collection(),
-                     'collections_available': self.collections_available(),
                      'ncourses': len(courses['data']),
                  })
         logging.info('session: %s' % dict(self.session))

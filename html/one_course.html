@@ -210,6 +210,10 @@ function format ( d ) {
 <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
   <h1>{{course_id}}</h1>
 
+{% if is_staff %}
+    {% include "collections_selector.html" %}
+{% endif %}
+
 <span style="float:right; color:blue">
 {% autoescape off %}{{ image }}{% endautoescape %} </span>
 

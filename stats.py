@@ -32,6 +32,13 @@ class DataStats(object):
                    'mode': MODE,
     }
 
+    def common_init(self):
+        '''
+        initialization routine called before dispatch, via dispatch override in auth.py
+        '''
+        self.common_data['collection_name'] = self.current_collection()
+        self.common_data['collections_available'] = self.collections_available()
+
     def set_current_collection(self, collection):
         '''
         Set the current collection to that specified, if it exists.

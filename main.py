@@ -31,8 +31,7 @@ from datasource import DataSource
 from dashboard import DashboardRoutes
 from developer import DeveloperRoutes
 from collections import defaultdict, OrderedDict
-
-import jinja2
+from templates import JINJA_ENVIRONMENT
 
 # from gviz_data_table import encode
 # from gviz_data_table import Table
@@ -40,11 +39,6 @@ import jinja2
 from google.appengine.api import memcache
 
 mem = memcache.Client()
-
-JINJA_ENVIRONMENT = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
-    extensions=['jinja2.ext.autoescape'],
-    autoescape=True)
 
 #-----------------------------------------------------------------------------
 
