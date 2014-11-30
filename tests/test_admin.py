@@ -66,3 +66,15 @@ class TestAdmin(unittest.TestCase):
         request = webapp2.Request.blank('/admin', POST={'action': "Reload course listings"})
         response = request.get_response(self.application)
         assert("Course listings reloaded" in response.text)
+
+    def test_access_log(self):
+        self.setup_main_with_auth()
+        request = webapp2.Request.blank('/admin')
+        response = request.get_response(self.application)
+
+        request = webapp2.Request.blank('/get/LogEntries')
+        response = request.get_response(self.application)
+        data = response.json
+        flent = data['loglines'][0]
+        assert('username' in flent)
+        assert(flent['username']=='testuser2')
