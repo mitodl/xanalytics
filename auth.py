@@ -127,14 +127,14 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
     def no_auth_sorry(self):
         self.response.write("Sorry, %s is not authorized to use this service" % self.user)
 
-    def get_staff_table(self, reload=False):
+    def get_staff_table(self, reload=False, ignore_cache=False):
         '''
         Get staff user table, a list of dicts.
         dicts should have "username", "role", and "course_id" as keys.  May also have "notes" key.
         '''
-        data = self.get_data('ndb:staff')['data']
+        data = self.get_data('ndb:staff', ignore_cache=True)['data']
 
-        # do initial load if empt
+        # do initial load if empty
         if reload or (len(data)==0):
             self.import_staff_table(overwrite=True)
             data = self.get_data('ndb:staff')['data']
@@ -157,6 +157,10 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
         if source is None:
             source = getattr(local_config, 'STAFF_COURSE_TABLE', None)
         data = self.get_data(source, ignore_cache=True)['data']
+        if len(data)==0:
+            msg = "[auth.import_staff_table] ERROR!  No data loaded for staff table from %s" % source
+            logging.error(msg)
+            raise Exception(msg)
         self.import_data_to_ndb(data, 'staff', overwrite)
         self.get_staff_course_table(ignore_cache=True)		# reload, to refill cache
         

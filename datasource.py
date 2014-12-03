@@ -32,6 +32,7 @@ class DataSource(object):
         '''
         if source.startswith('ndb:'):
             table = source[4:]
+            #return self.cached_get_ndb_data(table, ignore_cache=ignore_cache)	# ndb supposed to do its own memcaching
             return self.get_ndb_data(table)
 
         if source.startswith('docs:'):
@@ -49,6 +50,17 @@ class DataSource(object):
         if table not in NDB_DATASETS:
             raise Exception("[datasource] Error!  Unknown NDB data set %s" % table)
         return NDB_DATASETS[table]
+
+    def cached_get_ndb_data(self, table, key=None, ignore_cache=False):
+        memset = '%s%s' % ('ndb',table)
+        data = mem.get(memset)
+        if (not data) or ignore_cache:
+            data = self.get_ndb_data(table, key=key)
+            try:
+                mem.set(memset, data, time=60*10)
+            except Exception as err:
+                logging.error('error doing mem.set for %s from NDB' % (table))
+        return data
 
     def get_ndb_data(self, table, key=None):
         ndbset = self.get_ndb_dataset(table)
