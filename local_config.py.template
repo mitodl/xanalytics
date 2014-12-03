@@ -23,13 +23,16 @@ SESSION_SECRET_KEY = "dkjasf912lkj8d09"
 #-----------------------------------------------------------------------------
 # collections
 
-COLLECTIONS = {'year2': {'COURSE_LISTINGS_TABLE': "docs:X Analytics:Year 2 Course Listings",
-                         'END_DATE': '2014-09-21',
-                         },
+COLLECTIONS = {'latest': {'COURSE_LISTINGS_TABLE': "docs:X Analytics:Dashboard Courses",
+                             'dataset_latest': True,
+                             },
                'MyXSeries': {'COURSE_LISTINGS_TABLE': "docs:X Analytics:MyXSeries Courses",
                              'COURSE_REPORT_TABLE': "course_report_chinax",
                              'dataset_latest': False,
                              },
+               'year2': {'COURSE_LISTINGS_TABLE': "docs:X Analytics:Year 2 Course Listings",
+                         'END_DATE': '2014-09-21',
+                         },
                }
 
 #-----------------------------------------------------------------------------
