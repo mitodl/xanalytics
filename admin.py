@@ -69,6 +69,11 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
             cnt = self.import_custom_report_metadata(ignore_cache=True, collection=collection)
             msg = "Custom Report Metadata for '%s' reloaded (%d reports)" % (collection, cnt)
 
+        elif action=='Export Custom Reports':
+            collection = self.request.POST.get('collection')
+            cnt, destination = self.export_custom_report_metadata(ignore_cache=True, collection=collection)
+            msg = "Custom Report Metadata for '%s' exported to %s (%d reports)" % (collection, destination, cnt)
+
         elif action=='Add staff':
             fields = ['username', 'role', 'course_id', 'notes']
             data = { x: (self.request.POST.get(x) or '') for x in fields }

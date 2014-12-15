@@ -16,6 +16,10 @@ from collections import OrderedDict
 from oauth2client.appengine import AppAssertionCredentials
 from google.appengine.api import memcache
 
+from google.appengine.api import urlfetch
+
+urlfetch.set_default_fetch_deadline(60)
+
 mem = memcache.Client()
 
 SCOPE = 'https://spreadsheets.google.com/feeds https://docs.google.com/feeds'

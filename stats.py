@@ -10,6 +10,8 @@ import datetime
 import bqutil
 import local_config
 import logging
+import gsdata
+
 from collections import defaultdict, OrderedDict
 from datatable import DataTableField
 from unidecode import unidecode
@@ -100,6 +102,31 @@ class DataStats(object):
         else:
             return local_config.COLLECTIONS.keys()
 
+
+    def export_custom_report_metadata(self, ignore_cache=False, collection=None):
+        '''
+        Export custom report metadata to source specified for the collection (in local_config)
+        '''
+        custom_reports_source = self.get_collection_metadata('CUSTOM_REPORTS', collection=collection)
+        if not custom_reports_source:
+            logging.error("no custom reports available for collection %s" % collection)
+            return
+        (fname, sheet) = custom_reports_source[5:].split(':',1)	 # TODO: this is hardwired for google docs
+        destination = sheet + " Export"	# temporarily hardcoded; can do better
+        crq = CustomReport.query(CustomReport.collection==collection)
+        fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
+                  'html', 'javascript', 'icon']
+        cnt = 0
+        for crm in crq:
+            newrow = [str(getattr(crm, x)) for x in fields]
+            try:
+                gsdata.append_row_to_datasheet(fname, destination, newrow)
+            except Exception as err:
+                logging.error("Oops!  Failed to append to gsdata %s.%s, cnt=%d, newrow=%s, err=%s" % (fname, destination, cnt, newrow, err))
+                raise
+            cnt += 1
+
+        return cnt, destination
 
     def import_custom_report_metadata(self, ignore_cache=False, collection=None):
         '''
