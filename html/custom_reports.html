@@ -110,6 +110,10 @@ body {
 <div  class="container theme-showcase" role="main" data-target="#navbar">
     <h1>Custom Reports</h1>
 
+{% if msg %}
+<font color="red"><p>{{msg}}</p></font>
+{% endif %}
+
 {% for report in reports %}
 
     <hr width="100%"/>
@@ -123,6 +127,17 @@ body {
     <p></p><br style="clear:both;"/>
 
 {% endfor %}
+
+<hr width="100%"/>
+<hr width="100%"/>
+
+<form method="POST" action="/custom">
+    <p>Title: <input type="text" size="120" name="title" value=""/></p>
+    <p>Report ID name (no spaces, only letters, numbers, dash, underscore): <input type="text" size="120" name="name" value=""/></p>
+    <input type="submit" name="action" value="Create new Custom Report"/> 
+</form>
+
+<!-- ============================================================================= -->
 
 <script type="text/javascript">
 

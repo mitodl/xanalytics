@@ -119,6 +119,13 @@ body {
     <hr width="100%"/>
     <h2>{{report.title}}</h2>
 
+    <span  style="float:right">
+        <form method="POST">
+            <input type="hidden" name="name" value="{{report.name}}"/>
+            <input type="submit" name="action" value="Delete Report"/>
+        </form>
+    </span>
+
 {% if msg %}
 <font color="red"><p>{{msg}}</p></font>
 {% endif %}

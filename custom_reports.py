@@ -40,23 +40,36 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
     @auth_and_role_required(role='pm')
     @auth_required
-    def get_custom_report(self):
+    def get_custom_report(self, msg=""):
         '''
         custom reports page
         '''
         if not self.user in self.AUTHORIZED_USERS:	# require superuser
             return self.no_auth_sorry()
 
+        if (self.request.POST.get('action')=='Create new Custom Report'):
+            title = self.request.POST.get('title')
+            name =  self.request.POST.get('name')
+            existing_crm = self.get_custom_report_metadata(name, single=False)
+            if existing_crm.count():
+                msg = "Cannot create report '%s', already exists" % name
+            else:
+                crm = CustomReport(title=title, name=name)
+                logging.info("[cr] creating new custom report %s" % crm)
+                crm.put()
+                return self.redirect('/custom/edit_report/%s' % name)
+
         data = self.common_data.copy()
         data.update({'is_staff': self.is_superuser(),
                      'reports': self.get_custom_report_metadata(single=False),
+                     'msg': msg,
                  })
         template = JINJA_ENVIRONMENT.get_template('custom_reports.html')
         self.response.out.write(template.render(data))
         
     @auth_and_role_required(role='pm')
     @auth_required
-    def edit_custom_report(self, report_name):
+    def edit_custom_report(self, report_name, crm=None):
         '''
         edit custom report html, javascript, sql, description, ...
         '''
@@ -64,9 +77,23 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             return self.no_auth_sorry()
 
         msg = ''
-        if (self.request.POST.get('action')=='Save Changes'):
+        if (self.request.POST.get('action')=='Delete Report'):
+            try:
+                crm = self.get_custom_report_metadata(report_name)
+            except Exception as err:
+                logging.error("Failed to find custom report named %s!" % report_name)
+                raise
+            crm.key.delete()
+            msg = "Deleted course report %s" % report_name
+            return self.get_custom_report(msg=msg)
+
+        elif (self.request.POST.get('action')=='Save Changes'):
             fields = ['table_name', 'title', 'depends_on', 'html', 'sql', 'javascript', 'description']
-            crm = self.get_custom_report_metadata(report_name)
+            try:
+                crm = self.get_custom_report_metadata(report_name)
+            except Exception as err:
+                logging.error("Failed to find custom report named %s!" % report_name)
+                raise
             for field in fields:
                 fval = self.request.POST.get(field)
                 if fval is None:
@@ -77,7 +104,12 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             logging.info('saved crm = %s' % crm)
             msg = "Saved custom report %s" % report_name
 
-        crm = self.get_custom_report_metadata(report_name)
+        try:
+            if not crm:
+                crm = self.get_custom_report_metadata(report_name)
+        except Exception as err:
+            logging.error("Cannot get custom report %s" % report_name)
+            raise
 
         data = {'html': crm.html,
                 'js': crm.javascript,
