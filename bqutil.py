@@ -221,8 +221,9 @@ def get_bq_table_info(dataset_id, table_id, project_id=DEFAULT_PROJECT_ID):
         if 'Not Found' in str(err):
             raise
         table = None
-    table['lastModifiedTime'] = bq_timestamp_milliseconds_to_datetime(table['lastModifiedTime'])
-    table['creationTime'] = bq_timestamp_milliseconds_to_datetime(table['creationTime'])
+    if table:
+        table['lastModifiedTime'] = bq_timestamp_milliseconds_to_datetime(table['lastModifiedTime'])
+        table['creationTime'] = bq_timestamp_milliseconds_to_datetime(table['creationTime'])
     return table
 
 def default_logger(msg):

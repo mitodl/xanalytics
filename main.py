@@ -31,6 +31,8 @@ from datatable import DataTableField
 from datasource import DataSource
 from dashboard import DashboardRoutes
 from developer import DeveloperRoutes
+from admin import AdminRoutes
+from custom_reports import CustomReportRoutes
 from collections import defaultdict, OrderedDict
 from templates import JINJA_ENVIRONMENT
 
@@ -75,71 +77,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
         template = JINJA_ENVIRONMENT.get_template('courses.html')
         self.response.out.write(template.render(data))
 
-    @auth_required
-    def get_admin(self):
-        '''
-        Admin page: show authorized users, clear cache
-        '''
-        if not self.user in self.AUTHORIZED_USERS:	# require superuser
-            return self.no_auth_sorry()
-
-        msg = ""
-        action = self.request.POST.get('action', None)
-
-        if action=='Flush cache':
-            memcache.flush_all()
-            msg = "Cache flushed"
-
-        elif action=='Reload staff table':
-            self.get_staff_table(reload=True)
-            msg = "Staff table reloaded"
-
-        elif action=='Reload course listings':
-            self.get_course_listings(ignore_cache=True)
-            msg = "Course listings reloaded"
-
-        elif action=='Add staff':
-            fields = ['username', 'role', 'course_id', 'notes']
-            data = { x: (self.request.POST.get(x) or '') for x in fields }
-            self.add_staff_table_entry(data)
-            msg = "New staff %s added" % data
-
-        todelete = self.request.POST.get('do-delete', None)
-        if todelete is not None:
-            self.disable_staff_table_entry(int(todelete))
-            msg = "Deleted staff table row %s" % todelete
-
-        stable = self.get_staff_table()
-
-        stafftable = self.list2table([DataTableField({'icon':'delete', 'field': 'sid', 'title':' '}), 
-                                      'username', 'role', 'course_id', 'notes'], stable)
-
-        data = self.common_data
-        course_listings_source = self.get_collection_metadata('COURSE_LISTINGS_TABLE')
-        data.update({'superusers': self.AUTHORIZED_USERS,
-                     'table': stafftable,
-                     'msg': msg,
-                     'listings_source': course_listings_source,
-                     'staff_source': local_config.STAFF_COURSE_TABLE,
-                 })
-        template = JINJA_ENVIRONMENT.get_template('admin.html')
-        self.response.out.write(template.render(data))
-
-    @auth_required
-    def ajax_log_entries(self):
-        '''
-        Return recent log entries
-        '''
-        if not self.user in self.AUTHORIZED_USERS:	# require superuser
-            return self.no_auth_sorry()
-
-        rll = GetRecentLogLines(100)
-        self.response.headers['Content-Type'] = 'application/json'   
-        def fix_dt(y):
-            y['created'] = str(y['created'])[:19]
-            return y
-        loglines = [ fix_dt(x.to_dict()) for x in rll ]
-        self.response.out.write(json.dumps({'loglines': loglines}))
 
     @auth_required
     def ajax_switch_collection(self):
@@ -845,7 +782,6 @@ ROUTES = [
     # html pages
 
     webapp2.Route('/', handler=MainPage, handler_method='get_main'),
-    webapp2.Route('/admin', handler=MainPage, handler_method='get_admin'),
     webapp2.Route('/course/<org>/<number>/<semester>', handler=MainPage, handler_method='get_course'),
     webapp2.Route('/chapter/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_chapter'),
     webapp2.Route('/problem/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_problem'),
@@ -869,10 +805,11 @@ ROUTES = [
     webapp2.Route('/get/dashboard/geo_stats', handler=MainPage, handler_method='ajax_dashboard_get_geo_stats'),
 
     webapp2.Route('/get/switch_collection', handler=MainPage, handler_method='ajax_switch_collection'),
-    webapp2.Route('/get/LogEntries', handler=MainPage, handler_method='ajax_log_entries'),
 ]
 
 ROUTES += DashboardRoutes
+ROUTES += AdminRoutes
 ROUTES += DeveloperRoutes
+ROUTES += CustomReportRoutes
 
 application = webapp2.WSGIApplication(ROUTES, debug=True, config=config)

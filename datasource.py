@@ -15,7 +15,9 @@ from google.appengine.api import memcache
 
 mem = memcache.Client()
 
-NDB_DATASETS = {'staff': models.StaffUser}
+NDB_DATASETS = {'staff': models.StaffUser,
+                'CustomReport': models.CustomReport,
+}
 
 class DataSource(object):
     '''
@@ -78,15 +80,39 @@ class DataSource(object):
             ret['field_names'] = ret['fields']
         return ret
 
-    def import_data_to_ndb(self, data, table, overwrite=False):
+    def fix_date_fields(self, data, fields):
+        for field in fields:
+            dstr = data[field]
+            if dstr.count('/')==2:
+                (m, d, y) = map(int, dstr.split('/'))
+                if (y>70):
+                    y += 1900
+                elif (y<= 70):
+                    y += 2000
+                data[field] = datetime.datetime(y, m, d)
+            elif dstr.count('-')==2:
+                (y, m, d) = map(int, dstr.split('/'))
+                data[field] = datetime.datetime(y, m, d)
+            else:
+                raise Exception('do not know how to parse date time %s' % dstr)
+
+    def import_data_to_ndb(self, data, table, overwrite=False, extra_params=None, date_fields=None, overwrite_query=None):
         ndbset = self.get_ndb_dataset(table)
 
         if overwrite:
-            models.ndb.delete_multi([x.key for x in ndbset.query()])
+            models.ndb.delete_multi([x.key for x in ndbset.query(*(overwrite_query or []))])
 
+        cnt = 0
         for entry in data:
+
+            if date_fields:
+                self.fix_date_fields(entry, date_fields)
             entity = ndbset(**entry)
+            for key, val in (extra_params or {}).iteritems():	# set extra parameters on each entity
+                setattr(entity, key, val)
             entity.put()
+            cnt += 1
+        return cnt
 
     def get_datafile(self, fn, key=None):
         '''
@@ -157,6 +183,8 @@ class DataSource(object):
             except Exception as err:
                 if 'Not Found' in str(err):
                     table_date = None
+                    ignore_cache = True
+                    logging.info("[datasource.cached_get_bq_table] Table %s.%s doesn't exist, forcing recomputation" % (dataset, table))
                 else:
                     raise
 

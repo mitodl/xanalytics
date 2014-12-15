@@ -14,6 +14,8 @@ from collections import defaultdict, OrderedDict
 from datatable import DataTableField
 from unidecode import unidecode
 
+from models import CustomReport
+
 from google.appengine.api import memcache
 
 mem = memcache.Client()
@@ -48,12 +50,18 @@ class DataStats(object):
             return
         self.session['current_collection'] = collection
 
-    def get_collection_metadata(self, parameter, default=None):
+    def get_collection_metadata(self, parameter, default=None, collection=None):
         '''
         Return metadata parameter value for current collection
         Example: parameter = 'COURSE_LISTINGS_TABLE'
         '''
-        return self.current_collection(asdict=True).get(parameter, default)
+        if not collection:
+            return self.current_collection(asdict=True).get(parameter, default)
+
+        if collection not in self.collections_available():
+            logging.error('[get_collection_metadata] Unknown dataset collection %s!' % collection)
+            return
+        return local_config.COLLECTIONS[collection].get(parameter, default)
 
     def add_collection_name_prefix(self, name):
         '''
@@ -78,15 +86,42 @@ class DataStats(object):
                 collection = 'latest'
         if collection not in self.collections_available():
             logging.error('[current_collection] Unknown dataset collection %s!' % collection)
+            return None
         if not asdict:
             return collection
         return local_config.COLLECTIONS[collection]
 
-    def collections_available(self):
+    def collections_available(self, asdict=False):
         '''
         Return list of strings naming the available collections of datasets
         '''
-        return local_config.COLLECTIONS.keys()
+        if asdict:
+            return local_config.COLLECTIONS
+        else:
+            return local_config.COLLECTIONS.keys()
+
+
+    def import_custom_report_metadata(self, ignore_cache=False, collection=None):
+        '''
+        Load custom report metadata from source specified for the collection (in local_config)
+        '''
+        custom_reports_source = self.get_collection_metadata('CUSTOM_REPORTS', collection=collection)
+        if not custom_reports_source:
+            logging.error("no custom reports available for collection %s" % collection)
+            return
+        crdata = self.get_data(custom_reports_source, ignore_cache=ignore_cache)['data']
+        logging.info("crdata = %s" % crdata)
+        if len(crdata)==0:
+            msg = "[custom_reports.import_custom_report_metadata] ERROR!  No data loaded for custom report from %s" % custom_reports_source
+            logging.error(msg)
+            raise Exception(msg)
+        cnt = self.import_data_to_ndb(crdata, 'CustomReport', 
+                                      overwrite=True, 
+                                      overwrite_query=[CustomReport.collection==collection],
+                                      extra_params={'collection': collection},
+                                      date_fields=['date'],
+        )
+        return cnt
 
     def use_dataset_latest(self):
         '''
@@ -590,9 +625,11 @@ class DataStats(object):
                                         depends_on=['%s.person_course' % dataset])
 
 
-    def get_course_report_dataset(self):
+    def get_course_report_dataset(self, orgname=None):
         dataset = "course_report"
-        if self.use_dataset_latest():
+        if orgname:
+            return dataset + "_" + orgname
+        elif self.use_dataset_latest():
             dataset += '_latest'
         else:
             dataset += '_' + self.ORGNAME.split(' ')[-1]
@@ -694,9 +731,9 @@ class DataStats(object):
                     return val['url']
         return local_config.DEFAULT_COURSE_SITE
 
-    def get_course_listings(self, ignore_cache=False):
+    def get_course_listings(self, ignore_cache=False, collection=None):
 
-        course_listings_source = self.get_collection_metadata('COURSE_LISTINGS_TABLE')
+        course_listings_source = self.get_collection_metadata('COURSE_LISTINGS_TABLE', collection=collection)
 
         all_courses = self.get_data(course_listings_source, 
                                     key={'name': 'course_id'},

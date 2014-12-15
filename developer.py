@@ -25,14 +25,10 @@ from datatable import DataTableField
 from datasource import DataSource
 
 from auth import auth_required, auth_and_role_required
+from templates import JINJA_ENVIRONMENT
 
 # from google.appengine.api import memcache
 # mem = memcache.Client()
-
-JINJA_ENVIRONMENT = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
-    extensions=['jinja2.ext.autoescape'],
-    autoescape=True)
 
 class DeveloperPages(auth.AuthenticatedHandler, DataStats, DataSource):
     '''

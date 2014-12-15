@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>{{orgname}} Analytics Dashboard: Edit Custom Report</title>
+
+<!-- DataTables CSS -->
+<!--
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.3/css/jquery.dataTables.css">
+-->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.fixedColumns.css">
+
+<!-- codemirror -->
+
+<link rel="stylesheet" type="text/css" href="/css/codemirror.css">
+<script type="text/javascript" src="/js/codemirror-compressed.js"></script>
+  
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.10.2.min.js"></script>
+
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.css">
+<script type="text/javascript" src="//code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
+
+<!-- bootstrap -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap-theme.min.css">
+<!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> -->
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/docs.min.js"></script>
+<link href="/css/theme.css" rel="stylesheet">
+  
+<!-- nav -->
+<style>
+body {
+  position: relative;
+}
+</style>
+
+<!-- tooltips -->
+<style>
+.tooltip-inner {
+    max-width: 350px;
+    /* If max-width does not work, try using width instead */
+    width: 350px; 
+}
+.xxtooltip{
+	/* position: absolute; */
+	display: none;
+    width: 100px;
+	border: 1px solid #333;
+	background: #BDCDFF;
+	padding: 5px 20px;
+	color: #333;
+	
+	border-radius: 5px;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+}
+</style>
+
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+<script src="/js/dataTables.fixedColumns.js"></script>
+
+<!-- highchart -->
+
+<script src="/js/highstock.js"></script>
+<script src="/js/highcharts-more.js"></script>
+<script src="/js/modules/map.js"></script> 
+<script src="/js/modules/data.js"></script> 
+<script src="/js/mapdata/world.js"></script>
+
+<!-- ----------------------------------------------------------------------------- -->
+
+  <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+
+</head>
+
+
+  <body role="document">
+
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">{{orgname}} Analytics</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="/custom">Custom Reports</a></li>
+            <li class="active"><a href="#">Edit Custom Report</a></li>
+
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li><p class="navbar-text">{{user}}</p></li>
+	    {% if is_staff %}
+            <li><a href="/admin">Admin Page</a></li>
+	    {% endif %}
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+<div  class="container theme-showcase" role="main" data-target="#navbar">
+    <h1>Edit Custom Report</h1>
+
+    <hr width="100%"/>
+    <h2>{{report.title}}</h2>
+
+{% if msg %}
+<font color="red"><p>{{msg}}</p></font>
+{% endif %}
+
+<form method="POST">
+
+<ul>
+<li>HTML: <textarea name='html' data-mode="text/html" rows="10" cols="80">{{report.html}}</textarea></li>
+<li>Javascript: <textarea name='javascript' data-mode="text/javascript" rows="20" cols="80">{{report.javascript}}</textarea></li>
+<li>SQL: <textarea name='sql' data-mode="text/x-sql" rows="10" cols="80">{{report.sql}}</textarea></li>
+<li>Description: <textarea name='description' data-mode="text/html" rows="10" cols="80">{{report.description}}</textarea></li>
+</ul>
+
+<p>Report name (no spaces): <input type="text" size="120" name="name" value="{{report.name}}"/></p>
+<p>Table Name: <input type="text" size="80" name="table_name" value="{{report.table_name}}"/></p>
+<p>Title: <input type="text" size="120" name="title" value="{{report.title}}"/></p>
+<p>Depends on: <input type="text" size="120" name="depends_on" value="{{report.depends_on}}"/></p>
+
+<input type="submit" name="action" value="Save Changes"/>
+
+</form>
+
+<button class="cr-view-button" data-name="{{report.name}}">View</button>
+
+<hr width="100%"/>
+<div id="div-{{report.name}}"></div>
+
+<script type="text/javascript">
+$(document).ready( function () {
+
+    $('textarea').each(function(){
+	var data = $(this).data();
+	console.log('mode = ' + data.mode);
+	// $(this).resizable();
+	$(this).css({"border-color": "#C1E0FF", 
+		     "border-width":"1px", 
+		     "border-style":"solid"});
+	if (1){
+	    var myCodeMirror = CodeMirror.fromTextArea(this, {'mode': data.mode,
+							      'lineNumbers': true,
+							      matchBrackets: true,
+							     });
+	    }
+    });
+
+    $('.CodeMirror').resizable({
+	resize: function() {
+	    editor.setSize($(this).width(), $(this).height());
+	}
+    });
+
+    $('.cr-view-button').each(function(){
+	
+	var name = $(this).data().name;
+	console.log('name ' + name);
+
+	$(this).click(function(){
+	    console.log("viewing " + name);
+	    $.getJSON('/custom/get_report_html/' + name, 
+		      function(data){
+			  $("#div-" + name).html(data['html']);
+		      }
+		     );
+	});
+	
+    });
+
+});
+</script>
+
+</div> <!-- main -->
+</body>
+</html>

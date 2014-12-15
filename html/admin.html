@@ -21,6 +21,10 @@
 $(document).ready( function () {
     $('#table_id').DataTable({
     });
+
+    $('#collections_table').DataTable({
+    });
+
 });
 </script>
 
@@ -98,11 +102,48 @@ $(document).ready( function () {
 <hr width="100%"/>
 <h2>Course Listings</h2>
 
-<p>Data source: <font color='blue'>{{listings_source}}</font></p>
+<p>Default collection: <font color='blue'>{{collection_name}}</font></p>
+<p>Default data source: <font color='blue'>{{listings_source}}</font></p>
 
 <form method="post">
     <input type="submit" name="action" value="Reload course listings"/>
 </form>
+
+<hr width="100%"/>
+<h2>Collections</h2>
+
+<p>Available collections:</p>
+
+<table id="collections_table" class="display" width="100%">
+<tr>
+  <th>Name</th>
+  <th>Listings Table Source</th>
+  <th>End Date</th>
+  <th>Custom Reports Source</th>
+</tr>
+{% for name, cdata in collections.items() %}
+    <tr>
+      <td>{{name}}</td>
+      <td>{{cdata.COURSE_LISTINGS_TABLE}}
+	{% if cdata.COURSE_LISTINGS_TABLE %}
+	<form method="post">
+	  <input type="hidden" name="collection" value="{{name}}"/>
+	  <input type="submit" name="action" value="Reload Course Listings"/>
+	</form>
+	{% endif %}
+      </td>
+      <td>{{cdata.END_DATE}}</td>
+      <td>{{cdata.CUSTOM_REPORTS}}
+	{% if cdata.CUSTOM_REPORTS %}
+	<form method="post">
+	  <input type="hidden" name="collection" value="{{name}}"/>
+	  <input type="submit" name="action" value="Reload Custom Reports"/>
+	</form>
+	{% endif %}
+      </td>
+    </tr>
+{% endfor %}
+</table>
 
 <hr width="100%"/>
 <h2>Low-Level Maintenence</h2>
