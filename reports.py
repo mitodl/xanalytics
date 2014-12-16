@@ -45,7 +45,13 @@ class Reports(object):
         other = self
         class CRContainer(dict):
             def __getitem__(self, report_name):
-                crm = other.get_custom_report_metadata(report_name)
+                try:
+                    crm = other.get_custom_report_metadata(report_name)
+                except Exception as err:
+                    crm = None
+                if not crm:
+                    logging.info("No custom report '%s' found" % report_name)
+                    return ""
                 template = JINJA_ENVIRONMENT.get_template('custom_report_container.html')
                 data = {'is_staff': other.is_superuser(),
                         'report': crm,
