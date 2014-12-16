@@ -84,7 +84,7 @@ class DataSource(object):
         for field in fields:
             dstr = data[field]
             if dstr.count('/')==2:
-                (m, d, y) = map(int, dstr.split('/'))
+                (m, d, y) = map(int, dstr.split(' ')[0].split('/'))
                 if (y>70):
                     y += 1900
                 elif (y<= 70):

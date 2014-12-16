@@ -143,6 +143,7 @@ body {
 <p>Table Name: <input type="text" size="80" name="table_name" value="{{report.table_name}}"/></p>
 <p>Title: <input type="text" size="120" name="title" value="{{report.title}}"/></p>
 <p>Depends on: <input type="text" size="120" name="depends_on" value="{{report.depends_on}}"/></p>
+<p>Collection (e.g. year2): <input type="text" size="120" name="collection" value="{{report.collection}}"/></p>
 
 <input type="submit" name="action" value="Save Changes"/>
 
@@ -184,9 +185,14 @@ $(document).ready( function () {
 
 	$(this).click(function(){
 	    console.log("viewing " + name);
+	    var pos = $("#div-" + name).offset();
+	    var top = pos.top + 20;
+	    var left = 0;
+	    window.scrollTo((left < 0 ? 0 : left), (top < 0 ? 0 : top));
 	    $.getJSON('/custom/get_report_html/' + name, 
 		      function(data){
 			  $("#div-" + name).html(data['html']);
+			  $("#div-" + name)[0].scrollIntoView();
 		      }
 		     );
 	});

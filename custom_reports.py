@@ -55,6 +55,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 msg = "Cannot create report '%s', already exists" % name
             else:
                 crm = CustomReport(title=title, name=name)
+                crm.html = """<div id="contain-{{report_name}}" style="min-width: 310px; height: 400px; margin: 0 auto">
+                               <img src="/images/loading_icon.gif"/>\n</div>"""
+                jstemp = JINJA_ENVIRONMENT.get_template('custom_report_default.js')
+                crm.javascript = jstemp.render({})
                 logging.info("[cr] creating new custom report %s" % crm)
                 crm.put()
                 return self.redirect('/custom/edit_report/%s' % name)
@@ -88,7 +92,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             return self.get_custom_report(msg=msg)
 
         elif (self.request.POST.get('action')=='Save Changes'):
-            fields = ['table_name', 'title', 'depends_on', 'html', 'sql', 'javascript', 'description']
+            fields = ['table_name', 'title', 'depends_on', 'html', 'sql', 'javascript', 'description', 'collection']
             try:
                 crm = self.get_custom_report_metadata(report_name)
             except Exception as err:
@@ -103,6 +107,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             crm.put()
             logging.info('saved crm = %s' % crm)
             msg = "Saved custom report %s" % report_name
+
+            if not crm.table_name:
+                msg += "...Warning! table_name cannot be left empty"
 
         try:
             if not crm:
@@ -217,6 +224,14 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         # what table?  get custom course report configuration metadata for report name as specified
         crm = self.get_custom_report_metadata(report_name)
         table = crm.table_name
+        if not table or table=="None":
+            error = "No table name defined!  Cannot process this custom report"
+            data = {'error': error}
+            self.response.headers['Content-Type'] = 'application/json'   
+            self.response.out.write(json.dumps(data))
+            return
+        if not table.startswith('stats_'):
+            table = "stats_" + table
 
         # special handling for person_course table from particular dataset
         for m in re.findall('{person_course__([^ \}]+)}', crm.sql):
@@ -237,8 +252,12 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 x = x[1:-1]
                 return x
             return x
+
         try:
-            depends_on = [ strip_brackets(x.format(**pdata)) for x in (json.loads(crm.depends_on or "[]")) ]
+            if crm.depends_on:
+                depends_on = [ strip_brackets(x.format(**pdata)) for x in (json.loads(crm.depends_on or "[]")) ]
+            else:
+                depends_on = None
         except Exception as err:
             logging.error("for course report %s, cannot process depends_on=%s" % (report_name, crm.depends_on))
             raise

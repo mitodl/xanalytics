@@ -90,7 +90,7 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
         stafftable = self.list2table([DataTableField({'icon':'delete', 'field': 'sid', 'title':' '}), 
                                       'username', 'role', 'course_id', 'notes'], stable)
 
-        data = self.common_data
+        data = self.common_data.copy()
         course_listings_source = self.get_collection_metadata('COURSE_LISTINGS_TABLE')
         data.update({'superusers': self.AUTHORIZED_USERS,
                      'table': stafftable,
