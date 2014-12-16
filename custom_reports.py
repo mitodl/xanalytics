@@ -133,6 +133,21 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         
     @auth_and_role_required(role='pm')
     @auth_required
+    def ajax_export_custom_report(self, report_name=None):
+        '''
+        export report metadata to source specified in config
+        '''
+        if not self.user in self.AUTHORIZED_USERS:	# require superuser
+            return self.no_auth_sorry()
+
+        cnt, destination = self.export_custom_report_metadata(report_name=report_name)
+        msg = "Exported '%s' to %s (cnt=%s)" % (report_name, destination, cnt)
+        data = {'msg': msg}
+        self.response.headers['Content-Type'] = 'application/json'   
+        self.response.out.write(json.dumps(data))
+
+    @auth_and_role_required(role='pm')
+    @auth_required
     def ajax_get_report_html(self, report_name=None):
         '''
         return HTML for specified custom report
@@ -308,4 +323,5 @@ CustomReportRoutes = [
 # ajax routes
     webapp2.Route('/custom/get_report_data/<report_name>', handler=CustomReportPages, handler_method='ajax_get_report_data'),
     webapp2.Route('/custom/get_report_html/<report_name>', handler=CustomReportPages, handler_method='ajax_get_report_html'),
+    webapp2.Route('/custom/export_report/<report_name>', handler=CustomReportPages, handler_method='ajax_export_custom_report'),
 ]

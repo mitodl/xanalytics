@@ -103,7 +103,7 @@ class DataStats(object):
             return local_config.COLLECTIONS.keys()
 
 
-    def export_custom_report_metadata(self, ignore_cache=False, collection=None):
+    def export_custom_report_metadata(self, ignore_cache=False, collection=None, report_name=None):
         '''
         Export custom report metadata to source specified for the collection (in local_config)
         '''
@@ -113,7 +113,7 @@ class DataStats(object):
             return
         (fname, sheet) = custom_reports_source[5:].split(':',1)	 # TODO: this is hardwired for google docs
         destination = sheet + " Export"	# temporarily hardcoded; can do better
-        crq = CustomReport.query(CustomReport.collection==collection)
+        crq = self.get_custom_report_metadata(report_name=report_name, collection=collection, single=False)
         fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
                   'html', 'javascript', 'icon']
         cnt = 0

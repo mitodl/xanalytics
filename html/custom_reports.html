@@ -44,8 +44,8 @@
 <div  class="container theme-showcase" role="main" data-target="#navbar">
     <h1>Custom Reports</h1>
 
+<font color="red"><p id="msg">{{msg}}</p></font>
 {% if msg %}
-<font color="red"><p>{{msg}}</p></font>
 {% endif %}
 
 {% for report in reports %}
@@ -54,6 +54,7 @@
     <h2>{{report.title}}</h2>
     <span  style="float:right">
         <button data-state="init" class="cr-view-button" data-name="{{report.name}}">View</button>
+        <button class="cr-export-button" data-name="{{report.name}}">Export</button>
         <button class="cr-edit-button" data-name="{{report.name}}">Edit</button>
     </span>
     <p>{{report.description}}</p>
@@ -113,15 +114,29 @@ var setup_click = function () {
     });
 
     $('.cr-edit-button').each(function(){
-	
 	var name = $(this).data().name;
 	console.log('name ' + name);
-
 	$(this).click(function(){
 	    console.log("editing " + name);
 	    window.location.href = '/custom/edit_report/' + name;
 	});
-	
+    });
+
+    $('.cr-export-button').each(function(){
+	var name = $(this).data().name;
+	$(this).click(function(){
+	    console.log("exporting " + name);
+	    $('#msg').html('<img src="/images/loading_icon.gif"/>');
+	    $.getJSON('/custom/export_report/' + name, 
+			  function(data){
+			      $('#msg').html(data.msg);
+			      }
+		     ).fail(function(error){
+			 $('#msg').html("Export failed! status=" + error.statusText);
+			 console.log('export failed!');
+			 console.log(error);
+		     });
+	});
     });
 };
 
