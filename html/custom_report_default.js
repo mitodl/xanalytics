@@ -19,7 +19,6 @@ $.getJSON(
 	    "pageLength": 10,
 	    searching: true,
 	    ordering: true,
-	    order: [[2, "desc"]],
 	    data: data['data'],
 	});
 	

@@ -57,8 +57,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 crm = CustomReport(title=title, name=name)
                 crm.html = """<div id="contain-{{report_name}}" style="min-width: 310px; height: 400px; margin: 0 auto">
                                <img src="/images/loading_icon.gif"/>\n</div>"""
-                jstemp = JINJA_ENVIRONMENT.get_template('custom_report_default.js')
-                crm.javascript = jstemp.render({})
+                jstemp, jsfn, uptodate = JINJA_ENVIRONMENT.loader.get_source(JINJA_ENVIRONMENT, 'custom_report_default.js')
+                crm.javascript = str(jstemp)
+                #jstemp = JINJA_ENVIRONMENT.get_template('custom_report_default.js')
+                #crm.javascript = jstemp.render({})
                 logging.info("[cr] creating new custom report %s" % crm)
                 crm.put()
                 return self.redirect('/custom/edit_report/%s' % name)
@@ -221,6 +223,12 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             pcd = '[%s.%s]' % (org_dataset, self.find_latest_person_course_table(org_dataset))
             pdata['person_course__' + org] = pcd
             logging.info('[cr] org=%s, pc=%s.%s' % (org, org_dataset, pcd))
+
+        # special handling for course_report tables for specific orgs
+        for m in re.findall('{course_report__([^ \}]+)}', crm.sql):
+            org = m
+            org_dataset = self.get_course_report_dataset(orgname=org)
+            pdata['course_report__' + org] = org_dataset
 
         logging.info("Using %s for custom report %s person_course" % (pdata['person_course'], report_name))
 
