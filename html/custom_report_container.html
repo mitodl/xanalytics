@@ -1,0 +1,67 @@
+    <h3>{{report.title}}</h3>
+    <span  style="float:right">
+        <button id="view-{{report.name}}" data-state="init" class="cr-view-button" data-name="{{report.name}}">View</button>
+	{% if is_staff %}
+        <button id="edit-{{report.name}}" class="cr-edit-button" data-name="{{report.name}}">Edit</button>
+	{% endif %}
+    </span>
+    <p>{{report.description}}</p>
+    <div id="div-{{report.name}}"></div>
+    <p></p><br style="clear:both;"/>
+
+<script type="text/javascript">
+var setup_cr_click = function (report_name) {
+
+    $('#view-' + report_name).each(function(){
+	
+	var name = $(this).data().name;
+	console.log('name ' + name);
+	var button = $(this);
+	var the_div = $("#div-" + name);
+
+	$(this).click(function(){
+	    var state = button.data().state;
+	    if (state=='init'){
+		console.log("loading " + name);
+		$.getJSON('/custom/get_report_html/' + name, 
+			  function(data){
+			      the_div.html(data['html']);
+			      button.data('state', 'visible');
+			      button.html('Hide');
+			  }
+			 );
+		}else{
+		    if (state=='visible'){
+			the_div.hide();
+			button.data('state', 'hidden');
+			button.html('View');
+		    }else{
+			if (state=="hidden"){
+			    the_div.show();
+			    button.data('state', 'visible');
+			    button.html('Hide');
+			}
+		    }
+		}
+	});
+	
+    });
+
+{% if is_staff %}
+    $('#edit-' + report_name).each(function(){
+	
+	var name = $(this).data().name;
+	console.log('name ' + name);
+
+	$(this).click(function(){
+	    console.log("editing " + name);
+	    window.location.href = '/custom/edit_report/' + name;
+	});
+	
+    });
+{% endif %}
+
+};
+
+$(document).ready(function(){ setup_cr_click("{{report.name}}"); });
+</script>

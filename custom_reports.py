@@ -135,8 +135,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         '''
         return HTML for specified custom report
         '''
-        if not self.user in self.AUTHORIZED_USERS:	# require superuser
-            return self.no_auth_sorry()
+        #if not self.user in self.AUTHORIZED_USERS:	# require superuser
+        #    return self.no_auth_sorry()
 
         crm = self.get_custom_report_metadata(report_name)
         html = crm.html
@@ -156,25 +156,6 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
         
-
-    def get_custom_report_metadata(self, report_name=None, collection=None, single=True):
-        '''
-        return CustomReport ndb entry for report of specified name
-        '''
-        if collection and report_name:
-            crq = CustomReport.query(CustomReport.name==report_name, CustomReport.collection==collection)
-        elif report_name:
-            crq = CustomReport.query(CustomReport.name==report_name)
-        elif collection:
-            crq = CustomReport.query(CustomReport.collection==collection)
-        else:
-            crq = CustomReport.query()
-        if crq and single:
-            return crq.fetch(1)[0]
-        elif report_name and not crq:
-            logging.error('No custom report found with name=%s' % report_name)
-        return crq
-
 
     def find_latest_person_course_table(self, dataset):
         '''
@@ -201,8 +182,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         get data for custom report.
         parameters like course_id, chapter_id, problem_id are passed in as GET or POST parameters
         '''
-        if not self.user in self.AUTHORIZED_USERS:	# require superuser
-            return self.no_auth_sorry()
+        #if not self.user in self.AUTHORIZED_USERS:	# require superuser
+        #    return self.no_auth_sorry()
 
         params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'length', 'get_table_columns']
         pdata = {}

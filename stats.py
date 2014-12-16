@@ -150,6 +150,24 @@ class DataStats(object):
         )
         return cnt
 
+    def get_custom_report_metadata(self, report_name=None, collection=None, single=True):
+        '''
+        return CustomReport ndb entry for report of specified name
+        '''
+        if collection and report_name:
+            crq = CustomReport.query(CustomReport.name==report_name, CustomReport.collection==collection)
+        elif report_name:
+            crq = CustomReport.query(CustomReport.name==report_name)
+        elif collection:
+            crq = CustomReport.query(CustomReport.collection==collection)
+        else:
+            crq = CustomReport.query()
+        if crq and single:
+            return crq.fetch(1)[0]
+        elif report_name and not crq:
+            logging.error('No custom report found with name=%s' % report_name)
+        return crq
+
     def use_dataset_latest(self):
         '''
         The "latest" dataset have the most recent data.

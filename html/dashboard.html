@@ -296,9 +296,15 @@ $(document).ready(function() {
 
 <h2 id="enrollment">Cross-course comparison statistics</h2>
 
-<div id="cross-course" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+<div id="cross-course" style="min-width: 310px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 
 <script type="text/javascript" src="/js/dashboard-cc.js"></script>
+
+<br style="clear:both;"/>
+
+<h2 id="enrollment">Age Distributions</h2>
+
+{% autoescape off %}{{ custom_report["age-histogram"] }}{% endautoescape %}
 
 </div> <!-- main -->
 </body>

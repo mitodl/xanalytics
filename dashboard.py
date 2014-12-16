@@ -19,6 +19,7 @@ import local_config
 
 from collections import defaultdict, OrderedDict
 from stats import DataStats
+from reports import Reports
 from datatable import DataTableField
 from datasource import DataSource
 from templates import JINJA_ENVIRONMENT
@@ -28,7 +29,7 @@ from auth import auth_required, auth_and_role_required
 # from google.appengine.api import memcache
 # mem = memcache.Client()
 
-class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
+class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
     '''
     Methods for cross-course summary dashboard
     '''
@@ -47,6 +48,7 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource):
                      'courses': courses,
                      'table': html,
                      'ncourses': len(courses['data']),
+                     'custom_report': self.custom_report_container(),
                  })
         logging.info('session: %s' % dict(self.session))
         logging.info('================================================== dataset_latest=%s' % self.use_dataset_latest())

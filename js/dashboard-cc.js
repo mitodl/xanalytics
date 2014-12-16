@@ -157,9 +157,14 @@ var cc_get_data = function(){
         cchtml += '<div id="cc_certified"></div><p></p>';
         cchtml += '<div id="cc_verified"></div><p></p>';
         cchtml += '<table id="cc_data"></table><p></p>';
-        cchtml += '<div id="cc_forum"><a id="btn-cc-forum-show" class="btn btn-lg btn-primary" href="#" role="button">Show Forum and Navigation event stats »</a></div>';
-	cchtml += "<p></p>";
-        cchtml += '<div id="cc_time"><a id="btn-cc-time-show" class="btn btn-lg btn-primary" href="#" role="button">Show Time and Video event stats »</a></div>';
+	cchtml += '<br style="clear:both;"/>';
+	cchtml += "<div>";
+        cchtml += '  <div id="cc_forum"><a id="btn-cc-forum-show" class="btn btn-lg btn-primary" href="#" role="button">Show Forum and Navigation event stats »</a></div>';
+	cchtml += "  <p></p>";
+        cchtml += '  <div id="cc_time"><a id="btn-cc-time-show" class="btn btn-lg btn-primary" href="#" role="button">Show Time and Video event stats »</a></div>';
+	cchtml += "  <p></p>";
+	cchtml += "</div>";
+	cchtml += '<br style="clear:both;"/>';
 
 	$('#cross-course').html(cchtml);
 
