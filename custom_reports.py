@@ -258,7 +258,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             return x
 
         try:
-            if crm.depends_on:
+            if crm.depends_on and (not crm.depends_on=="None"):
                 depends_on = [ strip_brackets(x.format(**pdata)) for x in (json.loads(crm.depends_on or "[]")) ]
             else:
                 depends_on = None
@@ -282,7 +282,11 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             bqdata = {'data': None}
             error = str(err)
             logging.error('custom report error %s' % error)
-            raise
+            # raise
+            data = {'error': error}
+            self.response.headers['Content-Type'] = 'application/json'   
+            self.response.out.write(json.dumps(data))
+            return
 
         tablecolumns = []
         if pdata['get_table_columns']:
