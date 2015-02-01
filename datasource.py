@@ -10,6 +10,8 @@ import logging
 import gsdata
 import bqutil
 import datetime
+import dateutil
+import dateutil.parser
 from collections import defaultdict, OrderedDict
 from google.appengine.api import memcache
 
@@ -90,11 +92,14 @@ class DataSource(object):
                 elif (y<= 70):
                     y += 2000
                 data[field] = datetime.datetime(y, m, d)
-            elif dstr.count('-')==2:
+            elif dstr.count('-')==2 and dstr.count(':')==0:
                 (y, m, d) = map(int, dstr.split('/'))
                 data[field] = datetime.datetime(y, m, d)
             else:
-                raise Exception('do not know how to parse date time %s' % dstr)
+                try:
+                    data[field] = dateutil.parser.parse(dstr)
+                except Exception as err:
+                    raise Exception('do not know how to parse date time %s, err=%s' % (dstr, err))
 
     def import_data_to_ndb(self, data, table, overwrite=False, extra_params=None, date_fields=None, overwrite_query=None):
         ndbset = self.get_ndb_dataset(table)
@@ -149,7 +154,9 @@ class DataSource(object):
                             logger=None, ignore_cache=False, 
                             depends_on=None,
                             force_query=False,
-                            startIndex=0, maxResults=1000000):
+                            startIndex=0, maxResults=1000000,
+                            raise_exception=False,
+    ):
         '''
         Get a dataset from BigQuery; use memcache.
 
@@ -201,6 +208,8 @@ class DataSource(object):
                                            maxResults=maxResults)
             except Exception as err:
                 logging.error(err)
+                if raise_exception:
+                    raise
                 data = {'fields': {}, 'field_names': [], 'data': [], 'data_by_key': {}}
                 return data		# don't cache empty result
             data['depends_on'] = depends_on

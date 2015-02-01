@@ -103,19 +103,36 @@ class DataStats(object):
             return local_config.COLLECTIONS.keys()
 
 
-    def export_custom_report_metadata(self, ignore_cache=False, collection=None, report_name=None):
+    def export_custom_report_metadata(self, ignore_cache=False, collection=None, report_name=None, download=False):
         '''
         Export custom report metadata to source specified for the collection (in local_config)
         '''
+        crq = self.get_custom_report_metadata(report_name=report_name, collection=collection, single=False)
+        fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
+                  'html', 'javascript', 'icon']
+        
+        def strip_eol_spaces(code):
+            return '\n'.join([ x.rstrip() for x in code.split('\n')]).expandtabs()
+
+        if download and report_name:
+            if crq:
+                ret = []
+                for crm in crq:
+                    data = {x: str(getattr(crm, x)) for x in fields}
+                    for cset in ['sql', 'javascript', 'html']:
+                        data[cset] = strip_eol_spaces(data[cset])
+                    ret.append(data)
+                return ret
+            else:
+                logging.error("No custom report found for report_name=%s, cannot produce json" % report_name)
+
         custom_reports_source = self.get_collection_metadata('CUSTOM_REPORTS', collection=collection)
         if not custom_reports_source:
             logging.error("no custom reports available for collection %s" % collection)
             return
         (fname, sheet) = custom_reports_source[5:].split(':',1)	 # TODO: this is hardwired for google docs
         destination = sheet + " Export"	# temporarily hardcoded; can do better
-        crq = self.get_custom_report_metadata(report_name=report_name, collection=collection, single=False)
-        fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
-                  'html', 'javascript', 'icon']
+
         cnt = 0
         for crm in crq:
             newrow = [str(getattr(crm, x)) for x in fields]

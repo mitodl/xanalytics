@@ -10,6 +10,7 @@ import datetime
 import logging
 import webapp2
 import json
+import yaml
 import re
 
 import jinja2
@@ -17,6 +18,7 @@ import jinja2
 import gsdata
 import bqutil
 import auth
+import traceback
 
 import local_config
 
@@ -55,7 +57,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 msg = "Cannot create report '%s', already exists" % name
             else:
                 crm = CustomReport(title=title, name=name)
-                crm.html = """<div id="contain-{{report_name}}" style="min-width: 310px; height: 400px; margin: 0 auto">
+                #crm.html = """<div id="contain-{{report_name}}" style="min-width: 310px; height: 400px; margin: 0 auto">
+                crm.html = """<div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
                                <img src="/images/loading_icon.gif"/>\n</div>"""
                 jstemp, jsfn, uptodate = JINJA_ENVIRONMENT.loader.get_source(JINJA_ENVIRONMENT, 'custom_report_default.js')
                 crm.javascript = str(jstemp)
@@ -65,6 +68,50 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 crm.put()
                 return self.redirect('/custom/edit_report/%s' % name)
 
+        elif (self.request.POST.get('action')=='Upload Custom Report(s)'):
+            report_file = self.request.get('file')
+            data = yaml.load(report_file)
+            logging.info('[cr upload] data=%s' % data)
+            msg = ""
+            msg += "<br/>%d reports in file" % len(data)
+            for report in data:
+                # validate
+                fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
+                          'html', 'javascript', 'icon']
+                valid = True
+                for field in fields:
+                    if (field not in report):
+                        msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"))
+                        valid = False
+                        break
+                if not valid:
+                    continue
+
+                report_name = report['name'].strip()
+                if not report_name:
+                    msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"))
+                    break
+            
+                # does the report already exist?
+                exists = False
+                try:
+                    crm = self.get_custom_report_metadata(report_name)
+                    exists = True
+                except Exception as err:
+                    pass
+                if exists:
+                    msg += "<br/>Report %s already exists!  Cannot overload" % report_name
+                    break
+                try:
+                    self.import_data_to_ndb([report], 'CustomReport', 
+                                            date_fields=['date'],
+                                        )
+                    msg += "<br/>Successfully imported report %s (please refresh this page to see it)" % report_name
+                except Exception as err:
+                    msg += "<br/>Failed to import report %s, err=%s" % (report_name, err)
+                    logging.info(msg)
+                    logging.info("report = %s" % report)
+                    
         data = self.common_data.copy()
         data.update({'is_staff': self.is_superuser(),
                      'reports': self.get_custom_report_metadata(single=False),
@@ -83,7 +130,32 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             return self.no_auth_sorry()
 
         msg = ''
-        if (self.request.POST.get('action')=='Delete Report'):
+        if (self.request.POST.get('action')=='Download Report'):
+
+            class folded_unicode(unicode): pass
+            class literal_unicode(unicode): pass
+
+            def folded_unicode_representer(dumper, data):
+                return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='>')
+            def literal_unicode_representer(dumper, data):
+                return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
+
+            yaml.add_representer(folded_unicode, folded_unicode_representer)
+            yaml.add_representer(literal_unicode, literal_unicode_representer)
+
+            try:
+                data = self.export_custom_report_metadata(report_name=report_name, download=True)
+                dump = yaml.dump(data, default_style="|", default_flow_style=False)
+                logging.info("custom report yaml=%s" % dump)
+            except Exception as err:
+                logging.error("Failed to find custom report named %s!" % report_name)
+                raise
+            self.response.headers['Content-Type'] = 'application/text'
+            self.response.headers['Content-Disposition'] = 'attachment; filename=ANALYTICS_REPORT_%s.yaml' % report_name
+            self.response.out.write(dump)
+            return
+            
+        elif (self.request.POST.get('action')=='Delete Report'):
             try:
                 crm = self.get_custom_report_metadata(report_name)
             except Exception as err:
@@ -158,13 +230,20 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         crm = self.get_custom_report_metadata(report_name)
         html = crm.html
         html += "<script type='text/javascript'>"
-        html += "$(document).ready( function () {%s} );" % crm.javascript
+        html += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
         html += "</script>" 
 
         template = Template(html)
 
+        params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
+        pdata = {}
+        for param in params:
+            pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
+
         render_data = {'report_name': report_name,
+                       'parameters': json.dumps(pdata),
                        }
+        render_data.update(pdata)
 
         data = {'html': template.render(render_data),
                 'js': crm.javascript,
@@ -196,6 +275,23 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
     @auth_required
     def ajax_get_report_data(self, report_name=None):
         '''
+        do the actual call but in a try except to capture all errors, for reporting
+        '''
+        try:
+            self.actual_ajax_get_report_data(report_name=report_name)
+        except Exception as err:
+            logging.error(err)
+            logging.error(traceback.format_exc())
+            data = self.common_data.copy()
+            data.update({'data': None,
+                         'error': str(err),
+                         'tablecolumns': None,
+                 })
+            self.response.headers['Content-Type'] = 'application/json'   
+            self.response.out.write(json.dumps(data))
+
+    def actual_ajax_get_report_data(self, report_name=None):
+        '''
         get data for custom report.
         parameters like course_id, chapter_id, problem_id are passed in as GET or POST parameters
         '''
@@ -218,6 +314,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             # using course report dataset; list the tables, to determine which is the latest
             # person_course dataset, and use that for {person_course}
             pdata['person_course'] = '[%s.%s]' % (dataset, self.find_latest_person_course_table(dataset))
+        pdata['dataset'] = dataset
 
         # what table?  get custom course report configuration metadata for report name as specified
         crm = self.get_custom_report_metadata(report_name)
@@ -249,7 +346,12 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
         # generate SQL and depends_on
         error = None
-        sql = crm.sql.format(**pdata)
+        try:
+            sql = crm.sql.format(**pdata)
+        except Exception as err:
+            logging.error("Custom report data: failed to prepare SQL, err=%s" % str(err))
+            logging.error('pdata = %s' %  pdata)
+            raise
         def strip_brackets(x):
             x = x.strip()
             if x.startswith('[') and x.endswith(']'):
@@ -264,6 +366,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 depends_on = None
         except Exception as err:
             logging.error("for course report %s, cannot process depends_on=%s" % (report_name, crm.depends_on))
+            raise Exception("Bad format for the 'depends_on' setting in the custom report specification")
             raise
 
         # get the data, and do query if needed
@@ -276,6 +379,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                                               depends_on=depends_on,
                                               startIndex=int(pdata['start'] or 0), 
                                               maxResults=int(pdata['length'] or 100000),
+                                              raise_exception=True,
             )
             self.fix_bq_dates(bqdata)
         except Exception as err:

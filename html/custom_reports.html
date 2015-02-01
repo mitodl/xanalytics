@@ -44,7 +44,7 @@
 <div  class="container theme-showcase" role="main" data-target="#navbar">
     <h1>Custom Reports</h1>
 
-<font color="red"><p id="msg">{{msg}}</p></font>
+<font color="red"><p id="msg">{% autoescape off %}{{ msg }}{% endautoescape %}</p></font>
 {% if msg %}
 {% endif %}
 
@@ -56,6 +56,9 @@
         <button data-state="init" class="cr-view-button" data-name="{{report.name}}">View</button>
         <button class="cr-export-button" data-name="{{report.name}}">Export</button>
         <button class="cr-edit-button" data-name="{{report.name}}">Edit</button>
+	<form action="/custom/edit_report/{{report.name}}" method="POST">
+            <input type="submit" name="action" value="Download Report"/>
+        </form>
     </span>
     <p>{{report.description}}</p>
     <div id="div-{{report.name}}"></div>
@@ -66,10 +69,22 @@
 <hr width="100%"/>
 <hr width="100%"/>
 
+<h2>New Custom Report</h2>
+
+<p>Fill in this form to get started creating a new custom report:</p>
+
 <form method="POST" action="/custom">
     <p>Title: <input type="text" size="120" name="title" value=""/></p>
     <p>Report ID name (no spaces, only letters, numbers, dash, underscore): <input type="text" size="120" name="name" value=""/></p>
     <input type="submit" name="action" value="Create new Custom Report"/> 
+</form>
+
+<br/>
+<p>Or upload a custom report YAML file:</p>
+
+<form action="/custom" method="POST" enctype="multipart/form-data">
+  <p>Report YAML file: <input type="file" name="file"/></p>
+  <input type="submit" name="action" value="Upload Custom Report(s)"/> 
 </form>
 
 <!-- ============================================================================= -->

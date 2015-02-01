@@ -33,6 +33,7 @@ from dashboard import DashboardRoutes
 from developer import DeveloperRoutes
 from admin import AdminRoutes
 from custom_reports import CustomReportRoutes
+from reports import Reports
 from collections import defaultdict, OrderedDict
 from templates import JINJA_ENVIRONMENT
 
@@ -45,7 +46,7 @@ mem = memcache.Client()
 
 #-----------------------------------------------------------------------------
 
-class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
+class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
     '''
     Main python class which displays views.
     '''
@@ -642,13 +643,14 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource):
                 "defaultContent": ''
             },] +  [x.colinfo() for x in fields])
 
-        data = self.common_data
+        data = self.common_data.copy()
         data.update({'course_id': course_id,
                      'fields': tablefields,
                      'table': tablehtml,
                      'is_staff': self.is_superuser(),
                      'is_pm': self.is_pm(),
                      'image': self.get_course_image(course_id),
+                     'custom_report': self.custom_report_container(course_id=course_id),
                  })
         
         template = JINJA_ENVIRONMENT.get_template('one_course.html')

@@ -2,85 +2,7 @@
 <head>
   <title>Course: {{course_id}}</title>
 
-<!-- DataTables CSS -->
-<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
-<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
-  
-<style>
-td.details-control {
-    background: url('/images/details_open.png') no-repeat center center;
-    cursor: pointer;
-}
-tr.shown td.details-control {
-    background: url('/images/details_close.png') no-repeat center center;
-}
-</style>
-
-<!-- jQuery -->
-<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-  
-<!-- DataTables -->
-<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
-<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
-
-
-<script type='text/javascript' src='https://www.google.com/jsapi'></script>
-
-<!-- highchart -->
-
-
-<script src="/js/highstock.js"></script>
-<script src="/js/highcharts-more.js"></script>
-<script src="/js/modules/map.js"></script> 
-<script src="/js/modules/data.js"></script> 
-<script src="/js/mapdata/world.js"></script>
-
-<!-- bootstrap -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap-theme.min.css">
-<!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> -->
-<script src="/js/bootstrap.min.js"></script>
-<script src="/js/docs.min.js"></script>
-<link href="/css/theme.css" rel="stylesheet">
-
-<!--
-OLD SCRIPTS FOR TESTING
-
-<script src="http://github.highcharts.com/highstock.js"></script>
-<script src="http://github.highcharts.com/highcharts-more.js"></script>
-<script src="http://github.highcharts.com/modules/map.js"></script>
-<script src="http://code.highcharts.com/maps/modules/data.js"></script>
-<script src="http://code.highcharts.com/modules/exporting.js"></script>
-<script src="http://code.highcharts.com/mapdata/countries/us/us-all.js"></script>
-<script src="/js/mapdata/world.js"></script>
-
-<script src="/js/modules/exporting.js"></script>
-
-<script src="http://code.highcharts.com/highstock.js"></script>
-<script src="http://code.highcharts.com/modules/map.js"></script>
-<script src="http://code.highcharts.com/mapdata/index.js?1"></script>
-
-<script src="http://github.highcharts.com/highstock.src.js"></script>
-<script src="http://github.highcharts.com/modules/map.src.js"></script>
-<script src="http://code.highcharts.com/mapdata/index.js?1"></script>
-<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.js"></script>
-<script src="http://www.highcharts.com/samples/maps/demo/all-maps/jquery.combobox.js"></script>
-<script src="http://code.highcharts.com/mapdata/custom/world.js"></script>
-
-<script src="/js/highstock.js"></script>
-<script src="/js/highmaps.js"></script>
-<script src="/js/modules/exporting.js"></script>
-
-<script src="/js/modules/map.js"></script> 
-<script src="/js/modules/data.js"></script> 
-<script src="/js/mapdata/world.js"></script>
-
-<script src="http://code.highcharts.com/mapdata/custom/world.js"></script>
-
-<script src="http://code.highcharts.com/maps/highmaps.js"></script> 
-<script src="http://code.highcharts.com/maps/modules/data.js"></script>
-<script src="http://code.highcharts.com/mapdata/custom/world.js"></script>
--->
+  {% include 'all_head.html' %}
 
 <!-- table display -->
 
@@ -131,6 +53,8 @@ function format ( d ) {
     tablefields = {% autoescape off %}{{ fields }}{% endautoescape %};
 
     $(document).ready( function () {
+        $.fn.dataTable.ext.errMode = 'throw';
+
 	var table = $('#table_id').DataTable({
               "ajax": "/get/{{course_id}}/course_stats",
               "order": [[ 1, "asc" ]],
@@ -363,6 +287,14 @@ $(document).ready(function() {
     });
 });
 		</script>
+
+<!-- ----------------------------------------------------------------------------- -->
+
+{% if is_pm %}
+    {% autoescape off %}
+        {{custom_report['IDV_enrollment_by_course']}}
+    {% endautoescape %}
+{% endif %}
 
 <!-- ----------------------------------------------------------------------------- -->
 <h2>Geographic distribution</h2>

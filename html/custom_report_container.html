@@ -1,6 +1,7 @@
 <h2>{{report.title}}</h2>
     <span  style="float:right">
         <button id="view-{{report.name}}" data-state="init" class="cr-view-button" data-name="{{report.name}}">View</button>
+        <button id="reload-{{report.name}}" style="display:none" data-state="init" class="cr-reload-button" data-name="{{report.name}}">Reload</button>
 	{% if is_staff %}
         <button id="edit-{{report.name}}" class="cr-edit-button" data-name="{{report.name}}">Edit</button>
 	{% endif %}
@@ -19,32 +20,42 @@ var setup_cr_click = function (report_name) {
 	var button = $(this);
 	var the_div = $("#div-" + name);
 
+	var load_report = function(){
+	    console.log("loading " + name);
+	    $.getJSON('/custom/get_report_html/' + name, 
+                      {% autoescape off %}{{ report_params }}{% endautoescape %},
+		      function(data){
+			  the_div.html(data['html']);
+			  button.data('state', 'visible');
+			  button.html('Hide');
+                          $('#reload-' + report_name).show();
+		      }
+		     );
+	}
+
 	$(this).click(function(){
 	    var state = button.data().state;
 	    if (state=='init'){
-		console.log("loading " + name);
-		$.getJSON('/custom/get_report_html/' + name, 
-			  function(data){
-			      the_div.html(data['html']);
-			      button.data('state', 'visible');
-			      button.html('Hide');
-			  }
-			 );
+		load_report();
+    	    }else{
+		if (state=='visible'){
+		    the_div.hide();
+		    button.data('state', 'hidden');
+		    button.html('View');
 		}else{
-		    if (state=='visible'){
-			the_div.hide();
-			button.data('state', 'hidden');
-			button.html('View');
-		    }else{
-			if (state=="hidden"){
-			    the_div.show();
-			    button.data('state', 'visible');
-			    button.html('Hide');
-			}
+		    if (state=="hidden"){
+			the_div.show();
+			button.data('state', 'visible');
+			button.html('Hide');
 		    }
 		}
+	    }
 	});
 	
+        $('#reload-' + report_name).click(function(){
+	    load_report();
+	});
+
     });
 
 {% if is_staff %}

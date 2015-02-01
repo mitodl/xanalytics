@@ -38,7 +38,7 @@ class Reports(object):
     This class is meant to be mixed-in
     '''
 
-    def custom_report_container(self):
+    def custom_report_container(self, **kwargs):
         '''
         Return object which acts like a dict and can be used to generate HTML fragment as container for specified custom report.
         '''
@@ -47,14 +47,16 @@ class Reports(object):
             def __getitem__(self, report_name):
                 try:
                     crm = other.get_custom_report_metadata(report_name)
+                    err = None
                 except Exception as err:
                     crm = None
                 if not crm:
-                    logging.info("No custom report '%s' found" % report_name)
-                    return ""
+                    logging.info("No custom report '%s' found, err=%s" % (report_name, err))
+                    return "Missing custom report %s" % report_name
                 template = JINJA_ENVIRONMENT.get_template('custom_report_container.html')
                 data = {'is_staff': other.is_superuser(),
                         'report': crm,
+                        'report_params': json.dumps(kwargs),
                 }
                 return template.render(data)
         return CRContainer()
