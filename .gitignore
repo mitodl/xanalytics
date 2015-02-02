@@ -2,6 +2,7 @@ app.yaml
 local_config.py
 data/*.csv
 data/*.yaml
+data/*.txt
 
 *~
 *.py[co]
