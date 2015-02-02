@@ -38,5 +38,6 @@ class CustomReport(ndb.Model):
     html = ndb.StringProperty(indexed=False)
     javascript = ndb.StringProperty(indexed=False)
     icon = ndb.StringProperty(indexed=False)
+    group_tags = ndb.StringProperty(indexed=True, repeated=True)	# which pages it's on; also used for access control
 
     

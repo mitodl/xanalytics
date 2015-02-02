@@ -166,7 +166,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             return self.get_custom_report(msg=msg)
 
         elif (self.request.POST.get('action')=='Save Changes'):
-            fields = ['table_name', 'title', 'depends_on', 'html', 'sql', 'javascript', 'description', 'collection']
+            fields = ['table_name', 'title', 'depends_on', 'html', 'sql', 'javascript', 'description', 'collection', 'group_tags']
             try:
                 crm = self.get_custom_report_metadata(report_name)
             except Exception as err:
@@ -174,6 +174,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 raise
             for field in fields:
                 fval = self.request.POST.get(field)
+                if field=='group_tags':
+                    fval = [x.strip() for x in fval.split(',')]
                 if fval is None:
                     logging.error("oops, expected value for field=%s, but got fval=%s" % (field, fval))
                 else:

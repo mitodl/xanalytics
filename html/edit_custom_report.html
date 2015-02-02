@@ -83,6 +83,8 @@
 <p>Title: <input type="text" size="120" name="title" value="{{report.title}}"/></p>
 <p>Depends on: <input type="text" size="120" name="depends_on" value="{{report.depends_on}}"/></p>
 <p>Collection (e.g. year2): <input type="text" size="120" name="collection" value="{{report.collection}}"/></p>
+{% set rgt = ', '.join(report.group_tags) %}
+<p>Group tags (comma separated): <input type="text" size="120" name="group_tags" value="{{rgt}}"/></p>
 
 <input type="submit" name="action" value="Save Changes"/>
 
