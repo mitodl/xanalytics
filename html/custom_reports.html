@@ -44,12 +44,20 @@
 <div  class="container theme-showcase" role="main" data-target="#navbar">
     <h1>Custom Reports</h1>
 
-<font color="red"><p id="msg">{% autoescape off %}{{ msg }}{% endautoescape %}</p></font>
 {% if msg %}
+<font color="red"><p id="msg">{% autoescape off %}{{ msg }}{% endautoescape %}</p></font>
 {% endif %}
+
+    <span  style="float:right">
+                     <form action="/custom/edit_report/NONE" method="POST">
+                         <input type="submit" name="action" value="Download ALL Reports"/>
+                     </form>
+    </span>
+
 
 {% for report in reports %}
 
+    <hr width="100%"/>
     {% autoescape off %}
         {{custom_report[report.name]}}
     {% endautoescape %}
@@ -70,11 +78,19 @@
 </form>
 
 <br/>
-<p>Or upload a custom report YAML file:</p>
+<hr width="100%"/>
+
+<h2>Upload Custom Report(s)</h2>
+
+<p>Upload a custom report YAML file (the file may contain one or more reports):</p>
 
 <form action="/custom" method="POST" enctype="multipart/form-data">
   <p>Report YAML file: <input type="file" name="file"/></p>
   <input type="submit" name="action" value="Upload Custom Report(s)"/> 
+  <br/>
+  <input type="radio" name="overwrite" value="no" checked>  Do not overwrite existing reports</input>
+  <br>
+  <input type="radio" name="overwrite" value="yes">  Force uploaded reports to replace any pre-existing ones of the same name</input>
 </form>
 
 <!-- ============================================================================= -->

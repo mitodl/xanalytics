@@ -71,51 +71,61 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         elif (self.request.POST.get('action')=='Upload Custom Report(s)'):
             report_file = self.request.get('file')
+            overwrite = (self.request.get('overwrite')=='yes')
             data = yaml.load(report_file)
-            logging.info('[cr upload] data=%s' % data)
-            msg = ""
-            msg += "<br/>%d reports in file" % len(data)
-            for report in data:
-                # validate
-                fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
-                          'html', 'javascript', 'icon', 'group_tags', 'meta_info']
-                valid = True
-                fields_ok_missing = {'group_tags': [], 'meta_info': {}}
-                for field, default_value in fields_ok_missing.items():
-                    if field not in report:
-                        report[field] = default_value
-                for field in fields:
-                    if (field not in report):
-                        msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"), field)
-                        valid = False
-                        break
-                if not valid:
-                    continue
 
-                report_name = report['name'].strip()
-                if not report_name:
-                    msg += "<br/>Invalid report name=%s, missing report name" % (report.get('report_name',"<Unknown Name>"))
-                    break
-            
-                # does the report already exist?
-                exists = False
-                try:
-                    crm = self.get_custom_report_metadata(report_name)
-                    exists = True
-                except Exception as err:
-                    pass
-                if exists:
-                    msg += "<br/>Report %s already exists!  Cannot overload" % report_name
-                    break
-                try:
-                    self.import_data_to_ndb([report], 'CustomReport', 
-                                            date_fields=['date'],
-                                        )
-                    msg += "<br/>Successfully imported report %s (please refresh this page to see it)" % report_name
-                except Exception as err:
-                    msg += "<br/>Failed to import report %s, err=%s" % (report_name, err)
-                    logging.info(msg)
-                    logging.info("report = %s" % report)
+            if (not report_file) or (not data):
+                msg = "Must select (valid) file to upload!"
+            else:
+                logging.info('[cr upload] data=%s' % data)
+                msg = ""
+                msg += "<br/>%d reports in file" % len(data)
+                for report in data:
+                    # validate
+                    fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
+                              'html', 'javascript', 'icon', 'group_tags', 'meta_info']
+                    valid = True
+                    fields_ok_missing = {'group_tags': [], 'meta_info': {}}
+                    for field, default_value in fields_ok_missing.items():
+                        if field not in report:
+                            report[field] = default_value
+                    for field in fields:
+                        if (field not in report):
+                            msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"), field)
+                            valid = False
+                            break
+                    if not valid:
+                        continue
+    
+                    report_name = report['name'].strip()
+                    if not report_name:
+                        msg += "<br/>Invalid report name=%s, missing report name" % (report.get('report_name',"<Unknown Name>"))
+                        break
+                
+                    # does the report already exist?
+                    exists = False
+                    try:
+                        crm = self.get_custom_report_metadata(report_name)
+                        exists = True
+                    except Exception as err:
+                        pass
+                    if exists and not overwrite:
+                        msg += "<br/>Report %s already exists!  Cannot overwrite" % report_name
+                        break
+                    elif exists:
+                        msg += "<br/>Report %s already exists, deleting existing" % report_name
+                        crm.key.delete()
+                    try:
+                        self.import_data_to_ndb([report], 'CustomReport', 
+                                                date_fields=['date'],
+                                            )
+                        msg += "<br/>Successfully imported report %s (please refresh this page to see it)" % report_name
+                        if exists and overwrite:
+                            msg += "<br/>Note: existing report was overwritten"
+                    except Exception as err:
+                        msg += "<br/>Failed to import report %s, err=%s" % (report_name, err)
+                        logging.info(msg)
+                        logging.info("report = %s" % report)
                     
         data = self.common_data.copy()
         data.update({'is_staff': self.is_superuser(),
@@ -206,17 +216,6 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         msg = ''
         if (self.request.POST.get('action')=='Download Report'):
 
-            class folded_unicode(unicode): pass
-            class literal_unicode(unicode): pass
-
-            def folded_unicode_representer(dumper, data):
-                return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='>')
-            def literal_unicode_representer(dumper, data):
-                return dumper.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
-
-            yaml.add_representer(folded_unicode, folded_unicode_representer)
-            yaml.add_representer(literal_unicode, literal_unicode_representer)
-
             try:
                 data = self.export_custom_report_metadata(report_name=report_name, download=True)
                 dump = yaml.dump(data, default_style="|", default_flow_style=False)
@@ -229,6 +228,20 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             self.response.out.write(dump)
             return
             
+        elif (self.request.POST.get('action')=='Download ALL Reports'):
+
+            try:
+                data = self.export_custom_report_metadata(report_name=None, download=True)
+                dump = yaml.dump(data, default_style="|", default_flow_style=False)
+                logging.info("custom report yaml=%s" % dump)
+            except Exception as err:
+                raise
+            dtstr = self.TheNow().strftime('%Y-%m-%d_%H%M')
+            self.response.headers['Content-Type'] = 'application/text'
+            self.response.headers['Content-Disposition'] = 'attachment; filename=ANALYTICS_ALL_REPORTS_%s.yaml' % dtstr
+            self.response.out.write(dump)
+            return
+
         elif (self.request.POST.get('action')=='Delete Report'):
             try:
                 crm = self.get_custom_report_metadata(report_name)

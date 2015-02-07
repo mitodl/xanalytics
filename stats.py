@@ -108,17 +108,20 @@ class DataStats(object):
         Export custom report metadata to source specified for the collection (in local_config)
         '''
         crq = self.get_custom_report_metadata(report_name=report_name, collection=collection, single=False)
-        fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
-                  'html', 'javascript', 'icon', 'group_tags', 'meta_info']
+        fields = {'name': str, 'title': str, 'description': str, 
+                  'author': str, 'date': str, 'table_name': str, 
+                  'sql': str, 'depends_on': str, 'html': str, 
+                  'javascript': str, 'icon': str, 
+                  'group_tags': list, 'meta_info': dict}
         
         def strip_eol_spaces(code):
             return '\n'.join([ x.rstrip() for x in code.split('\n')]).expandtabs()
 
-        if download and report_name:
+        if download:
             if crq:
                 ret = []
                 for crm in crq:
-                    data = {x: str(getattr(crm, x)) for x in fields}
+                    data = {x: xtype(getattr(crm, x)) for x, xtype in fields.items()}
                     for cset in ['sql', 'javascript', 'html']:
                         data[cset] = strip_eol_spaces(data[cset])
                     ret.append(data)
