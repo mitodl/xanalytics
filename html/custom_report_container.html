@@ -4,6 +4,12 @@
         <button id="reload-{{report.name}}" style="display:none" data-state="init" class="cr-reload-button" data-name="{{report.name}}">Reload</button>
 	{% if is_staff %}
         <button id="edit-{{report.name}}" class="cr-edit-button" data-name="{{report.name}}">Edit</button>
+           {% if report_is_staff %}
+                     <!-- <button class="cr-export-button" data-name="{{report.name}}">Export</button> -->
+                     <form action="/custom/edit_report/{{report.name}}" method="POST">
+                         <input type="submit" name="action" value="Download Report"/>
+                     </form>
+           {% endif %}
 	{% endif %}
     </span>
     <p>{{report.description}}</p>
@@ -11,19 +17,18 @@
     <p></p><br style="clear:both;"/>
 
 <script type="text/javascript">
-var setup_cr_click = function (report_name) {
+var setup_cr_click = function (report_name, report_params, meta_info, immediate_view) {
 
     $('#view-' + report_name).each(function(){
 	
 	var name = $(this).data().name;
-	console.log('name ' + name);
 	var button = $(this);
 	var the_div = $("#div-" + name);
 
 	var load_report = function(){
 	    console.log("loading " + name);
 	    $.getJSON('/custom/get_report_html/' + name, 
-                      {% autoescape off %}{{ report_params }}{% endautoescape %},
+                      report_params,
 		      function(data){
 			  the_div.html(data['html']);
 			  button.data('state', 'visible');
@@ -33,8 +38,15 @@ var setup_cr_click = function (report_name) {
 		     );
 	}
 
-	$(this).click(function(){
+	var do_view = function(){
 	    var state = button.data().state;
+
+	    // console.log("rn=" + report_name + ", meta_info = ", meta_info);
+	    if (meta_info.is_page){
+		console.log("is page!");
+		window.location.href = "/page/" + report_name + "?" + $.param(report_params);
+	    }
+
 	    if (state=='init'){
 		load_report();
     	    }else{
@@ -50,12 +62,14 @@ var setup_cr_click = function (report_name) {
 		    }
 		}
 	    }
-	});
+	};
 	
+	$(this).click(do_view);
+
         $('#reload-' + report_name).click(function(){
 	    load_report();
 	});
-
+	
     });
 
 {% if is_staff %}
@@ -72,7 +86,16 @@ var setup_cr_click = function (report_name) {
     });
 {% endif %}
 
+    if (immediate_view){
+	$('#view-' + report_name).click();
+    }
+
 };
 
-$(document).ready(function(){ setup_cr_click("{{report.name}}"); });
+
+$(document).ready(function(){ setup_cr_click("{{report.name}}",
+ 					     {% autoescape off %}{{ report_params }}{% endautoescape %},
+ 					     {% autoescape off %}{{ report_meta_info }}{% endautoescape %},
+					     {{immediate_view}}
+					    ); });
 </script>

@@ -44,6 +44,13 @@ class Reports(object):
         '''
         other = self
         class CRContainer(dict):
+            immediate_view = False
+
+            @property
+            def immediate(self):
+                self.immediate_view = True
+                return self
+
             def __getitem__(self, report_name):
                 try:
                     crm = other.get_custom_report_metadata(report_name)
@@ -57,6 +64,9 @@ class Reports(object):
                 data = {'is_staff': other.is_superuser(),
                         'report': crm,
                         'report_params': json.dumps(kwargs),
+                        'report_is_staff': kwargs.get('staff'),
+                        'report_meta_info': json.dumps(crm.meta_info),
+                        'immediate_view': json.dumps(self.immediate_view),
                 }
                 return template.render(data)
         return CRContainer()

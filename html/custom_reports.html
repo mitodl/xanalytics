@@ -50,19 +50,9 @@
 
 {% for report in reports %}
 
-    <hr width="100%"/>
-    <h2>{{report.title}}</h2>
-    <span  style="float:right">
-        <button data-state="init" class="cr-view-button" data-name="{{report.name}}">View</button>
-        <button class="cr-export-button" data-name="{{report.name}}">Export</button>
-        <button class="cr-edit-button" data-name="{{report.name}}">Edit</button>
-	<form action="/custom/edit_report/{{report.name}}" method="POST">
-            <input type="submit" name="action" value="Download Report"/>
-        </form>
-    </span>
-    <p>{{report.description}}</p>
-    <div id="div-{{report.name}}"></div>
-    <p></p><br style="clear:both;"/>
+    {% autoescape off %}
+        {{custom_report[report.name]}}
+    {% endautoescape %}
 
 {% endfor %}
 
@@ -88,76 +78,6 @@
 </form>
 
 <!-- ============================================================================= -->
-
-<script type="text/javascript">
-
-var setup_click = function () {
-
-    $('.cr-view-button').each(function(){
-	
-	var name = $(this).data().name;
-	console.log('name ' + name);
-	var button = $(this);
-	var the_div = $("#div-" + name);
-
-	$(this).click(function(){
-	    var state = button.data().state;
-	    if (state=='init'){
-		console.log("loading " + name);
-		$.getJSON('/custom/get_report_html/' + name, 
-			  function(data){
-			      the_div.html(data['html']);
-			      button.data('state', 'visible');
-			      button.html('Hide');
-			  }
-			 );
-		}else{
-		    if (state=='visible'){
-			the_div.hide();
-			button.data('state', 'hidden');
-			button.html('View');
-		    }else{
-			if (state=="hidden"){
-			    the_div.show();
-			    button.data('state', 'visible');
-			    button.html('Hide');
-			}
-		    }
-		}
-	});
-	
-    });
-
-    $('.cr-edit-button').each(function(){
-	var name = $(this).data().name;
-	console.log('name ' + name);
-	$(this).click(function(){
-	    console.log("editing " + name);
-	    window.location.href = '/custom/edit_report/' + name;
-	});
-    });
-
-    $('.cr-export-button').each(function(){
-	var name = $(this).data().name;
-	$(this).click(function(){
-	    console.log("exporting " + name);
-	    $('#msg').html('<img src="/images/loading_icon.gif"/>');
-	    $.getJSON('/custom/export_report/' + name, 
-			  function(data){
-			      $('#msg').html(data.msg);
-			      }
-		     ).fail(function(error){
-			 $('#msg').html("Export failed! status=" + error.statusText);
-			 console.log('export failed!');
-			 console.log(error);
-		     });
-	});
-    });
-};
-
-$(document).ready( setup_click );
-
-</script>
 
 </div> <!-- main -->
 </body>

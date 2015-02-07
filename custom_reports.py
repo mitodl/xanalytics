@@ -28,6 +28,7 @@ from collections import defaultdict, OrderedDict
 from stats import DataStats
 from datatable import DataTableField
 from datasource import DataSource
+from reports import Reports
 
 from auth import auth_required, auth_and_role_required
 from templates import JINJA_ENVIRONMENT
@@ -35,7 +36,7 @@ from templates import JINJA_ENVIRONMENT
 from google.appengine.api import memcache
 mem = memcache.Client()
 
-class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
+class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
     '''
     Methods for custom report pages
     '''
@@ -77,11 +78,15 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             for report in data:
                 # validate
                 fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
-                          'html', 'javascript', 'icon']
+                          'html', 'javascript', 'icon', 'group_tags', 'meta_info']
                 valid = True
+                fields_ok_missing = {'group_tags': [], 'meta_info': {}}
+                for field, default_value in fields_ok_missing.items():
+                    if field not in report:
+                        report[field] = default_value
                 for field in fields:
                     if (field not in report):
-                        msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"))
+                        msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"), field)
                         valid = False
                         break
                 if not valid:
@@ -89,7 +94,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
                 report_name = report['name'].strip()
                 if not report_name:
-                    msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"))
+                    msg += "<br/>Invalid report name=%s, missing report name" % (report.get('report_name',"<Unknown Name>"))
                     break
             
                 # does the report already exist?
@@ -116,9 +121,78 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         data.update({'is_staff': self.is_superuser(),
                      'reports': self.get_custom_report_metadata(single=False),
                      'msg': msg,
+                     'custom_report': self.custom_report_container(staff=True),
                  })
         template = JINJA_ENVIRONMENT.get_template('custom_reports.html')
         self.response.out.write(template.render(data))
+        
+
+    def custom_report_auth_check(self, report_name):
+
+        crm = self.get_custom_report_metadata(report_name)
+        msg = ''
+        
+        # params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
+        params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 'get_table_columns']
+        pdata = {}
+        for param in params:
+            pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
+
+        auth_ok = False
+
+        if 'course' in crm.group_tags:	            # course_id must be specified for this report
+            course_id = pdata['course_id']
+            if not course_id:
+                msg = "Unknown course_id"
+
+            if not self.is_user_authorized_for_course(course_id):
+                return self.no_auth_sorry()
+
+            auth_ok = True
+
+        else:
+            for tag in crm.group_tags:
+                if tag.startswith('role:'):
+                    role = tag[5:]
+                    if self.does_user_have_role(role):
+                        auth_ok = True
+                        logging.info("Authorization OK for user=%s role=%s report=%s" % (self.user, role, report_name))
+                        break
+
+        if self.user in self.AUTHORIZED_USERS:	# superuser gets access
+            auth_ok = True
+
+        if not auth_ok:
+            logging.error("Authorization DENIED for user=%s report=%s, group_tags=%s" % (self.user, report_name, crm.group_tags))
+
+        return crm, pdata, auth_ok, msg
+
+
+    @auth_required
+    def get_custom_report_page(self, report_name):
+        '''
+        Single custom report which behaves as a HTML page
+        '''
+                    
+        crm, pdata, auth_ok, msg = self.custom_report_auth_check(report_name)	# crm = CourseReport model
+        if not auth_ok:
+            return self.no_auth_sorry()
+
+        html = crm.html
+        html += "<script type='text/javascript'>"
+        html += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
+        html += "</script>" 
+
+        template = JINJA_ENVIRONMENT.from_string(html)
+
+        render_data = {'report_name': report_name,
+                       'parameters': json.dumps(pdata),
+                       'custom_report': self.custom_report_container(**pdata),
+                       'msg': msg,
+                       }
+        render_data.update(pdata)
+        self.response.out.write(template.render(render_data))
+
         
     @auth_and_role_required(role='pm')
     @auth_required
@@ -166,7 +240,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
             return self.get_custom_report(msg=msg)
 
         elif (self.request.POST.get('action')=='Save Changes'):
-            fields = ['table_name', 'title', 'depends_on', 'html', 'sql', 'javascript', 'description', 'collection', 'group_tags']
+            fields = ['table_name', 'title', 'depends_on', 'html', 'sql', 'javascript', 'description', 'collection', 'group_tags', 'meta_info']
             try:
                 crm = self.get_custom_report_metadata(report_name)
             except Exception as err:
@@ -176,6 +250,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 fval = self.request.POST.get(field)
                 if field=='group_tags':
                     fval = [x.strip() for x in fval.split(',')]
+                elif field=='meta_info':
+                    fval = eval(fval)
                 if fval is None:
                     logging.error("oops, expected value for field=%s, but got fval=%s" % (field, fval))
                 else:
@@ -220,16 +296,15 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
 
-    @auth_and_role_required(role='pm')
     @auth_required
     def ajax_get_report_html(self, report_name=None):
         '''
         return HTML for specified custom report
         '''
-        #if not self.user in self.AUTHORIZED_USERS:	# require superuser
-        #    return self.no_auth_sorry()
+        crm, pdata, auth_ok, msg = self.custom_report_auth_check(report_name)	# crm = CourseReport model
+        if not auth_ok:
+            return self.no_auth_sorry()
 
-        crm = self.get_custom_report_metadata(report_name)
         html = crm.html
         html += "<script type='text/javascript'>"
         html += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
@@ -237,10 +312,6 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
         template = Template(html)
 
-        params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
-        pdata = {}
-        for param in params:
-            pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
 
         render_data = {'report_name': report_name,
                        'parameters': json.dumps(pdata),
@@ -273,7 +344,6 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 pctable = table
         return pctable
 
-    @auth_and_role_required(role='pm')
     @auth_required
     def ajax_get_report_data(self, report_name=None):
         '''
@@ -297,16 +367,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         get data for custom report.
         parameters like course_id, chapter_id, problem_id are passed in as GET or POST parameters
         '''
-        #if not self.user in self.AUTHORIZED_USERS:	# require superuser
-        #    return self.no_auth_sorry()
-
-        params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'length', 'get_table_columns']
-        pdata = {}
-        for param in params:
-            pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
+        crm, pdata, auth_ok, msg = self.custom_report_auth_check(report_name)	# crm = CourseReport model
+        if not auth_ok:
+            return self.no_auth_sorry()
         course_id = pdata['course_id']
-
-        # should re-authorize for course_id specific access here
 
         if course_id:
             dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
@@ -319,7 +383,6 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource):
         pdata['dataset'] = dataset
 
         # what table?  get custom course report configuration metadata for report name as specified
-        crm = self.get_custom_report_metadata(report_name)
         table = crm.table_name
         if not table or table=="None":
             error = "No table name defined!  Cannot process this custom report"
@@ -429,6 +492,7 @@ CustomReportRoutes = [
 # displayed page routes
     webapp2.Route('/custom', handler=CustomReportPages, handler_method='get_custom_report'),
     webapp2.Route('/custom/edit_report/<report_name>', handler=CustomReportPages, handler_method='edit_custom_report'),
+    webapp2.Route('/page/<report_name>', handler=CustomReportPages, handler_method='get_custom_report_page'),
 
 # ajax routes
     webapp2.Route('/custom/get_report_data/<report_name>', handler=CustomReportPages, handler_method='ajax_get_report_data'),

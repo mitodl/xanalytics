@@ -109,7 +109,7 @@ class DataStats(object):
         '''
         crq = self.get_custom_report_metadata(report_name=report_name, collection=collection, single=False)
         fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
-                  'html', 'javascript', 'icon']
+                  'html', 'javascript', 'icon', 'group_tags', 'meta_info']
         
         def strip_eol_spaces(code):
             return '\n'.join([ x.rstrip() for x in code.split('\n')]).expandtabs()

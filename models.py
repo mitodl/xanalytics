@@ -37,7 +37,7 @@ class CustomReport(ndb.Model):
     depends_on = ndb.StringProperty(indexed=False)	# JSON of list of strings
     html = ndb.StringProperty(indexed=False)
     javascript = ndb.StringProperty(indexed=False)
-    icon = ndb.StringProperty(indexed=False)
+    icon = ndb.StringProperty(indexed=False)		# graphical icon, either as a URL, or a data-encoded URI
     group_tags = ndb.StringProperty(indexed=True, repeated=True)	# which pages it's on; also used for access control
-
+    meta_info = ndb.JsonProperty()		# meta info, including location on page, type of report (e.g. HTML page)
     
