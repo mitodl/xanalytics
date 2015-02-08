@@ -219,7 +219,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             try:
                 data = self.export_custom_report_metadata(report_name=report_name, download=True)
                 dump = yaml.dump(data, default_style="|", default_flow_style=False)
-                logging.info("custom report yaml=%s" % dump)
+                # logging.info("custom report yaml=%s" % dump)
             except Exception as err:
                 logging.error("Failed to find custom report named %s!" % report_name)
                 raise
@@ -264,7 +264,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 if field=='group_tags':
                     fval = [x.strip() for x in fval.split(',')]
                 elif field=='meta_info':
-                    fval = eval(fval)
+                    fval = eval(fval) or {}
                 if fval is None:
                     logging.error("oops, expected value for field=%s, but got fval=%s" % (field, fval))
                 else:

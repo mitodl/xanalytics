@@ -227,11 +227,15 @@ $(document).ready(function() {
 });
 </script>
 
-<h2 id="enrollment">Cross-course comparison statistics</h2>
+<!-- <h2 id="enrollment">Cross-course comparison statistics</h2> -->
 
-<div id="cross-course" style="min-width: 310px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
+{% autoescape off %}{{ custom_report["cross-course-enrollment-comparison"] }}{% endautoescape %}
 
-<script type="text/javascript" src="/js/dashboard-cc.js"></script>
+{% autoescape off %}{{ custom_report["cross-course-forum-usage-comparison"] }}{% endautoescape %}
+
+<!-- <div id="cross-course" style="min-width: 310px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div> -->
+
+<!-- <script type="text/javascript" src="/js/dashboard-cc.js"></script> -->
 
 <br style="clear:both;"/>
 

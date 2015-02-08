@@ -121,9 +121,14 @@ class DataStats(object):
             if crq:
                 ret = []
                 for crm in crq:
-                    data = {x: xtype(getattr(crm, x)) for x, xtype in fields.items()}
+                    try:
+                        data = {x: xtype(getattr(crm, x)) for x, xtype in fields.items()}
+                    except Exception as err:
+                        logging.error("cannot create data for custom report %s" % crm)
+                        raise
+
                     for cset in ['sql', 'javascript', 'html']:
-                        data[cset] = strip_eol_spaces(data[cset])
+                        data[cset] = strip_eol_spaces(data[cset] or '')
                     ret.append(data)
                 return ret
             else:

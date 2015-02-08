@@ -218,6 +218,6 @@ var cc_get_data = function(){
 
 
 $(document).ready(function() {
-    cc_get_data();
+    // cc_get_data();
 });
 

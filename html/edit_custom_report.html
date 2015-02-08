@@ -74,7 +74,8 @@
 <ul>
 <li>HTML: <textarea name='html' data-mode="text/html" rows="10" cols="80">{{report.html}}</textarea></li>
 <li>Javascript: <textarea name='javascript' data-mode="text/javascript" rows="20" cols="80">{{report.javascript}}</textarea></li>
-<li>SQL: <textarea name='sql' data-mode="text/x-sql" rows="10" cols="80">{{report.sql}}</textarea></li>
+{% set report_sql_str = report.sql or '' %}
+<li>SQL: <textarea name='sql' data-mode="text/x-sql" rows="10" cols="80">{{report_sql_str}}</textarea></li>
 <li>Description: <textarea name='description' data-mode="text/html" rows="10" cols="80">{{report.description}}</textarea></li>
 </ul>
 
