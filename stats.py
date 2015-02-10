@@ -117,12 +117,19 @@ class DataStats(object):
         def strip_eol_spaces(code):
             return '\n'.join([ x.rstrip() for x in code.split('\n')]).expandtabs()
 
+        def fix_type(xtype, datum):
+            if xtype==dict and not datum:
+                return {}
+            if xtype==list and not datum:
+                return []
+            return xtype(datum)
+
         if download:
             if crq:
                 ret = []
                 for crm in crq:
                     try:
-                        data = {x: xtype(getattr(crm, x)) for x, xtype in fields.items()}
+                        data = {x: fix_type(xtype, getattr(crm, x)) for x, xtype in fields.items()}
                     except Exception as err:
                         logging.error("cannot create data for custom report %s" % crm)
                         raise
