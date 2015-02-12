@@ -191,6 +191,10 @@ $(document).ready(function() {
 
         $('#activity_date').html('<h3>Data computed from logs through ' + data['data_date'] + '</h3>');
 
+        if (!data['data_date']){
+               $('#activity_date').html('<h3>No data - course launches ' + data['launch'] + '</h3>');
+        }
+
         // Create the chart
         $('#container').highcharts('StockChart', {
 

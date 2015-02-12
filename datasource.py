@@ -200,7 +200,7 @@ class DataSource(object):
                 logging.info("[datasource.cached_get_bq_table] Forcing query recomputation of %s.%s, table_date=%s, latest=%s" % (dataset, table,
                                                                                                                                  table_date, latest))
 
-        if (not data) or ignore_cache:
+        if (not data) or ignore_cache or (not data['data']):	# data['data']=None if table was empty, and in that case try again
             try:
                 data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger,
                                            force_query=force_query,

@@ -570,14 +570,16 @@ class DataStats(object):
             logging.error(err)
 
 
-    def compute_activity_by_day(self, course_id, start="2012-08-20", end="2015-01-01"):
+    def compute_activity_by_day(self, course_id, start=None, end="2015-01-01"):
         '''
         Compute course activity by day, based on person_course_day table
         '''
         dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
 
         end = self.get_collection_metadata('END_DATE', end)
-        start = self.get_collection_metadata('START_DATE', start)
+        start = start or self.get_collection_metadata('START_DATE', "2012-08-20")
+
+        logging.info('[compute_activity_by_day] start=%s, end=%s' % (start, end))
 
         tables = bqutil.get_list_of_table_ids(dataset)
         if 'person_course_day' not in tables:
