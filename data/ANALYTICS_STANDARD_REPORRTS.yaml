@@ -1,0 +1,257 @@
+#-----------------------------------------------------------------------------
+# enrollment by date for course
+#
+- "author": |-
+    None
+  "date": |-
+    2015-02-11 22:51:43.261547
+  "depends_on": |-
+    ["{person_course}"]
+  "description": "Cumulative enrollment by date, from SQL records (updated weekly).\
+    \  \r\nUsers can un-enroll; this is included in the \"Net registered\" line, but\
+    \ not in \"Ever registered\"."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |-
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+
+    $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+
+        function(data) {
+
+            html = '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+            html += '<div id="plot-{{report_name}}"></div>';
+            if (data.error){
+                html = "Error!  " + data.error;
+            }
+            $('#contain-{{report_name}}').html(html);
+            if (data.error){ return; }
+
+            if (0){
+                var table = $('#table-{{report_name}}').DataTable({
+                    dom: 'T<"clear">lfrtip',
+                    "columns": data['tablecolumns'],
+                    "pageLength": 10,
+                    searching: true,
+                    ordering: true,
+                    data: data['data'],
+                });
+            }
+
+            // create data series
+            var nvac = [];
+            var nvec = [];
+            var daily_ever = [];
+            var daily_net = [];
+            var xaxis_data = [];
+            var total_net = 0;
+            var total_ever = 0;
+            var series = [{name: 'Ever Registered', yAxis: 1, data: nvec},
+                          {name: 'Net Registered', yAxis: 1, data: nvac},
+                          {name: 'Ever Reg daily', type: 'column', data: daily_ever},
+                          // {name: 'Net Reg daily', type: 'column', data: daily_net}
+                         ];
+            data['data'].forEach(function(x){
+                        var date = $.datepicker.parseDate('yy-mm-dd', x.date).getTime();
+                        var nnet = Number(x.nregistered_net);
+                var n_ever = Number(x.nregistered_ever);
+                        total_net += nnet;
+                        total_ever += n_ever;
+                    xaxis_data.push(date);
+
+                nvac.push( [date, total_net] );
+                        nvec.push( [date, total_ever] );
+                daily_ever.push( [date, n_ever] );
+                daily_net.push( [date, nnet] );
+            });
+
+            // plot data
+            $('#plot-{{report_name}}').highcharts({
+                chart: {  zoomType: 'xy'  },
+                credits: {  enabled: false  },
+                title : {  text : 'Enrollment by date for ' + parameters.course_id,  },
+                subtitle: { text: "Source: SQL" },
+                xAxis: [ { type: 'datetime',
+                       // categories: xaxis_data,
+                     } ],
+                yAxis: [ {    labels: { style: { color: Highcharts.getOptions().colors[2] } },
+                              title: { text: 'Daily Enrollment', style: { color: Highcharts.getOptions().colors[2] } },
+                              opposite: true,
+                            // min: 0,
+                              },
+                       { gridLineWidth: 0,
+                         title: { text: 'Cumulative Enrollment', style: { color: Highcharts.getOptions().colors[0] } },
+                         labels: {style: { color: Highcharts.getOptions().colors[0] }  },
+                    // min: 0,
+                       },
+                       ],
+                series : series,
+            });
+
+        } );
+  "meta_info": {}
+  "name": |-
+    enrollment-by-day-for-course-from-sql
+  "sql": |-
+    SELECT course_id,
+                     date,
+                     SUM(registered) as nregistered_ever,
+                     SUM(un_registered) as n_unregistered,
+                     -SUM(un_registered) + nregistered_ever as nregistered_net,
+                     SUM(nregistered_ever) over (partition by course_id order by date) as nregistered_ever_cum,
+                     SUM(nregistered_net) over (partition by course_id order by date) as nregistered_net_cum,
+
+                     SUM(verified) as nverified_ever,
+                     SUM(verified_un_registered) as nverified_un_registered,
+                     -SUM(verified_un_registered) + nverified_ever as nverified_net,
+                     SUM(nverified_ever) over (partition by course_id order by date) as nverified_ever_cum,
+                     SUM(nverified_net) over (partition by course_id order by date) as nverified_net_cum,
+
+                   FROM (
+                       SELECT
+                         course_id,
+                         date(last_event) as date,
+                         INTEGER(0) as registered,
+                         INTEGER(count(*)) un_registered,
+                         INTEGER(0) as verified,
+                         INTEGER(sum(case when mode = "verified" then 1 else 0 end)) as verified_un_registered,
+                       FROM {person_course}
+                       where is_active = 0
+                       and  last_event is not null
+                       and ((forumRoles_isStudent = 1) or (forumRoles_isStudent is null))
+                       group by date, course_id
+                       order by date, course_id
+                     ),(
+                       SELECT
+                         course_id,
+                         date(start_time) as date,
+                         INTEGER(count(*)) registered,
+                         INTEGER(0) as un_registered,
+                         INTEGER(sum(case when mode = "verified" then 1 else 0 end)) as verified,
+                         INTEGER(0) as verified_un_registered,
+                       FROM {person_course}
+                       where start_time is not null
+                       and ((forumRoles_isStudent = 1) or (forumRoles_isStudent is null))
+                       group by date, course_id
+                       order by date, course_id
+                     )
+                   group by date, course_id
+                   order by date, course_id;
+  "table_name": |-
+    stats_enrollment_sql
+  "title": |-
+    Enrollment by day for course
+#
+#-----------------------------------------------------------------------------
+# ID Verified Registrants by date
+#
+- "author": |-
+    None
+  "date": |-
+    2015-02-01 02:12:24.177493
+  "depends_on": |-
+    [ "{dataset}.user_info_combo" ]
+  "description": |-
+    ID Verified Registrants -- Enrollment by Date
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+
+    $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+
+        function(data) {
+
+            html = '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+            html += '<div id="plot-{{report_name}}"></div>';
+            if (data.error){
+                html = "Error!  " + data.error;
+            }
+            $('#contain-{{report_name}}').html(html);
+            if (data.error){ return; }
+
+            // make data table
+        if (0){
+            var table = $('#table-{{report_name}}').DataTable({
+                dom: 'T<"clear">lfrtip',
+                "columns": data['tablecolumns'],
+                "pageLength": 10,
+                searching: true,
+                ordering: true,
+                data: data['data'],
+            });
+        }
+
+            // create data series
+        var nvac = [];
+        var nvec = []
+            var series = [{name: 'idV ever enrolled', data: nvec},
+                      {name: 'idV active', data: nvac},
+                     ];
+            data['data'].forEach(function(x){
+            date = $.datepicker.parseDate('yy-mm-dd', x.date).getTime();
+            nvac.push([ date, Number(x.nverified_active_cum) ]);
+            nvec.push([ date, Number(x.nverified_ever_cum) ]);
+            });
+
+            // plot data
+            $('#plot-{{report_name}}').highcharts('StockChart', {
+
+                rangeSelector : {
+                    selected : 4
+                },
+                credits: {  enabled: false  },
+                title : {
+                    text : 'ID Verified Registrants -- Enrollment by Date for ' + parameters.course_id,
+                },
+
+                series : series,
+            });
+
+        } );
+  "meta_info": {}
+  "name": |-
+    IDV_enrollment_by_course
+  "sql": |-
+    SELECT
+        date,
+        #nverified_active as nverified_active_day,
+        #nverified_ever as nverified_ever_day,
+        sum(nverified_active) over (order by date) as nverified_active_cum,
+        sum(nverified_ever) over (order by date) as nverified_ever_cum,
+    FROM (
+      SELECT
+        date(enrollment_created) as date,
+        sum(case when enrollment_is_active=1 then 1 else 0 end) as nverified_active,
+        count(*) as nverified_ever,
+      FROM [{dataset}.user_info_combo]
+      where
+        enrollment_mode = "verified"
+      group by date
+      order by date
+    )
+    order by date
+  "table_name": |-
+    IDV_enrollment
+  "title": |-
+    ID Verified Registrants

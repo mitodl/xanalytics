@@ -47,6 +47,7 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
         msg = ""
         action = self.request.POST.get('action', None)
+        custom_reports_standard_source = "ANALYTICS_STANDARD_REPORRTS.yaml"
 
         if action=='Flush cache':
             memcache.flush_all()
@@ -64,6 +65,11 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
             collection = self.request.POST.get('collection')
             self.get_course_listings(ignore_cache=True, collection=collection)
             msg = "Course listings for '%s' reloaded" % collection
+
+        elif action=='Reload Standard Reports':
+            report_file_data = open('data/%s' % custom_reports_standard_source).read()
+            msg = "Standard Reports reloading from %s<br/>" % (custom_reports_standard_source)
+            msg += self.import_custom_report_from_file_data(report_file_data, overwrite=True)
 
         elif action=='Reload Custom Reports':
             collection = self.request.POST.get('collection')

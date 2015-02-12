@@ -70,62 +70,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 return self.redirect('/custom/edit_report/%s' % name)
 
         elif (self.request.POST.get('action')=='Upload Custom Report(s)'):
-            report_file = self.request.get('file')
+            report_file_data = self.request.get('file')
             overwrite = (self.request.get('overwrite')=='yes')
-            data = yaml.load(report_file)
-
-            if (not report_file) or (not data):
-                msg = "Must select (valid) file to upload!"
-            else:
-                logging.info('[cr upload] data=%s' % data)
-                msg = ""
-                msg += "<br/>%d reports in file" % len(data)
-                for report in data:
-                    # validate
-                    fields = ['name', 'title', 'description', 'author', 'date', 'table_name', 'sql', 'depends_on',
-                              'html', 'javascript', 'icon', 'group_tags', 'meta_info']
-                    valid = True
-                    fields_ok_missing = {'group_tags': [], 'meta_info': {}}
-                    for field, default_value in fields_ok_missing.items():
-                        if field not in report:
-                            report[field] = default_value
-                    for field in fields:
-                        if (field not in report):
-                            msg += "<br/>Invalid report name=%s, missing field %s" % (report.get('report_name',"<Unknown Name>"), field)
-                            valid = False
-                            break
-                    if not valid:
-                        continue
-    
-                    report_name = report['name'].strip()
-                    if not report_name:
-                        msg += "<br/>Invalid report name=%s, missing report name" % (report.get('report_name',"<Unknown Name>"))
-                        break
-                
-                    # does the report already exist?
-                    exists = False
-                    try:
-                        crm = self.get_custom_report_metadata(report_name)
-                        exists = True
-                    except Exception as err:
-                        pass
-                    if exists and not overwrite:
-                        msg += "<br/>Report %s already exists!  Cannot overwrite" % report_name
-                        break
-                    elif exists:
-                        msg += "<br/>Report %s already exists, deleting existing" % report_name
-                        crm.key.delete()
-                    try:
-                        self.import_data_to_ndb([report], 'CustomReport', 
-                                                date_fields=['date'],
-                                            )
-                        msg += "<br/>Successfully imported report %s (please refresh this page to see it)" % report_name
-                        if exists and overwrite:
-                            msg += "<br/>Note: existing report was overwritten"
-                    except Exception as err:
-                        msg += "<br/>Failed to import report %s, err=%s" % (report_name, err)
-                        logging.info(msg)
-                        logging.info("report = %s" % report)
+            msg += self.import_custom_report_from_file_data(report_file_data, overwrite)
                     
         data = self.common_data.copy()
         data.update({'is_staff': self.is_superuser(),

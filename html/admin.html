@@ -66,7 +66,7 @@ $(document).ready( function () {
 <h1>Analytics Dashbboard Admin Page</h1>
 
 {% if msg %}
-<font color="red"><p>{{msg}}</p></font>
+<font color="red"><p>{% autoescape off %}{{ msg }}{% endautoescape %}</p></font>
 {% endif %}
 
 <h2>Staff</h2>
@@ -107,6 +107,16 @@ $(document).ready( function () {
 
 <form method="post">
     <input type="submit" name="action" value="Reload course listings"/>
+</form>
+
+<hr width="100%"/>
+<h2>Reports</h2>
+
+<p>Report source: <font color='blue'>{{custom_reports_standard_source}}</font></p>
+<p>Go to the <a href="/custom">Custom reports dashboard</a></p>
+
+<form method="post">
+    <input type="submit" name="action" value="Reload Standard Reports"/>  -- Warning: overloads any existing reports of the same name!
 </form>
 
 <hr width="100%"/>
