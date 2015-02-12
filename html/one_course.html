@@ -219,46 +219,11 @@ $(document).ready(function() {
 <!-- ----------------------------------------------------------------------------- -->
 {% if mode=="mooc" %}
 
-<h2>Enrollment</h2>
-{% if is_staff %}
-<div id="recompute_enroll" style="display:oo">
-  <span style="float:right">
-    <form method="post">
-      <input type="submit" name="action" value="force recompute enrollment"/>
-    </form>
-  </span>
-</div>
-{% endif %}
-<p>(according to tracking logs)</p>
+<!-- <h2>Enrollment</h2> -->
 
-<div id="enrollment_div" style="min-width: 310px; height: 400px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
-
-<script type="text/javascript">
-
-$(document).ready(function() {
-
-    $.getJSON('/get/{{course_id}}/enrollment_stats', function(data) {
-
-// console.log('data = ', data)
-
-        // Create the chart
-        $('#enrollment_div').highcharts('StockChart', {
-
-            rangeSelector : {
-                selected : 4
-            },
-	    credits: {  enabled: false  },
-            yAxis: {min: 0},
-            title : {
-                text : 'Enrollment by day',
-            },
-
-            series : data['series'],
-        });
-
-    });
-});
-		</script>
+    {% autoescape off %}
+        {{custom_report.immediate['enrollment-by-day-for-course-from-sql']}}
+    {% endautoescape %}
 
 <!-- ----------------------------------------------------------------------------- -->
 

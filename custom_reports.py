@@ -139,8 +139,17 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
     def custom_report_auth_check(self, report_name):
 
-        crm = self.get_custom_report_metadata(report_name)
         msg = ''
+
+        try:
+            crm = self.get_custom_report_metadata(report_name)
+        except Exception as err:
+            logging.error("[custom_report_auth_check] Cannot get custom report %s" % report_name)
+            logging.error(err)
+            auth_ok = False
+            pdata = {}
+            crm = None
+            return crm, pdata, auth_ok, msg
         
         # params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
         params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 'get_table_columns']
@@ -154,14 +163,17 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             course_id = pdata['course_id']
             if not course_id:
                 msg = "Unknown course_id"
+            else:
+                print "[get_custom] user=%s, auth_for_(%s)=%s" % (self.user, course_id, self.is_user_authorized_for_course(course_id))
 
-            if not self.is_user_authorized_for_course(course_id):
-                return self.no_auth_sorry()
+                if not self.is_user_authorized_for_course(course_id):
+                    return crm, pdata, auth_ok, msg
+                    # return self.no_auth_sorry()
 
-            auth_ok = True
+                auth_ok = True
 
         else:
-            for tag in crm.group_tags:
+            for tag in (crm.group_tags or []):
                 if tag.startswith('role:'):
                     role = tag[5:]
                     if self.does_user_have_role(role):
@@ -183,7 +195,6 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         '''
         Single custom report which behaves as a HTML page
         '''
-                    
         crm, pdata, auth_ok, msg = self.custom_report_auth_check(report_name)	# crm = CourseReport model
         if not auth_ok:
             return self.no_auth_sorry()
@@ -212,6 +223,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         '''
         if not self.user in self.AUTHORIZED_USERS:	# require superuser
             return self.no_auth_sorry()
+
+        parameter_values = self.request.get('parameter_values', self.session.get('edit_report_parameter_values'))
+        self.session['edit_report_parameter_values'] = parameter_values
 
         msg = ''
         if (self.request.POST.get('action')=='Download Report'):
@@ -288,6 +302,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 'report_name': report_name,
                 'report': crm,
                 'msg': msg,
+                'parameter_values': parameter_values,
         }
         data.update(self.common_data)
 
@@ -318,13 +333,16 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if not auth_ok:
             return self.no_auth_sorry()
 
+        if self.request.get('save_parameters'):
+            self.session['edit_report_parameter_values'] = json.dumps({x:v for x,v in pdata.items() if v is not None})
+            logging.info("Saved edit_report_parameter_values = %s" % self.session['edit_report_parameter_values'])
+
         html = crm.html
         html += "<script type='text/javascript'>"
         html += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
         html += "</script>" 
 
         template = Template(html)
-
 
         render_data = {'report_name': report_name,
                        'parameters': json.dumps(pdata),
@@ -379,6 +397,12 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         '''
         get data for custom report.
         parameters like course_id, chapter_id, problem_id are passed in as GET or POST parameters
+
+        Defined parameters for SQL:
+
+        {person_course} --> person_course table for the specific course
+        {dataset} --> dataset for the specific course
+        
         '''
         crm, pdata, auth_ok, msg = self.custom_report_auth_check(report_name)	# crm = CourseReport model
         if not auth_ok:

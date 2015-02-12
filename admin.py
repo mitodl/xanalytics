@@ -27,6 +27,7 @@ from datasource import DataSource
 
 from auth import auth_required, auth_and_role_required
 from templates import JINJA_ENVIRONMENT
+from logger import GetRecentLogLines
 
 from google.appengine.api import memcache
 mem = memcache.Client()

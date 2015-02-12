@@ -44,7 +44,9 @@ class Reports(object):
         '''
         other = self
         class CRContainer(dict):
-            immediate_view = False
+            def __init__(self, *args, **kwargs):
+                self.immediate_view = False
+                super(CRContainer, self).__init__(*args, **kwargs)
 
             @property
             def immediate(self):
@@ -68,6 +70,7 @@ class Reports(object):
                         'report_meta_info': json.dumps(crm.meta_info),
                         'immediate_view': json.dumps(self.immediate_view),
                 }
+                self.immediate_view = False	# return to non-immediate view by default
                 return template.render(data)
         return CRContainer()
     

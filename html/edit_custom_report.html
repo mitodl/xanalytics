@@ -89,8 +89,13 @@
 <p>Meta Info (dict): <input type="text" size="120" name="meta_info" value="{{report.meta_info}}"/></p>
 
 <input type="submit" name="action" value="Save Changes"/>
-
 </form>
+
+
+<hr width="100%"/>
+<h2>View Page</h2>
+
+<p>Parameters (json): <input type="text" size="120" id="parameter_values" name="parameter_values" value="{{parameter_values}}"/></p>
 
 <button class="cr-view-button" data-name="{{report.name}}">View</button>
 
@@ -132,7 +137,11 @@ $(document).ready( function () {
 	    var top = pos.top + 20;
 	    var left = 0;
 	    window.scrollTo((left < 0 ? 0 : left), (top < 0 ? 0 : top));
-	    $.getJSON('/custom/get_report_html/' + name, 
+	    parameter_values = $.parseJSON($('#parameter_values').val());
+            console.log('parameter_values = ', parameter_values);
+            parameter_values.save_parameters = true;
+ 	    $.getJSON('/custom/get_report_html/' + name, 
+                      parameter_values,
 		      function(data){
 			  $("#div-" + name).html(data['html']);
 			  $("#div-" + name)[0].scrollIntoView();
