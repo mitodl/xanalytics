@@ -1,0 +1,122 @@
+- "author": |-
+    None
+  "date": |-
+    2015-02-07 23:30:20.200959
+  "depends_on": |-
+    None
+  "description": |-
+    Comparison of total number of forum posts across courses
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |-
+    var cc_data = {}
+
+    var cc_forum_show = function(){
+
+        var ccfhtml = '<h3>Forum and Navigation events stats</h3>';
+        ccfhtml += '<div id="cc_forum_plot" style="min-width: 310px; max-width: 800px; height: 1400px; margin: 0 auto" ></div>';
+        ccfhtml += '<table id="cc_forum_table"></table>';
+        $('#cc_forum').html(ccfhtml);
+
+        var data = cc_data['data'];
+
+            fpdata = [];
+        data['table'].forEach(function(x){
+            fpdata.push({'course_id': x.course_id, 'nfp': Number(x.nforum_posts_sum) });
+        });
+        fpdata.sort(function(a,b){ return b.nfp - a.nfp });
+
+        var nfp = [];
+        var series = [ {'name': '# forum posts', data: nfp }];
+        var courses = [];
+        fpdata.forEach(function(x){
+                    nfp.push( x.nfp );
+                    courses.push(x.course_id);
+        });
+
+        $('#cc_forum_plot').highcharts({
+            chart: { type: 'bar',  zoomType: 'x' },
+            credits: {  enabled: false  },
+            yAxis: {min: 0},
+            title : { text : 'Number of forum posts by course', },
+            subtitle: { text: '(click and drag to zoom)' },
+            xAxis: { categories: courses },
+            yAxis: {  min: 0,   title: { text: '# forum posts' } },
+            legend: {
+                reversed: true
+            },
+            plotOptions: {
+                series: {
+                    stacking: 'normal'
+                }
+            },
+            // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
+            series : series,
+        });
+
+        var cc_forum_table = $('#cc_forum_table').DataTable({
+            dom: 'T<"clear">lfrtip',
+            "paging":   true,
+            "ordering": true,
+            "info":     true,
+            "searching":    true,
+            "order": [ 1, 'desc' ],
+            "data": data['table'],
+            scrollY:        false,
+            scrollX:        true,
+            scrollCollapse: true,
+            // "columns" : data['tablecolumns'],
+            'columns': [{"title": "course_id", "class": "dt-center", "data": "course_id"},
+                        {"title": "nforum_posts_sum", "class": "dt-center", "data": "nforum_posts_sum"},
+                        {"title": "min_gade_certified", "class": "dt-center", "data": "min_gade_certified"},
+                        {"title": "nforum_votes_sum", "class": "dt-center", "data": "nforum_votes_sum"},
+                        {"title": "nforum_endorsed_sum", "class": "dt-center", "data": "nforum_endorsed_sum"},
+                        {"title": "nforum_threads_sum", "class": "dt-center", "data": "nforum_threads_sum"},
+                        {"title": "nforum_commments_sum", "class": "dt-center", "data": "nforum_commments_sum"},
+                        {"title": "nforum_pinned_sum", "class": "dt-center", "data": "nforum_pinned_sum"},
+                        {"title": "nprogcheck_avg", "class": "dt-center", "data": "nprogcheck_avg"},
+                        {"title": "certified_nprogcheck", "class": "dt-center", "data": "certified_nprogcheck"},
+                        {"title": "verified_nprogcheck", "class": "dt-center", "data": "verified_nprogcheck"},
+                        {"title": "nshow_answer_sum", "class": "dt-center", "data": "nshow_answer_sum"},
+                        {"title": "nseq_goto_sum", "class": "dt-center", "data": "nseq_goto_sum"},
+                       ],
+        });
+        new $.fn.dataTable.FixedColumns( cc_forum_table );
+    };
+
+    $.getJSON('/dashboard/get/broad_stats', function (data) {
+
+        var cchtml = '';
+        cchtml += '  <div id="cc_forum"></div>';
+        cchtml += '<br style="clear:both;"/>';
+
+        $('#contain-{{report_name}}').html(cchtml);
+
+        // console.log('tabledata=', data['table']);
+        // console.log('tablecolumns=', data['tablecolumns']);
+
+        cc_data['data'] = data;
+
+        cc_forum_show();
+
+        //  cc_all_enrollment_plot();
+        //  cc_enrollment_plot();
+        //  cc_certified_plot();
+        //  cc_verified_plot();
+
+     });
+  "meta_info": {}
+  "name": |-
+    cross-course-forum-usage-comparison
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Cross Course Forum Usage Comparison
