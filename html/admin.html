@@ -99,6 +99,15 @@ $(document).ready( function () {
     <input type="submit" name="action" value="Refresh page"/>
 </form>
 
+<h2>Check Authorization</h2>
+
+<form method="post">
+  <p>Username: <input type="text" size='40' name='username' /></p>
+  <p>course_id or tag: <input type="text" size='40' name='course_id' /></p>
+    <input type="submit" name="action" value="Check access"/>
+</form>
+
+
 <hr width="100%"/>
 <h2>Course Listings</h2>
 
@@ -107,6 +116,10 @@ $(document).ready( function () {
 
 <form method="post">
     <input type="submit" name="action" value="Reload course listings"/>
+</form>
+
+<form method="post">
+    <input type="submit" name="action" value="List current course tags"/>
 </form>
 
 <hr width="100%"/>

@@ -1,0 +1,198 @@
+- "author": |-
+    None
+  "date": |-
+    2015-02-13 15:52:10.802773
+  "depends_on": |-
+    None
+  "description": "Comparison of enrollment across courses.  \r\n<br/>\r\nViewed =\
+    \ clicked once in the courseware, Explored = viewed at least half of the chapters;\
+    \ Certified = earned a certificate."
+  "group_tags":
+  - !!python/unicode |-
+    group
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+    console.log('parameters=', parameters);
+
+    $.getJSON(
+        '/dashboard/get/broad_stats',
+        parameters,
+
+        function(data) {
+
+        // console.log('ajax data = ', data);
+
+        links = "<ul>";
+        data['table'].forEach(function(x){
+                    links += "<li><a href='/course/" + x.course_id + "'>" + x.course_id + "</a></li>";
+        });
+        links += "</ul>";
+        // console.log('links = ', links);
+
+            html = "<h3>Registration totals over all {{parameter_values.group_tag}} courses</h3>";
+        html += '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+            html += '<div id="plot-{{report_name}}" style="height: 800px"></div>';
+            html += '<div id="plot2-{{report_name}}" style="height: 800px"></div>';
+            html += '<div id="plot3-{{report_name}}" style="height: 800px"></div>';
+        html += "<div id='links'><h3>Course Analytics Pages:</h3>" + links + "</div>";
+            if (data.error){
+                html = "Error!  " + data.error;
+            }
+            $('#contain-{{report_name}}').html(html);
+            if (data.error){ return; }
+
+        // compute totals for registered, viewed, explored, certified, ID Verified
+          var totals = {'reg': 0, 'viewed': 0, 'explored': 0, 'certified': 0, 'idv': 0};
+          data['table'].forEach(function(x){
+            totals.certified += Number(x.certified_sum);
+            totals.reg += Number(x.registered_sum);
+            totals.viewed += Number(x.viewed_sum);
+            totals.explored += Number(x.explored_sum);
+            totals.idv += Number(x.n_verified_id);
+          });
+
+
+        function numberWithCommas(x) {
+               return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+
+        for (var key in totals) {
+            totals[key] = numberWithCommas(totals[key]);
+            }
+
+            var the_columns = [
+          {'data': 'reg', 'title': '# registered', 'class': "dt-center" },
+          {'data': 'viewed', 'title': '# viewed', 'class': "dt-center" },
+          {'data': 'explored', 'title': '# explored', 'class': "dt-center" },
+          {'data': 'certified', 'title': '# certified', 'class': "dt-center" },
+          {'data': 'idv', 'title': '# ID Verified', 'class': "dt-center" },
+            ];
+
+            if (1){
+                    // make data table
+          var table = $('#table-{{report_name}}').DataTable({
+              // dom: 'T<"clear">lfrtip',
+              "columns": the_columns,
+              // "pageLength": 10,
+              paging: false,
+              info: false,
+              searching: false,
+              ordering: false,
+              data: [totals],
+          });
+        }
+
+            // auto-set plot heights depending on number of courses
+        var ncourses = data['enrollment_courses'].length;
+        var height = 35*ncourses + 150;
+        $('#plot-{{report_name}}').css('height', String(height) + "px");
+        $('#plot2-{{report_name}}').css('height', String(height) + "px");
+        $('#plot3-{{report_name}}').css('height', String(height) + "px");
+
+            // first plot: registration numbers, as bar chart
+          $('#plot-{{report_name}}').highcharts({
+            chart: { type: 'bar',  zoomType: 'x' },
+            credits: {  enabled: false  },
+            yAxis: {min: 0},
+            title : { text : 'Number of registrants by course', },
+            subtitle: { text: '(click and drag to zoom)' },
+            xAxis: { categories: data['enrollment_courses'] },
+            yAxis: {  min: 0,   title: { text: 'Registrants' } },
+            legend: {
+              reversed: true
+            },
+            plotOptions: {
+              series: {
+                stacking: 'normal'
+              }
+            },
+            // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
+            series : data['all_enrollment_series'],
+          });
+
+
+          // bar plot of certificate earners
+          var cdata = [];
+          data['table'].forEach(function(x){
+            cdata.push({'course_id': x.course_id, 'ncert': Number(x.certified_sum)})
+          });
+          cdata.sort(function(a,b){ return b.ncert - a.ncert });
+
+          // console.log('cdata=', cdata);
+
+          var ncert = [];
+          var series = [{'name': '# Certified', data: ncert}];
+          var courses = [];
+          cdata.forEach(function(x){ ncert.push(x.ncert); courses.push(x.course_id); });
+
+          $('#plot2-{{report_name}}').highcharts({
+            chart: { type: 'bar',  zoomType: 'x' },
+            credits: {  enabled: false  },
+            yAxis: {min: 0},
+            title : { text : 'Number of certificate earners', },
+            subtitle: { text: '(click and drag to zoom)' },
+            xAxis: { categories: courses },
+            yAxis: {  min: 0,   title: { text: 'Certified' } },
+            legend: {
+              reversed: true
+            },
+            plotOptions: {
+              series: {
+                stacking: 'normal'
+              }
+            },
+            // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
+            series : series,
+          });
+
+
+          // bar plot of ID verified registrants
+          var cdata = [];
+          data['table'].forEach(function(x){
+            cdata.push({'course_id': x.course_id, 'ncert': Number(x.n_verified_id)})
+          });
+          cdata.sort(function(a,b){ return b.ncert - a.ncert });
+
+          // console.log('cdata=', cdata);
+
+          var ncert = [];
+          var series = [{'name': '# ID Verified', data: ncert}];
+          var courses = [];
+          cdata.forEach(function(x){ ncert.push(x.ncert); courses.push(x.course_id); });
+
+          $('#plot3-{{report_name}}').highcharts({
+            chart: { type: 'bar',  zoomType: 'x' },
+            credits: {  enabled: false  },
+            yAxis: {min: 0},
+            title : { text : 'Number of ID Verified Registrants', },
+            subtitle: { text: '(click and drag to zoom)' },
+            xAxis: { categories: courses },
+            yAxis: {  min: 0,   title: { text: '# IDV' } },
+            legend: {
+              reversed: true
+            },
+            plotOptions: {
+              series: {
+                stacking: 'normal'
+              }
+            },
+            // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
+            series : series,
+          });
+
+        } );
+  "meta_info": {}
+  "name": |-
+    multicourse_report_enrollment
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    MultiCourse Report - Enrollment

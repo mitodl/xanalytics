@@ -8,6 +8,7 @@ import codecs
 import models
 import datetime
 import logging
+import glob
 import webapp2
 import json
 
@@ -47,7 +48,15 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
         msg = ""
         action = self.request.POST.get('action', None)
-        custom_reports_standard_source = "ANALYTICS_STANDARD_REPORRTS.yaml"
+        custom_reports_standard_source_dir = "ANALYTICS_STANDARD_REPORRTS"
+        custom_reports_standard_source_file = "ANALYTICS_STANDARD_REPORRTS.yaml"
+
+        crssd = 'data/%s' % custom_reports_standard_source_dir
+        crssf = 'data/%s' % custom_reports_standard_source_file
+        if os.path.exists(crssd):
+            custom_reports_standard_source = custom_reports_standard_source_dir
+        else:
+            custom_reports_standard_source = custom_reports_standard_source_file
 
         if action=='Flush cache':
             memcache.flush_all()
@@ -61,15 +70,37 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
             self.get_course_listings(ignore_cache=True)
             msg = "Course listings reloaded"
 
+        elif action=='List current course tags':
+            tags = self.get_course_listings_tags()
+            msg = "Current course tags = %s" % tags
+
+        elif action=='Check access':
+            username = self.request.get('username')
+            course_id = self.request.get('course_id')
+            if self.is_user_authorized_for_course(course_id=course_id, user=username):
+                msg = "User %s IS authorized for %s" % (username, course_id)
+            else:
+                msg = "User %s is NOT authorized for %s" % (username, course_id)
+
         elif action=='Reload Course Listings':
             collection = self.request.POST.get('collection')
             self.get_course_listings(ignore_cache=True, collection=collection)
             msg = "Course listings for '%s' reloaded" % collection
 
         elif action=='Reload Standard Reports':
-            report_file_data = open('data/%s' % custom_reports_standard_source).read()
-            msg = "Standard Reports reloading from %s<br/>" % (custom_reports_standard_source)
-            msg += self.import_custom_report_from_file_data(report_file_data, overwrite=True)
+            crssd = 'data/%s' % custom_reports_standard_source_dir
+            crssf = 'data/%s' % custom_reports_standard_source_file
+            if os.path.exists(crssd):
+                files = glob.glob('%s/*.yaml' % crssd)
+            elif os.path.exists(crssf):
+                files = [crssf]
+            msg = "<ul>"
+            for fn in files:
+                msg += "<li>Standard Reports loading from %s<br/>" % (fn)
+                report_file_data = open(fn).read()
+                msg += self.import_custom_report_from_file_data(report_file_data, overwrite=True)
+                msg += "</li>"
+            msg += "</ul>"
 
         elif action=='Reload Custom Reports':
             collection = self.request.POST.get('collection')
@@ -105,6 +136,7 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
                      'listings_source': course_listings_source,
                      'staff_source': local_config.STAFF_COURSE_TABLE,
                      'collections': self.collections_available(asdict=True),
+                     'custom_reports_standard_source': custom_reports_standard_source,
                  })
         template = JINJA_ENVIRONMENT.get_template('admin.html')
         self.response.out.write(template.render(data))

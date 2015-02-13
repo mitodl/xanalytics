@@ -41,14 +41,16 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         Dashboard page: show cross-course comparisons
         '''
         courses = self.get_course_listings()
-        data = self.common_data
+        data = self.common_data.copy()
         html = self.list2table(['Registration Open', 'course_id', 'title', 'Course Launch', 'Course Wrap', 'New or Rerun', 'Instructors'],
                                courses['data'])
         data.update({'is_staff': self.is_superuser(),
                      'courses': courses,
                      'table': html,
                      'ncourses': len(courses['data']),
-                     'custom_report': self.custom_report_container(),
+                     'custom_report': self.custom_report_container(self.is_authorized_for_custom_report),
+                     'nav_is_active': self.nav_is_active('allcourse'),
+                     'is_pm': self.is_pm(),
                  })
         logging.info('session: %s' % dict(self.session))
         logging.info('================================================== dataset_latest=%s' % self.use_dataset_latest())
@@ -212,27 +214,47 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         self.response.out.write(json.dumps(data))
 
     @auth_required
-    def ajax_dashboard_get_broad_stats(self):
+    def ajax_dashboard_get_broad_stats(self, group_tag=None):
         '''
         broad comparison stats across courses.
+
+        if group_tag is specified, then only include courses which have a matching tag
+        (in the "tags" column of the course listings).
+
+        control access based on group_tag.
+
+        also look for group_tag in self.request
         '''
-        courses = self.get_course_listings()
+        group_tag = group_tag or self.request.get('group_tag', None)
+
+        if not group_tag:
+            if not self.does_user_have_role('pm'):
+                return self.no_auth_sorry()
+        else:
+            if not self.is_user_authorized_for_course(group_tag):
+                return self.no_auth_sorry()
+
+        courses = self.get_course_listings(check_individual_auth=False)
         (bqdata, tableinfo) = self.get_report_broad_stats()
         self.fix_bq_dates(bqdata)
 
-        # keep only courses in the course listings table
-        known_course_ids = [x['course_id'] for x in courses['data']]
+        # keep only courses in the course listings table, with matching tag
+        known_course_ids_with_tags = {x['course_id']: x['tags'] for x in courses['data']}
         data_by_cid = OrderedDict()
 
         for row in bqdata['data']:
             cid = row['course_id']
-            if cid in known_course_ids:
-                data_by_cid[cid] = row
+            if not cid in known_course_ids_with_tags:
+                continue
+            course_tags = known_course_ids_with_tags[cid]
+            if not self.course_listings_row_has_tag(course_tags, group_tag):
+                continue
+            data_by_cid[cid] = row
 
         fields = tableinfo['schema']['fields']
         field_names = [x['name'] for x in fields]
 
-        tablecolumns = json.dumps([ { 'data': x, 'title': x, 'class': 'dt-center' } for x in field_names ])
+        tablecolumns = [ { 'data': x, 'title': x, 'class': 'dt-center' } for x in field_names ]
 
         # get list of course_id's sorted by decreasing registration
         all_series = [ [ x['course_id'], 

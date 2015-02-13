@@ -259,23 +259,25 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
                     return True
         return False
 
-    def is_user_authorized_for_course(self, course_id=None):
+    def is_user_authorized_for_course(self, course_id=None, user=None):
         '''
         Return True if user is authorized for the course.
         '''
-        if self.is_superuser():
+        if (not user) and self.is_superuser():
             return True
+        if not user:
+            user = self.user
         staff_course_table = self.get_staff_course_table()
         # logging.info('user=%s, cid = %s' % (self.user, course_id))
         # logging.info('sct_user=%s' % staff_course_table['user'])
         if staff_course_table is None or not staff_course_table:
             return False
-        if course_id and ((self.user, course_id) in staff_course_table['user_course']):
+        if course_id and ((user, course_id) in staff_course_table['user_course']):
             return True
-        if (course_id is None) and (self.user in staff_course_table['user']):
+        if (course_id is None) and (user in staff_course_table['user']):
             return True
         
-        for uent in staff_course_table['user'].get(self.user, []):
+        for uent in staff_course_table['user'].get(user, []):
             if 'pm' in uent['role'].split(','):
                 return True
             

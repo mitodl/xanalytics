@@ -1,0 +1,106 @@
+- "author": |-
+    None
+  "date": |-
+    2015-02-07 21:44:59.802225
+  "depends_on": |-
+    None
+  "description": |-
+    Cross-Course Enrollment Comparison
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |-
+    var cc_all_enrollment_plot = function(){
+        // stacked horizontal bar chart, each row one course
+        var data = cc_data['data'];
+        $('#cc_enrollment').highcharts({
+            chart: { type: 'bar',  zoomType: 'x' },
+            credits: {  enabled: false  },
+            yAxis: {min: 0},
+            title : { text : 'Number of registrants by course', },
+            subtitle: { text: '(click and drag to zoom)' },
+            xAxis: { categories: data['enrollment_courses'] },
+            yAxis: {  min: 0,   title: { text: 'Registrants' } },
+            legend: {
+                reversed: true
+            },
+            plotOptions: {
+                series: {
+                    stacking: 'normal'
+                }
+            },
+            // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
+            series : data['all_enrollment_series'],
+        });
+    }
+
+    $.getJSON('/dashboard/get/broad_stats', function (data) {
+
+            var cchtml = '<h3>Enrollment and certification statistics</h3>';
+            cchtml += '<div id="cc_enrollment"  style="min-width: 310px; max-width: 800px; height: 1400px; margin: 0 auto"></div><p></p>';
+            cchtml += '<div id="cc_certified"></div><p></p>';
+            cchtml += '<div id="cc_verified"></div><p></p>';
+            cchtml += '<table id="cc_data"></table><p></p>';
+            cchtml += '<br style="clear:both;"/>';
+
+            $('#contain-{{report_name}}').html(cchtml);
+
+            // console.log('tabledata=', data['table']);
+            // console.log('tablecolumns=', data['tablecolumns']);
+
+            cc_data['data'] = data;
+
+
+            cc_all_enrollment_plot();
+    //      cc_enrollment_plot();
+    //      cc_certified_plot();
+    //      cc_verified_plot();
+
+            var cc_table = $('#cc_data').DataTable({
+                dom: 'T<"clear">lfrtip',
+                "paging":   true,
+                "ordering": true,
+                "info":     true,
+                "searching":    true,
+                "order": [ 1, 'desc' ],
+                "data": data['table'],
+                // scrollY:        "300px",
+                scrollY:        false,
+                scrollX:        true,
+                scrollCollapse: true,
+                // paging:         false
+                // "columns" : data['tablecolumns'],
+                'columns': [{"title": "course_id", "class": "dt-center", "data": "course_id"},
+                            {"title": "registered_sum", "class": "dt-center", "data": "registered_sum"},
+                            {"title": "viewed_sum", "class": "dt-center", "data": "viewed_sum"},
+                            {"title": "explored_sum", "class": "dt-center", "data": "explored_sum"},
+                            {"title": "certified_sum", "class": "dt-center", "data": "certified_sum"},
+                            {"title": "n_male", "class": "dt-center", "data": "n_male"},
+                            {"title": "n_female", "class": "dt-center", "data": "n_female"},
+                            {"title": "n_verified_id", "class": "dt-center", "data": "n_verified_id"},
+                            {"title": "verified_viewed", "class": "dt-center", "data": "verified_viewed"},
+                            {"title": "verified_explored", "class": "dt-center", "data": "verified_explored"},
+                            {"title": "verified_certified", "class": "dt-center", "data": "verified_certified"},
+                            {"title": "verified_avg_grade", "class": "dt-center", "data": "verified_avg_grade"},
+                            {"title": "verified_n_male", "class": "dt-center", "data": "verified_n_male"},
+                            {"title": "verified_n_female", "class": "dt-center", "data": "verified_n_female"},
+                           ],
+            });
+            new $.fn.dataTable.FixedColumns( cc_table );
+
+        });
+  "meta_info": {}
+  "name": |-
+    cross-course-enrollment-comparison
+  "sql": |-
+    None
+  "table_name": |-
+    None
+  "title": |-
+    Cross Course Enrollment Comparison

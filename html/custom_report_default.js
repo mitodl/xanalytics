@@ -1,6 +1,9 @@
+parameters = {{parameters}};
+parameters.get_table_columns = true;
+
 $.getJSON(
     '/custom/get_report_data/{{report_name}}', 
-    {'get_table_columns': true},
+    parameters,
     
     function(data) {
 	

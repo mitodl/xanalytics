@@ -41,3 +41,10 @@ class CustomReport(ndb.Model):
     group_tags = ndb.StringProperty(indexed=True, repeated=True)	# which pages it's on; also used for access control
     meta_info = ndb.JsonProperty()		# meta info, including location on page, type of report (e.g. HTML page)
     
+    # defined group_tag values:
+    #
+    # course   - require course_id
+    # group    - require group_tag
+    # role:pm  - require role "PM" (project manager)
+    # role:XXX - require role XXX 
+    # open     - anyone can access

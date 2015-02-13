@@ -1,9 +1,9 @@
-<h2>{{report.title}}</h2>
+<h2>{{title}}</h2>
     <span  style="float:right">
-        <button id="view-{{report.name}}" data-state="init" class="cr-view-button" data-name="{{report.name}}">View</button>
-        <button id="reload-{{report.name}}" style="display:none" data-state="init" class="cr-reload-button" data-name="{{report.name}}">Reload</button>
+        <button id="view-{{id}}" data-state="init" class="cr-view-button" data-name="{{report.name}}" data-id="{{id}}" >View</button>
+        <button id="reload-{{id}}" style="display:none" data-state="init" class="cr-reload-button" data-name="{{report.name}}"  data-id="{{id}}">Reload</button>
 	{% if is_staff %}
-        <button id="edit-{{report.name}}" class="cr-edit-button" data-name="{{report.name}}">Edit</button>
+        <button id="edit-{{id}}" class="cr-edit-button" data-name="{{report.name}}"  data-id="{{id}}">Edit</button>
            {% if report_is_staff %}
                      <!-- <button class="cr-export-button" data-name="{{report.name}}">Export</button> -->
                      <form action="/custom/edit_report/{{report.name}}" method="POST">
@@ -12,18 +12,19 @@
            {% endif %}
 	{% endif %}
     </span>
-    <p>{{report.description}}</p>
-    <div id="div-{{report.name}}"></div>
+    <p>{% autoescape off %}{{report.description}}{% endautoescape %}</p>
+    <div id="div-{{id}}"></div>
     <p></p><br style="clear:both;"/>
 
 <script type="text/javascript">
-var setup_cr_click = function (report_name, report_params, meta_info, immediate_view) {
+var setup_cr_click = function (report_id, report_name, report_params, meta_info, immediate_view) {
 
-    $('#view-' + report_name).each(function(){
+    $('#view-' + report_id).each(function(){
 	
 	var name = $(this).data().name;
+	var id = $(this).data().id;
 	var button = $(this);
-	var the_div = $("#div-" + name);
+	var the_div = $("#div-" + id);
 
 	var load_report = function(){
 	    console.log("loading " + name);
@@ -33,7 +34,7 @@ var setup_cr_click = function (report_name, report_params, meta_info, immediate_
 			  the_div.html(data['html']);
 			  button.data('state', 'visible');
 			  button.html('Hide');
-                          $('#reload-' + report_name).show();
+                          $('#reload-' + id).show();
 		      }
 		     );
 	}
@@ -66,17 +67,17 @@ var setup_cr_click = function (report_name, report_params, meta_info, immediate_
 	
 	$(this).click(do_view);
 
-        $('#reload-' + report_name).click(function(){
+        $('#reload-' + report_id).click(function(){
 	    load_report();
 	});
 	
     });
 
 {% if is_staff %}
-    $('#edit-' + report_name).each(function(){
+    $('#edit-' + report_id).each(function(){
 	
 	var name = $(this).data().name;
-	console.log('name ' + name);
+	// console.log('name ' + name);
 
 	$(this).click(function(){
 	    console.log("editing " + name);
@@ -87,13 +88,14 @@ var setup_cr_click = function (report_name, report_params, meta_info, immediate_
 {% endif %}
 
     if (immediate_view){
-	$('#view-' + report_name).click();
+	$('#view-' + report_id).click();
     }
 
 };
 
 
-$(document).ready(function(){ setup_cr_click("{{report.name}}",
+$(document).ready(function(){ setup_cr_click("{{id}}",
+                                             "{{report.name}}",
  					     {% autoescape off %}{{ report_params }}{% endautoescape %},
  					     {% autoescape off %}{{ report_meta_info }}{% endautoescape %},
 					     {{immediate_view}}

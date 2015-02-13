@@ -655,7 +655,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                      'is_staff': self.is_superuser(),
                      'is_pm': self.is_pm(),
                      'image': self.get_course_image(course_id),
-                     'custom_report': self.custom_report_container(course_id=course_id),
+                     'nav_is_active': self.nav_is_active('onecourse'),
+                     'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, 
+                                                                   course_id=course_id),
                  })
         
         template = JINJA_ENVIRONMENT.get_template('one_course.html')

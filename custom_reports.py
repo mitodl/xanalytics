@@ -78,7 +78,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         data.update({'is_staff': self.is_superuser(),
                      'reports': self.get_custom_report_metadata(single=False),
                      'msg': msg,
-                     'custom_report': self.custom_report_container(staff=True),
+                     'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, staff=True,
+                                                                   group_tag = "{{group_tag}}",
+                                                               ),
                  })
         template = JINJA_ENVIRONMENT.get_template('custom_reports.html')
         self.response.out.write(template.render(data))
@@ -93,46 +95,31 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         except Exception as err:
             logging.error("[custom_report_auth_check] Cannot get custom report %s" % report_name)
             logging.error(err)
+            msg = "Unknown custom report %s" % report_name
             auth_ok = False
             pdata = {}
             crm = None
             return crm, pdata, auth_ok, msg
         
+        if not crm:
+            msg = "Unknown custom report %s" % report_name
+            auth_ok = True
+            pdata = {}
+            return crm, pdata, auth_ok, msg
+
         # params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
-        params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 'get_table_columns']
+        params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 
+                  'get_table_columns',
+                  'group_tag']
         pdata = {}
         for param in params:
-            pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
+            # pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
+            pdata[param] = self.request.get(param, None)
 
-        auth_ok = False
+        logging.info('[cr auth] report_name=%s, pdata=%s' % (report_name, pdata))
 
-        if 'course' in crm.group_tags:	            # course_id must be specified for this report
-            course_id = pdata['course_id']
-            if not course_id:
-                msg = "Unknown course_id"
-            else:
-                print "[get_custom] user=%s, auth_for_(%s)=%s" % (self.user, course_id, self.is_user_authorized_for_course(course_id))
-
-                if not self.is_user_authorized_for_course(course_id):
-                    return crm, pdata, auth_ok, msg
-                    # return self.no_auth_sorry()
-
-                auth_ok = True
-
-        else:
-            for tag in (crm.group_tags or []):
-                if tag.startswith('role:'):
-                    role = tag[5:]
-                    if self.does_user_have_role(role):
-                        auth_ok = True
-                        logging.info("Authorization OK for user=%s role=%s report=%s" % (self.user, role, report_name))
-                        break
-
-        if self.user in self.AUTHORIZED_USERS:	# superuser gets access
-            auth_ok = True
-
-        if not auth_ok:
-            logging.error("Authorization DENIED for user=%s report=%s, group_tags=%s" % (self.user, report_name, crm.group_tags))
+        auth_ok, msg2 = self.is_authorized_for_custom_report(crm, pdata)
+        msg = msg + msg2
 
         return crm, pdata, auth_ok, msg
 
@@ -146,18 +133,33 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if not auth_ok:
             return self.no_auth_sorry()
 
+        if not crm:
+            self.response.write(msg)
+            return
+
         html = crm.html
         html += "<script type='text/javascript'>"
         html += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
         html += "</script>" 
 
         template = JINJA_ENVIRONMENT.from_string(html)
+        parameters = {x:v for x,v in pdata.items() if v is not None}
 
-        render_data = {'report_name': report_name,
-                       'parameters': json.dumps(pdata),
-                       'custom_report': self.custom_report_container(**pdata),
-                       'msg': msg,
-                       }
+        render_data = self.common_data.copy()
+
+        if crm.meta_info.get('need_tags'):
+            render_data['course_tags'] = self.get_course_listings_tags()
+
+        render_data.update({'report_name': report_name,
+                            'parameters': json.dumps(parameters),	# for js
+                            'parameter_values': parameters,		# for html template variables
+                            'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, 
+                                                                          **pdata),	# pass pdata so children of page also get parameters
+                            'is_staff': self.is_superuser(),
+                            'is_pm': self.is_pm(),
+                            'msg': msg,
+                            'nav_is_active': self.nav_is_active('multicourse'),
+                        })
         render_data.update(pdata)
         self.response.out.write(template.render(render_data))
 
@@ -171,8 +173,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if not self.user in self.AUTHORIZED_USERS:	# require superuser
             return self.no_auth_sorry()
 
-        parameter_values = self.request.get('parameter_values', self.session.get('edit_report_parameter_values'))
-        self.session['edit_report_parameter_values'] = parameter_values
+        parameter_values = self.session.get('edit_report_parameter_values')
+        # self.session['edit_report_parameter_values'] = parameter_values
 
         msg = ''
         if (self.request.POST.get('action')=='Download Report'):
@@ -290,9 +292,16 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         html += "</script>" 
 
         template = Template(html)
+        #template = JINJA_ENVIRONMENT.from_string(html)
+        parameters = {x:v for x,v in pdata.items() if v is not None}
 
         render_data = {'report_name': report_name,
-                       'parameters': json.dumps(pdata),
+                       'parameters': json.dumps(parameters),	# for js
+                       'parameter_values': parameters,		# for html template variables
+                       'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, 
+                                                                     **parameters),	# pass pdata so children of page also get parameters
+                       'is_staff': self.is_superuser(),
+                       'is_pm': self.is_pm(),
                        }
         render_data.update(pdata)
 

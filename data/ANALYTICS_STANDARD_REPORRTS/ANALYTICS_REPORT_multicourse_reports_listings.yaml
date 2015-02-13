@@ -1,0 +1,58 @@
+- "author": |-
+    None
+  "date": |-
+    2015-02-13 18:56:42.737654
+  "depends_on": |-
+    None
+  "description": |-
+    Page listing all multi-course reports available to user.
+  "group_tags":
+  - !!python/unicode |-
+    open
+  "html": |-
+    <html>
+      <head>
+        <title>Multi-Course Reports</title>
+
+        {% include 'all_head.html' %}
+      </head>
+      <body role="document">
+
+          {% include 'navbar_standard.html' %}
+
+
+        <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
+
+        <h1>Multi-Course Reports</h1>
+
+          {% if 1 %}<div><font color="red">{{msg}}</font></div>{% endif %}
+
+          Below is a list of all multi-course reports which you have access to.  Click the "View" button to see each report.
+
+
+      {% autoescape off %}
+          {% for group_tag in course_tags %}
+            <hr width="100%"/>
+            {{custom_report.parameter.group_tag[group_tag]["multicourse-report"]}}
+          {%  endfor %}
+      {% endautoescape %}
+
+
+            </div>
+          </body>
+        </html>
+  "icon": |-
+    None
+  "javascript": ""
+  "meta_info":
+    !!python/unicode "is_page": !!bool |-
+      true
+    !!python/unicode "need_tags": !!bool |-
+      true
+  "name": |-
+    multicourse_reports_listings
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    MultiCourse Reports

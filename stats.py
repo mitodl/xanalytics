@@ -206,7 +206,10 @@ class DataStats(object):
                     break
                 elif exists:
                     msg += "<br/>Report %s already exists, deleting existing" % report_name
-                    crm.key.delete()
+                    try:
+                        crm.key.delete()
+                    except Exception as err:
+                        logging.error("[import_custom_report_from_file_data] Error deleting report %s which should have existed" % report_name)
                 try:
                     self.import_data_to_ndb([report], 'CustomReport', 
                                             date_fields=['date'],
@@ -255,7 +258,11 @@ class DataStats(object):
         else:
             crq = CustomReport.query()
         if crq and single:
-            return crq.fetch(1)[0]
+            crmset = crq.fetch(1)
+            if len(crmset):
+                return crmset[0]
+            logging.error('No custom report found with name=%s' % report_name)
+            return None
         elif report_name and not crq:
             logging.error('No custom report found with name=%s' % report_name)
         return crq
@@ -870,7 +877,15 @@ class DataStats(object):
                     return val['url']
         return local_config.DEFAULT_COURSE_SITE
 
-    def get_course_listings(self, ignore_cache=False, collection=None):
+    def get_course_listings(self, ignore_cache=False, collection=None, check_individual_auth=True):
+        '''
+        Return the course listings table, in the standard dataset format.  This is a dict, with:
+
+        data_by_key = dict with keys being course_id, and values being dict of table columns
+        data        = list of dicts of table columns
+
+        If check_individual_auth is true, then only the listings authorized for access are returned.
+        '''
 
         course_listings_source = self.get_collection_metadata('COURSE_LISTINGS_TABLE', collection=collection)
 
@@ -881,7 +896,7 @@ class DataStats(object):
         courses = {'data': [], 'data_by_key': OrderedDict()}
 
         for course_id, cinfo in all_courses['data_by_key'].items():
-            if not self.is_user_authorized_for_course(course_id):
+            if check_individual_auth and (not self.is_user_authorized_for_course(course_id)):
                 continue
             courses['data'].append(cinfo)
             courses['data_by_key'][course_id] = cinfo
@@ -905,6 +920,29 @@ class DataStats(object):
             k['launch'] = ldate
             courses['data_by_key'][cid]['launch'] = ldate
         return courses
+
+    def make_course_tags_list(self, course_tags_string):
+        '''
+        Turn a string of comma and space delimited tags into a list of the tags.
+        '''
+        return [x.strip() for x in course_tags_string.replace(',', ' ').split(' ') if x]
+
+    def get_course_listings_tags(self):
+        '''
+        Return list of unique tags present in the course listings "tags" column.
+        These tags are used for multicourse reports.
+
+        The tags are typically strings like "Physics", "EECS", "ChinaX".
+        '''
+        courses = self.get_course_listings(check_individual_auth=False)
+        
+        all_tags  = []
+        tagsets = [ self.make_course_tags_list(x['tags']) for x in courses['data'] ]
+        for tags in tagsets:
+            all_tags += tags
+        unique_tags = list(set(all_tags))
+        unique_tags.sort()
+        return unique_tags
 
     @staticmethod
     def fix_date(x):
@@ -950,3 +988,81 @@ class DataStats(object):
         tableinfo = bqutil.get_bq_table_info(dataset, table)
         data = self.cached_get_bq_table(dataset, table, key=key)
         return (data, tableinfo)
+
+    def course_listings_row_has_tag(self, course_tags, group_tag=None):
+        if not group_tag:
+            return True
+        course_tags_list = self.make_course_tags_list(course_tags)
+        return group_tag in course_tags_list
+
+    def is_authorized_for_custom_report(self, crm, pdata):
+        '''
+        Return True if current user is authorized for access to specified custom report.
+
+        crm = custom report model instance
+        pdata = parameter data, a dict with parameters like course_id and group_tag
+        '''
+        auth_ok = False
+        msg = ""
+
+        if self.user in self.AUTHORIZED_USERS:	# global access for superusers
+            auth_ok = True
+            return auth_ok, msg
+
+        if 'course' in crm.group_tags:	            # course_id must be specified for this report
+            course_id = pdata.get('course_id')
+            if not course_id:
+                msg = "Unknown course_id"
+                return auth_ok, msg
+
+            logging.info("[is_authorized_for_custom_report] user=%s, auth_for_(%s)=%s" % (self.user, course_id, self.is_user_authorized_for_course(course_id)))
+
+            if not self.is_user_authorized_for_course(course_id):
+                msg = "user %s not authorized for report %s on course %s" % (self.user, crm.name, course_id)
+                return auth_ok, msg
+
+            auth_ok = True
+
+        elif 'group' in crm.group_tags:	            # group_tag must be specified for this report
+            group_tag = pdata.get('group_tag')
+            if not group_tag:
+                msg = "Unknown group_tag"
+                return auth_ok, msg
+
+            logging.info("[is_authorized_for_custom_report] user=%s, auth_for_(%s)=%s" % (self.user, group_tag, self.is_user_authorized_for_course(group_tag)))
+
+            if not self.is_user_authorized_for_course(group_tag):
+                msg = "user %s not authorized for report %s on group_tag %s" % (self.user, crm.name, group_tag)
+                return auth_ok, msg
+
+            auth_ok = True
+
+        elif 'open' in crm.group_tags:
+            auth_ok = True
+
+        else:
+            for tag in (crm.group_tags or []):
+                if tag.startswith('role:'):
+                    role = tag[5:]
+                    if self.does_user_have_role(role):
+                        auth_ok = True
+                        logging.info("Authorization OK for user=%s role=%s report=%s" % (self.user, role, crm.name))
+                        break
+
+        if self.user in self.AUTHORIZED_USERS:	# superuser gets access
+            auth_ok = True
+
+        if not auth_ok:
+            logging.error("Authorization DENIED for user=%s report=%s, group_tags=%s" % (self.user, crm.name, crm.group_tags))
+        
+        return auth_ok, msg
+
+    def nav_is_active(self, current):
+        class NavActive(dict):
+            def __getitem__(self, section):
+                logging.info('[nav_is_active] section=%s, current=%s' % (section, current))
+                if section==current:
+                    return 'active'
+                return ''
+        return NavActive()
+                    

@@ -1,0 +1,92 @@
+- "author": |-
+    None
+  "date": |-
+    2015-02-13 18:07:18.082789
+  "depends_on": |-
+    None
+  "description": |-
+    Table of broad statistics across courses.
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+    console.log('parameters=', parameters);
+
+    $.getJSON(
+        '/dashboard/get/broad_stats',
+        parameters,
+
+        function(data) {
+
+        console.log('ajax data = ', data);
+            html = '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+            // html += '<div id="plot-{{report_name}}" style="height: 800px"></div>';
+            if (data.error){
+                html = "Error!  " + data.error;
+            }
+            $('#contain-{{report_name}}').html(html);
+            if (data.error){ return; }
+
+            if (1){
+                    // make data table
+          var table = $('#table-{{report_name}}').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "columns": data['tablecolumns'],
+              "pageLength": 10,
+              searching: true,
+              ordering: true,
+              data: data['table'],
+          });
+        }
+
+        if (0){
+          // create data series
+          var series = [];
+          data['data'].forEach(function(x){
+              srow = {cc: x.cc,
+                  z: Number(x.nverified),
+                  name: x.countryLabel,
+                 };
+              series.push(srow);
+          });
+        }
+
+        if (0){
+          $('#plot-{{report_name}}').highcharts({
+            chart: { type: 'bar',  zoomType: 'x' },
+            credits: {  enabled: false  },
+            yAxis: {min: 0},
+            title : { text : 'Number of registrants by course', },
+            subtitle: { text: '(click and drag to zoom)' },
+            xAxis: { categories: data['enrollment_courses'] },
+            yAxis: {  min: 0,   title: { text: 'Registrants' } },
+            legend: {
+              reversed: true
+            },
+            plotOptions: {
+              series: {
+                stacking: 'normal'
+              }
+            },
+            // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
+            series : data['all_enrollment_series'],
+          });
+        }
+
+        } );
+  "meta_info": {}
+  "name": |-
+    multicourse-broad-stats-full-table
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    MultiCourse Report - Broad Stats by Course (full table)
