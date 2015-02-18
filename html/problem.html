@@ -217,15 +217,16 @@ function drawChart() {
 			   hdhtml = "<span>"
 			   hdhtml += "<p>Responses extracted from logs through: " + json['data_date'] + "</p>"
 			   hdhtml += "<p>Number of items in this problem: " + json['items'].length + "</p>"
-			   hdhtml += "<p>Top 20 responses and frequency of each response for these items:</p>"
-			   hdhtml += "<table border='1' width='100%'><tr>"
+			   hdhtml += "<p>Top 20 responses and frequency of each response for these items (for multiple choice questions, answers are lettered starting with 'A'):</p>"
+                           var the_width = Math.round(100/(json['items'].length));
+			   hdhtml += "<table border='1' width='" + String(100) + "%'><tr>"
 			   $.each(json['items'], function(idx, histname){
 			       hdhtml += "<th align='center'>Item " + histname + "</th>\n"
 			   });
 			   hdhtml += "</tr>"
 			   hdhtml += "<tr>"
 			   $.each(json['items'], function(idx, histname){
-			       hdhtml += "<td><table id='item_" + histname + "'></table></td>\n"
+			       hdhtml += "<td><table id='item_" + histname + "' width='" + String(the_width) + "%' ></table></td>\n"
 			   });
 			   hdhtml += "</tr></table>\n"
 			   hdhtml += "</span>"

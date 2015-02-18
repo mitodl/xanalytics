@@ -269,18 +269,34 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                     aid = k.rsplit('_',1)[0]
                     if sadat[aid].strip():
                         sadat[aid] += u' \u21d2 ' + sadat[k]
+
+            def fix_choice(citem):
+                def choice2letter(m):
+                    return chr(ord('A')+int(m.group(1)))
+                return re.sub('choice_(\d+)', choice2letter, citem)
+
             for k  in keys:
                 if k.endswith('_dynamath'):
                     continue
                 answer_id = '_'.join(k.rsplit('_',2)[1:])  # see edx_platform/common/lib/capa/capa/capa_problem.py
                 answer = sadat[k]
-                if type(answer)==str and answer.startswith("[u'choce_"):
+                hist_done = False
+                if type(answer)==str and answer.startswith("[u'choce_") and answer.strip():
                     answer = answer.replace("u'","")
-                elif type(answer)==list:
-                    answer = str([str(x) for x in answer])
-                elif type(answer) in [str, unicode] and '%20' in answer:
-                    answer = urllib.unquote(answer)
-                if answer.strip():
+                elif type(answer)==list:		# for lists, make histogram of each item separately
+                    answer = map(fix_choice, answer)
+                    for answer_item in answer:
+                        histograms[answer_id][answer_item] += 1
+                        hist_done = True
+                    # answer = str([str(x) for x in answer])
+                    answer = ', '.join(answer)
+                elif type(answer) in [str, unicode] and ('%20' in answer) and answer.strip():
+                    answer = urllib.unquote(answer).strip()
+
+                if type(answer) in [str, unicode] and answer.startswith('choice_'):
+                    answer = fix_choice(answer)
+
+                if not hist_done and answer.strip():
                     histograms[answer_id][answer] += 1
                 sastr += "<tr><td>%s:</td><td>%s</td></tr>" % (answer_id, answer)
             sastr += "</table>"
@@ -292,6 +308,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
             topitems.sort(key=lambda(x): x[1], reverse=True)
             topitems = topitems[:20]
             histograms[aid] = topitems
+
+        # also order the histograms by aid
+        histograms = OrderedDict(sorted(histograms.items()))
 
         # logging.info(json.dumps(histograms, indent=4))
 
