@@ -315,8 +315,11 @@ class DataStats(object):
             estr = (row.get(field, '') or '')
             if eformat is None:
                 return estr
-            elif name in eformat:
-                return eformat[field](estr)
+            elif (name in eformat) or (field in eformat):
+                efunc = eformat[field]
+                if 'row' in efunc.func_code.co_varnames:
+                    return efunc(estr, row=row)
+                return efunc(estr)
             return estr
 
         for k in data:

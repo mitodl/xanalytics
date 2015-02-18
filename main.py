@@ -60,6 +60,14 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
 
         # logging.info('course listings: %s' % courses['data'])
 
+        def add_link(xstr, row=None):
+            '''add link to course page to table element'''
+            cid =  row.get('course_id', None)
+            if cid:
+                return "<a href=/course/%s>%s</a>" % (cid, xstr)
+            else:
+                return xstr
+                
         html = self.list2table(map(DataTableField, 
                                    [{'field': 'launch', 'title':'Course launch', 'width': '12%'},
                                     {'field': 'course_number', 'title': 'Course #', 'width': '5%'}, 
@@ -67,7 +75,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                                     {'field': 'title', 'title': 'Course Title', 'width': '40%'},
                                     {'field': 'course_id', 'title': 'course ID', 'width': '12%'},
                                    ]), 
-                               courses['data'])
+                               courses['data'],
+                               eformat={'course_number': add_link, 'title': add_link},
+                           )
 
         data = self.common_data
         data.update({'data': {},
