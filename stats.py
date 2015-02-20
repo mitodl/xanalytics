@@ -1024,6 +1024,13 @@ class DataStats(object):
                 msg = "user %s not authorized for report %s on course %s" % (self.user, crm.name, course_id)
                 return auth_ok, msg
 
+            if 'instructor' in crm.group_tags:		# user must be an instructor
+                is_instructor = self.does_user_have_role('instructor', course_id)
+                if not is_instructor:
+                    msg = "user %s must be a course instructor to access report %s on course %s" % (self.user, 
+                                                                                                    crm.name, course_id)
+                    return auth_ok, msg
+
             auth_ok = True
 
         elif 'group' in crm.group_tags:	            # group_tag must be specified for this report
@@ -1064,7 +1071,9 @@ class DataStats(object):
         class NavActive(dict):
             def __getitem__(self, section):
                 logging.info('[nav_is_active] section=%s, current=%s' % (section, current))
-                if section==current:
+                if (section==current) or (section==current.replace('-','_')):
+                    return 'active'
+                if ('*' in section) and re.match(section, current):
                     return 'active'
                 return ''
         return NavActive()

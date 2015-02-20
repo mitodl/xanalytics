@@ -48,8 +48,8 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
         msg = ""
         action = self.request.POST.get('action', None)
-        custom_reports_standard_source_dir = "ANALYTICS_STANDARD_REPORRTS"
-        custom_reports_standard_source_file = "ANALYTICS_STANDARD_REPORRTS.yaml"
+        custom_reports_standard_source_dir = "ANALYTICS_STANDARD_REPORTS"
+        custom_reports_standard_source_file = "ANALYTICS_STANDARD_REPORTS.yaml"
 
         crssd = 'data/%s' % custom_reports_standard_source_dir
         crssf = 'data/%s' % custom_reports_standard_source_file

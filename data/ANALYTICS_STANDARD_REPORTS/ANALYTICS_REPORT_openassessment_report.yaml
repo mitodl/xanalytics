@@ -1,0 +1,150 @@
+- "author": |-
+    None
+  "date": |-
+    2015-02-20 00:18:56.842284
+  "depends_on": |-
+    ["{dataset}.ora_events"]
+  "description": |-
+    Table of openassessment submissions, self, and peer assessment grades and feedback
+  "group_tags":
+  - !!python/unicode |-
+    course
+  - !!python/unicode |-
+    instructor
+  "html": |-
+    <html>
+      <head>
+        <title>OpenAssessment Report</title>
+
+        {% include 'all_head.html' %}
+      </head>
+      <body role="document">
+
+          {% include 'navbar_standard.html' %}
+
+
+        <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
+
+        <h1>OpenAssessment Report</h1>
+
+          {% if 1 %}<div><font color="red">{{msg}}</font></div>{% endif %}
+
+          <h2>Table of submissions for openassessment problem {{problem_id}}</h2>
+
+          <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+              </div>
+
+
+          <iframe sandbox="allow-same-origin allow-scripts allow-popups allow-forms" width="1100" height="800" src="{{base}}/courses/{{course_id}}/jump_to_id/{{problem_id}}"></iframe>
+
+        </div>
+      </body>
+    </html>
+  "icon": |-
+    None
+  "javascript": |
+    parameters = {% autoescape off %}{{parameters}}{% endautoescape %};
+    parameters.get_table_columns = true;
+
+    console.log("parameters=",parameters);
+
+    ShowProblem = function(pid, username){
+      console.log('show problem pid=', pid, ", username=", username);
+      $("#responses-{{report_name}}").html('<img src="/images/loading_icon.gif"/>');
+                var pos = $("#responses-{{report_name}}").offset();
+                var top = pos.top + 1;
+                window.scrollTo(0, (top < 0 ? 0 : top));
+
+      $.getJSON('/custom/get_report_data/openassessment_peer_responses',
+                {"course_id": parameters.course_id, "problem_id": pid, 'get_table_columns': true},
+                function(data){
+            if (data.error){
+                html = "Error!  " + data.error;
+                $("#responses-{{report_name}}").html(html);
+                            return;
+        }
+        html = "<br/><h3>Assessment results for " + pid + " by " + username + "</h3>";
+        html += '<table id="table2-{{report_name}}" class="display" width="100%"></table>';
+        $("#responses-{{report_name}}").html(html);
+
+        var columns = data['tablecolumns'];
+
+            // make data table
+            var table = $('#table2-{{report_name}}').DataTable({
+                dom: 'T<"clear">lfrtip',
+                "columns": columns,
+                "pageLength": 10,
+                searching: true,
+                ordering: true,
+                data: data['data'],
+            });
+
+                window.scrollTo(0, top-25 );
+
+
+      });
+    };
+
+    $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+
+        function(data) {
+
+            html = '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+            html += '<div id="responses-{{report_name}}"></div>';
+            if (data.error){
+                html = "Error!  " + data.error;
+            }
+            $('#contain-{{report_name}}').html(html);
+            if (data.error){ return; }
+
+        // console.log("tablecolumns ", JSON.stringify(data['tablecolumns']));
+
+        var columns = [{"title":"time","data":"time","class":"dt-center"},
+                   {"title":"username","data":"username","class":"dt-center"},
+                   {"title":"submission uuid","data":"submission_uuid","class":"dt-center", 'width': '12%'},
+                   {"title":"attempt #","data":"attempt_num","class":"dt-center", 'width': '4%' },
+                   {"title":"answer text","data":"answer_text","class":"dt-center", 'width': '70%' }];
+
+        // add link to submission_uuid
+        data['data'].forEach(function(x){
+          var uid = x['submission_uuid'];
+          x['submission_uuid'] = "<a href='javascript:void(0);' onclick='ShowProblem(\"" + uid
+                                                            + "\", \"" + x['username'] + "\");'>" + uid + "</a>";
+        });
+
+            // make data table
+            var table = $('#table-{{report_name}}').DataTable({
+                dom: 'T<"clear">lfrtip',
+                "columns": columns,
+                "pageLength": 10,
+                searching: true,
+                ordering: true,
+                data: data['data'],
+            });
+    });
+  "meta_info":
+    !!python/unicode "is_page": !!bool |-
+      true
+  "name": |-
+    openassessment_report
+  "sql": |-
+    select
+        # problem_id,
+        time, username,
+        # action,
+        submission_uuid,
+        # part1_points, part1_feedback,
+        attempt_num,
+        answer_text,
+    from
+        [{dataset}.ora_events]
+    where
+        problem_id="{problem_id}"
+        and action="create_submission"
+  "table_name": |-
+    stats_ora_sub_{problem_id}
+  "title": |-
+    OpenAssessment Report

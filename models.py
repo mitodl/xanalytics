@@ -48,3 +48,4 @@ class CustomReport(ndb.Model):
     # role:pm  - require role "PM" (project manager)
     # role:XXX - require role XXX 
     # open     - anyone can access
+    # instructor - require user to be instructor of specified course (pm not sufficient)

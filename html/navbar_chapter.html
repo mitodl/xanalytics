@@ -12,10 +12,10 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-            <li class="{{nav_is_active.onecourse}}" ><a href="/">Course Overview</a></li>
-            <li class="{{nav_is_active['multicourse.*']}}" ><a href="/page/multicourse_reports_listings">Multi-Course Reports</a></li>
-	    {% if is_pm %}
-            <li class="{{nav_is_active.allcourse}}"><a href="/dashboard">All-Course dashboard</a></li>
+	    <li><a href="/course/{{course_id}}">Course Overview</a> </li>
+	    <li class="active"><a href="#">Chapter Overview</a></li>
+	    {% if is_staff %}
+            <li ><a href="/dashboard">Cross-Course dashboard</a></li>
 	    {% endif %}
 
           </ul>

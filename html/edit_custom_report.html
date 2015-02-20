@@ -131,8 +131,16 @@ $(document).ready( function () {
 	var name = $(this).data().name;
 	console.log('name ' + name);
 
+        meta_info = {% autoescape off %}{{ meta_info }}{% endautoescape %};
+
 	$(this).click(function(){
 	    console.log("viewing " + name);
+
+            if (meta_info.is_page){
+                parameter_values = $.parseJSON($('#parameter_values').val());
+		window.location.href = "/page/" + name + "?" + $.param(parameter_values);
+            }
+
 	    var pos = $("#div-" + name).offset();
 	    var top = pos.top + 20;
 	    var left = 0;

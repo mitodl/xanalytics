@@ -463,12 +463,16 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                     caent['max_attempts'] = ps['max_attempts']
                     caent['nsubmissions'] = ps['nsubmissions']
 
-        def makelink(txt, rdat):
+        def makelink(txt, rdat, link_str=None):
             try:
-                link = "<a href='/{category}/{course_id}/{url_name}'>{txt}</a>".format(txt=(txt.encode('utf8') or "none"),
-                                                                                       course_id=course_id,
-                                                                                       category=rdat['category'],
-                                                                                       url_name=rdat['url_name'])
+                if link_str is None:
+                    link_str = "<a href='/{category}/{course_id}/{url_name}'>{txt}</a>"
+                link = link_str.format(txt=(txt.encode('utf8') or "none"),
+                                       course_id=course_id,
+                                       category=rdat['category'],
+                                       url_name=rdat['url_name'],
+                                       cid_enc=urllib.urlencode({'course_id':course_id}),
+                                       )
             except Exception as err:
                 logging.error('oops, cannot make link for %s' % repr(rdat))
                 link = txt
@@ -489,6 +493,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
             row['start'] = self.fix_date(rdat['start'])
             if row['category'] in ['problem', 'video', 'html']:
                 row['name'] = makelink(row['name'], rdat)
+            elif row['category'] in ['openassessment']:
+                row['name'] = makelink(row['name'], rdat, 
+                                       "<a href='/page/openassessment_report?problem_id={url_name}&{cid_enc}'>{txt}</a>")
             return row
 
         tabledata = json.dumps({'data': [ makerow(x) for x in ccontents ]})

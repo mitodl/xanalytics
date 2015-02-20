@@ -109,7 +109,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         # params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
         params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 
-                  'get_table_columns',
+                  'get_table_columns', 'force_query',
                   'group_tag']
         pdata = {}
         for param in params:
@@ -150,6 +150,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if crm.meta_info.get('need_tags'):
             render_data['course_tags'] = self.get_course_listings_tags()
 
+        if ('course_id' in pdata) and pdata['course_id']:
+            render_data['base'] = self.get_base(pdata['course_id'])
+            logging.info('[page] base=%s' % render_data['base'])
+
         render_data.update({'report_name': report_name,
                             'parameters': json.dumps(parameters),	# for js
                             'parameter_values': parameters,		# for html template variables
@@ -158,7 +162,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                             'is_staff': self.is_superuser(),
                             'is_pm': self.is_pm(),
                             'msg': msg,
-                            'nav_is_active': self.nav_is_active('multicourse'),
+                            'nav_is_active': self.nav_is_active(report_name),
                         })
         render_data.update(pdata)
         self.response.out.write(template.render(render_data))
@@ -252,6 +256,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 'report': crm,
                 'msg': msg,
                 'parameter_values': parameter_values,
+                'meta_info': json.dumps(crm.meta_info),
         }
         data.update(self.common_data)
 
@@ -364,6 +369,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if not auth_ok:
             return self.no_auth_sorry()
         course_id = pdata['course_id']
+        force_query = pdata.get('force_query', False)
+        if force_query == 'false':
+            force_query = False
 
         if course_id:
             dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
@@ -383,6 +391,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             self.response.headers['Content-Type'] = 'application/json'   
             self.response.out.write(json.dumps(data))
             return
+        if '{' in table:
+            table = table.format(**pdata)
+            table = table.replace('-', '_').replace(' ', '_')
         if not table.startswith('stats_'):
             table = "stats_" + table
 
@@ -431,13 +442,22 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         logging.info('custom report get_report_data name=%s, table=%s.%s, depends_on=%s, pdata=%s' % (report_name, dataset, table, depends_on, pdata))
 
+        the_msg = []
+
+        def my_logger(msg):
+            logging.info(msg)
+            the_msg.append(msg)
+
         try:
             bqdata = self.cached_get_bq_table(dataset, table, 
                                               sql=sql,
+                                              logger=my_logger,
                                               depends_on=depends_on,
                                               startIndex=int(pdata['start'] or 0), 
                                               maxResults=int(pdata['length'] or 100000),
                                               raise_exception=True,
+                                              ignore_cache=force_query,
+                                              force_query=force_query,
             )
             self.fix_bq_dates(bqdata)
         except Exception as err:
@@ -445,6 +465,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             error = str(err)
             logging.error('custom report error %s' % error)
             # raise
+            if self.is_superuser():
+                msg = ('\n'.join(the_msg))
+                msg = msg.replace('<','&lt;')
+                error += "<pre>%s</pre>" % msg
             data = {'error': error}
             self.response.headers['Content-Type'] = 'application/json'   
             self.response.out.write(json.dumps(data))
