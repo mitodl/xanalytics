@@ -7,7 +7,7 @@ GOOGLE_STORAGE_ROOT = "x-univ-data"
 
 STAFF_USERS = ['superman']
 
-DEFAULT_COURSE_SITE = "https://edx.org"
+DEFAULT_COURSE_SITE = "https://courses.edx.org"
 
 COURSE_SITE_MAP = { '3091-exam': {'match': '.*-exam.*', 'url': 'https://special.edx.edu'},
                 }
@@ -18,6 +18,7 @@ PROJECT_ID = '99353222151'
 MODE = 'mooc'	# mooc or residential (no demographics for residential)
 DEFAULT_COLLECTION = 'latest'
 
+# make this unique to the site and random
 SESSION_SECRET_KEY = "dkjasf912lkj8d09"
 
 #-----------------------------------------------------------------------------
@@ -38,6 +39,14 @@ COLLECTIONS = {'latest': {'COURSE_LISTINGS_TABLE': "docs:X Analytics:Dashboard C
 #-----------------------------------------------------------------------------
 # user authentication
 
+# table specifying users and their authorizations
+# must have columns username,role,course_id
+STAFF_COURSE_TABLE = "docs:doc-spreadsheet-file-name:sheet-name"    
+
+# to authenticate using google, set AUTH_METHOD = 'google', leave CAS_URL blank, 
+# and add "login: required" under "script: main.application" in app.yaml
+# AUTH_METHOD = 'google'
+
 CAS_URL = "https://the_cas_server.org"
 
 #-----------------------------------------------------------------------------
@@ -46,3 +55,4 @@ CAS_URL = "https://the_cas_server.org"
 SERVICE_EMAIL = "99353222151-qqc2e5qgkquvdd2c3g9onip3bn90kc99@developer.gserviceaccount.com"
 SERVICE_KEY_FILE = "../service-account.pem"
 LOCAL_PORT = '8081'
+ADMIN_PORT = '7081'
