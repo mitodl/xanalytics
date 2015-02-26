@@ -678,6 +678,8 @@ class DataStats(object):
         sql = """
            SELECT course_id,
                    count(*) as registered_sum,
+                   sum(case when is_active = 1 then 1 else 0 end) as nregistered_active,
+                   sum(case when is_active = 0 then 1 else 0 end) as n_unregistered,
                    sum(case when viewed then 1 else 0 end) as viewed_sum,
                    sum(case when explored then 1 else 0 end) as explored_sum,
                    sum(case when certified then 1 else 0 end) as certified_sum,
@@ -729,7 +731,9 @@ class DataStats(object):
         table = self.add_collection_name_prefix('stats_overall')
         key = None
         return self.cached_get_bq_table(dataset, table, sql=sql, key=key,
-                                        depends_on=['%s.person_course' % dataset])
+                                        depends_on=['%s.person_course' % dataset],
+                                        force_newer_than = datetime.datetime(2015,2,26,21,10,0),
+                                    )
 
 
     def compute_geo_stats(self, course_id):

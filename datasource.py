@@ -154,6 +154,7 @@ class DataSource(object):
                             logger=None, ignore_cache=False, 
                             depends_on=None,
                             force_query=False,
+                            force_newer_than=None,
                             startIndex=0, maxResults=1000000,
                             raise_exception=False,
     ):
@@ -163,6 +164,10 @@ class DataSource(object):
         If "depends_on" is provided (as a list of strings), and if the desired table
         already exists, then check to make sure it is newer than any of the tables
         listed in "depends_on".
+
+        if force_newer_than is set (should be a datetime) then in the depends_on
+        testing, use that date as an override, such that the SQL is re-run if
+        the existing table is older than this date.
         '''
         if logger is None:
             logger = logging.info
@@ -178,6 +183,9 @@ class DataSource(object):
             
             if not latest:
                 raise Exception("[datasource.cached_get_bq_table] Cannot get last mod time for %s (got %s), needed by %s.%s" % (depends_on, modtimes, dataset, table))
+
+            if force_newer_than and force_newer_than > latest:
+                latest = force_newer_than
 
             if data and data.get('lastModifiedTime', None):
                 # data has a mod time, let's see if that has expired
@@ -199,6 +207,8 @@ class DataSource(object):
                 force_query = True
                 logging.info("[datasource.cached_get_bq_table] Forcing query recomputation of %s.%s, table_date=%s, latest=%s" % (dataset, table,
                                                                                                                                  table_date, latest))
+
+            # logging.info("[datasource.cached_get_bq_table] %s.%s table_date=%s, latest=%s, force_query=%s" % (dataset, table, table_date, latest, force_query))
 
         if (not data) or ignore_cache or (not data['data']):	# data['data']=None if table was empty, and in that case try again
             try:

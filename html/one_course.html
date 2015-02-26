@@ -134,6 +134,8 @@ $(document).ready(function() {
 
     {% if mode=="mooc" %}
         the_columns = the_columns.concat([
+           { "data": "n_unregistered", "title": "# UN-registered", "class": "dt-center" },
+           { "data": "nregistered_active", "title": "Net # registered", "class": "dt-center" },
            { "data": "certified_sum", "title": "# certified", "class": "dt-center" },
            { "data": "n_verified_id", "title": "# verified ID", "class": "dt-center" },
            { "data": "verified_certified", "title": "# certified & verified", "class": "dt-center" },
