@@ -256,7 +256,7 @@ class DataStats(object):
         elif collection:
             crq = CustomReport.query(CustomReport.collection==collection)
         else:
-            crq = CustomReport.query()
+            crq = CustomReport.query().order(CustomReport.name)
         if crq and single:
             crmset = crq.fetch(1)
             if len(crmset):
