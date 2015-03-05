@@ -1,0 +1,32 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-05 20:40:03.203538
+  "depends_on": |-
+    None
+  "description": |-
+    HTML for extra reports which show up on the cross-course analytics dashboard page
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+
+            <hr width="100%"/>
+            {{custom_report["age-histogram"]}}
+
+
+    </div>
+  "icon": |-
+    None
+  "javascript": ""
+  "meta_info":
+    !!python/unicode "embedded": !!bool |-
+      true
+  "name": |-
+    extra-cross-course-reports
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Extra Cross-Course Reports
