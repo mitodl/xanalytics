@@ -1,23 +1,35 @@
-<h2>{{title}}</h2>
-    <span  style="float:right">
-        <button id="view-{{id}}" data-state="init" class="cr-view-button" data-name="{{report.name}}" data-id="{{id}}" >View</button>
-        <button id="reload-{{id}}" style="display:none" data-state="init" class="cr-reload-button" data-name="{{report.name}}"  data-id="{{id}}">Reload</button>
-	{% if is_staff %}
-        <button id="edit-{{id}}" class="cr-edit-button" data-name="{{report.name}}"  data-id="{{id}}">Edit</button>
-           {% if report_is_staff %}
-                     <!-- <button class="cr-export-button" data-name="{{report.name}}">Export</button> -->
-                     <form action="/custom/edit_report/{{report.name}}" method="POST">
-                         <input type="submit" name="action" value="Download Report"/>
-                     </form>
-           {% endif %}
+{% if not report.meta_info.embedded %}
+    <h2>{{title}}</h2>
+{% endif %}
+        <span  style="float:right">
+            <button id="view-{{id}}" data-state="init" class="cr-view-button" data-name="{{report.name}}" data-id="{{id}}" 
+		      {% if report.meta_info.embedded %}
+		        style="display:none"
+		      {% endif %}
+		    >View</button>
+            <button id="reload-{{id}}" style="display:none" data-state="init" class="cr-reload-button" data-name="{{report.name}}"  data-id="{{id}}">Reload</button>
+    	{% if is_staff %}
+            <button id="edit-{{id}}" class="cr-edit-button" data-name="{{report.name}}"  data-id="{{id}}">Edit</button>
+	    {% if not report.meta_info.embedded %}
+               {% if report_is_staff %}
+                         <!-- <button class="cr-export-button" data-name="{{report.name}}">Export</button> -->
+                         <form action="/custom/edit_report/{{report.name}}" method="POST">
+                             <input type="submit" name="action" value="Download Report"/>
+                         </form>
+               {% endif %}
+	    {% endif %}
+    	{% endif %}
+        </span>
+	{% if not report.meta_info.embedded %}
+            <p>{% autoescape off %}{{report.description}}{% endautoescape %}</p>
 	{% endif %}
-    </span>
-    <p>{% autoescape off %}{{report.description}}{% endautoescape %}</p>
-    <div id="div-{{id}}"></div>
-    <p></p><br style="clear:both;"/>
-
+        <div id="div-{{id}}"></div>
+        <p></p><br style="clear:both;"/>
+    
 <script type="text/javascript">
 var setup_cr_click = function (report_id, report_name, report_params, meta_info, immediate_view) {
+
+    if (meta_info.embedded){  immediate_view = true; }
 
     $('#view-' + report_id).each(function(){
 	
@@ -32,9 +44,11 @@ var setup_cr_click = function (report_id, report_name, report_params, meta_info,
                       report_params,
 		      function(data){
 			  the_div.html(data['html']);
-			  button.data('state', 'visible');
-			  button.html('Hide');
-                          $('#reload-' + id).show();
+                          if (!meta_info.embedded){
+  			      button.data('state', 'visible');
+			      button.html('Hide');
+                              $('#reload-' + id).show();
+                          }
 		      }
 		     );
 	}

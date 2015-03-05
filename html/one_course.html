@@ -344,5 +344,12 @@ $(document).ready(function() {
 
 {% endif %}
 
+
+<!-- ----------------------------------------------------------------------------- -->
+
+    {% autoescape off %}
+        {{custom_report['extra-course-specific-reports']}}
+    {% endautoescape %}
+
 </body>
 </html>

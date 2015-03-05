@@ -49,11 +49,17 @@ class Reports(object):
         class CRContainer(dict):
             def __init__(self, *args, **kwargs):
                 self.immediate_view = False
+                self.do_no_embed = False		# prevent report from rendering as embedded (need for custom_reports.html)
                 super(CRContainer, self).__init__(*args, **kwargs)
 
             @property
             def immediate(self):
                 self.immediate_view = True
+                return self
+
+            @property
+            def no_embed(self):
+                self.do_no_embed = True
                 return self
 
             @property
@@ -90,6 +96,10 @@ class Reports(object):
                 parameters = {x:v for x,v in pdata.items() if v is not None}
 
                 report_id = hashlib.sha224("%s %s" % (crm.name, json.dumps(pdata))).hexdigest()
+                crm.description = crm.description.format(**parameters)
+
+                if self.do_no_embed and 'embedded' in crm.meta_info:
+                    crm.meta_info.pop('embedded')
 
                 template = JINJA_ENVIRONMENT.get_template('custom_report_container.html')
                 data = {'is_staff': other.is_superuser(),
@@ -102,6 +112,7 @@ class Reports(object):
                         'id': report_id,
                 }
                 self.immediate_view = False	# return to non-immediate view by default
+                self.do_no_embed = False		# return to default
                 return template.render(data)
         return CRContainer()
     

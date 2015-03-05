@@ -299,6 +299,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         template = Template(html)
         #template = JINJA_ENVIRONMENT.from_string(html)
         parameters = {x:v for x,v in pdata.items() if v is not None}
+        # logging.info("get_report_html name=%s, parameters=%s" % (report_name, parameters))
 
         render_data = {'report_name': report_name,
                        'parameters': json.dumps(parameters),	# for js

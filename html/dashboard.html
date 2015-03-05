@@ -212,9 +212,12 @@ $(document).ready(function() {
 
 <br style="clear:both;"/>
 
+<!-- ----------------------------------------------------------------------------- -->
 <!-- additional custom reports, which may or may not exist -->
 
-{% autoescape off %}{{ custom_report["age-histogram"] }}{% endautoescape %}
+    {% autoescape off %}
+        {{custom_report['extra-cross-course-reports']}}
+    {% endautoescape %}
 
 </div> <!-- main -->
 </body>

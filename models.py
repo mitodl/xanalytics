@@ -49,3 +49,8 @@ class CustomReport(ndb.Model):
     # role:XXX - require role XXX 
     # open     - anyone can access
     # instructor - require user to be instructor of specified course (pm not sufficient)
+
+    # defined meta_info keys:
+    #
+    # embedded - true makes this report render immediately with no title or description, embedded into html page
+    # is_page  - true makes this report render as its own separate HTML page

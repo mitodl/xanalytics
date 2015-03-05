@@ -1,0 +1,34 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-05 19:51:21.948011
+  "depends_on": |-
+    None
+  "description": |-
+    HTML providing extra custom reports which are added to the course-specific analytics page
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+
+            <hr width="100%"/>
+            {{custom_report["attempts-correct-percentages"]}}
+
+
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+  "meta_info":
+    !!python/unicode "embedded": !!bool |-
+      true
+  "name": |-
+    extra-course-specific-reports
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Extra Course-Specific Reports
