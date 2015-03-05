@@ -96,7 +96,8 @@ class Reports(object):
                 parameters = {x:v for x,v in pdata.items() if v is not None}
 
                 report_id = hashlib.sha224("%s %s" % (crm.name, json.dumps(pdata))).hexdigest()
-                crm.description = crm.description.format(**parameters)
+                if crm.description:
+                    crm.description = crm.description.format(**parameters)
 
                 if self.do_no_embed and 'embedded' in crm.meta_info:
                     crm.meta_info.pop('embedded')
