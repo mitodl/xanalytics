@@ -67,7 +67,21 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 #crm.javascript = jstemp.render({})
                 logging.info("[cr] creating new custom report %s" % crm)
                 crm.put()
-                return self.redirect('/custom/edit_report/%s' % name)
+                # return self.redirect('/custom/edit_report/%s' % name)
+                #
+                # because of how NDB may take awhile to store the new entry, we cannot go directly
+                # to the report edit page, but instead, must go to a transition page asking 
+                # for the user to click on a button first.
+                data = self.common_data.copy()
+                data.update({'report': crm,
+                         })
+                template = JINJA_ENVIRONMENT.get_template('edit_custom_report_transition.html')
+                self.response.out.write(template.render(data))
+                return
+
+        elif (self.request.POST.get('action')=='Edit this report'):
+            name =  self.request.POST.get('name')
+            return self.redirect('/custom/edit_report/%s' % name)
 
         elif (self.request.POST.get('action')=='Upload Custom Report(s)'):
             report_file_data = self.request.get('file')

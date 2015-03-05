@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>{{orgname}} Analytics Dashboard: Edit Custom Report</title>
+
+  {% include 'all_head.html' %}
+
+<!-- codemirror -->
+
+<link rel="stylesheet" type="text/css" href="/css/codemirror.css">
+<script type="text/javascript" src="/js/codemirror-compressed.js"></script>
+
+</head>
+
+
+  <body role="document">
+
+  {% include 'navbar_custom_report.html' %}
+
+<div  class="container theme-showcase" role="main" data-target="#navbar">
+    <h1>Edit Custom Report</h1>
+
+    <hr width="100%"/>
+    <h2>{{report.title}}</h2>
+
+{% if msg %}
+<font color="red"><p>{{msg}}</p></font>
+{% endif %}
+
+<h3>Please wait a moment: creating database entry...</h3>
+
+<form method="POST">
+<input type="hidden" name="name" value="{{report.name}}" />
+<input type="submit" name="action" value="Edit this report"/>
+</form>
+
+</div> <!-- main -->
+</body>
+</html>
