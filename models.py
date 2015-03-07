@@ -54,3 +54,4 @@ class CustomReport(ndb.Model):
     #
     # embedded - true makes this report render immediately with no title or description, embedded into html page
     # is_page  - true makes this report render as its own separate HTML page
+    # require_table - provide table name or dataset.table ; if this doesn't exist, then the custom report is not shown

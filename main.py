@@ -118,7 +118,10 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
 
     @auth_required
     def ajax_get_usage_stats(self, org=None, number=None, semester=None):
-
+        '''
+        Return json with course overall stats on activity, including number of registrants, viewers,
+        explorers, certified.
+        '''
         course_id = '/'.join([org, number, semester])
         usdat = self.compute_usage_stats(course_id)['data'][0]
         # categories = ['registered', 'viewed', 'explored']

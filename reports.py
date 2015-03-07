@@ -90,10 +90,27 @@ class Reports(object):
                 auth_ok, msg = is_authorized_for_custom_report(crm, pdata)
                 if not auth_ok:
                     return ""			# return empty string if not authorized
-                
+
                 title = JINJA_ENVIRONMENT.from_string(crm.title)
                 title_rendered = title.render(pdata)
                 parameters = {x:v for x,v in pdata.items() if v is not None}
+                
+                if 'require_table' in crm.meta_info:
+                    table = crm.meta_info['require_table']
+                    if '.' in table:
+                        (dataset, table) = table.split('.', 1)
+                    else:
+                        course_id = parameters.get('course_id')
+                        dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=other.use_dataset_latest())
+                    try:
+                        tinfo = bqutil.get_bq_table_info(dataset, table)
+                    except Exception as err:
+                        if "Not Found" in str(err):
+                            logging.info("Suppressing report %s because %s.%s doesn't exist" % (title, dataset, table))
+                            return ""
+                        logging.error(err)
+                        logging.error(traceback.format_exc())
+                        return ""
 
                 report_id = hashlib.sha224("%s %s" % (crm.name, json.dumps(pdata))).hexdigest()
                 if crm.description:

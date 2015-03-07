@@ -479,6 +479,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             bqdata = {'data': None}
             error = str(err)
             logging.error('custom report error %s' % error)
+            logging.error(err)
+            logging.error(traceback.format_exc())
             # raise
             if self.is_superuser():
                 msg = ('\n'.join(the_msg))
