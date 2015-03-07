@@ -1,0 +1,276 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-07 19:48:37.768641
+  "depends_on": |-
+    ["{dataset}.time_on_task"]
+  "description": "Timeline of total time on task by date, for all events, problems,\
+    \ and video, aggregated \r\nover all users in {course_id}.  The algorithm uses\
+    \ a 30 min cutoff for no activity."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |-
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+
+    $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+
+        function(data) {
+
+            html = '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+            html += '<div id="plot-{{report_name}}"></div>';
+            html += '<div id="plot2-{{report_name}}"></div>';
+            html += '<div id="plot3-{{report_name}}"></div>';
+            if (data.error){
+                html = "Error!  " + data.error;
+            }
+            $('#contain-{{report_name}}').html(html);
+            if (data.error){ return; }
+
+            if (0){
+                var table = $('#table-{{report_name}}').DataTable({
+                    dom: 'T<"clear">lfrtip',
+                    "columns": data['tablecolumns'],
+                    "pageLength": 10,
+                    searching: true,
+                    ordering: true,
+                    data: data['data'],
+                });
+            }
+
+            // create data series
+            var total_time = [];
+            var problem_time = [];
+            var video_time = [];
+
+            var total_time_sum = 0;
+            var problem_time_sum = 0;
+            var video_time_sum = 0;
+
+                    var cert_total_time_sum = 0;
+                    var cert_problem_time_sum = 0;
+                    var cert_video_time_sum = 0;
+
+            var cert_total_time = [];
+            var cert_problem_time = [];
+            var cert_video_time = [];
+
+            var avg_total_time = [];
+            var avg_problem_time = [];
+            var avg_video_time = [];
+
+            var series = [{name: 'All Actions (hours)', data: total_time},
+                          {name: 'Problem Time (hours)', data: problem_time},
+                          {name: 'Video Time (hours)', data: video_time},
+                          ];
+
+            var series2 = [
+                           {name: 'Certificate Earners - All Actions (hours)', data: cert_total_time},
+                           {name: 'Certificate Earners - Problem Time (hours)', data: cert_problem_time},
+                           {name: 'Certificate Earners - Video Time (hours)', data: cert_video_time},
+                         ];
+
+
+            var series3 = [{name: 'All Actions', data: avg_total_time},
+                          {name: 'Problem Time', data: avg_problem_time},
+                          {name: 'Video Time', data: avg_video_time},
+                          ];
+
+            data['data'].forEach(function(x){
+                        var date = $.datepicker.parseDate('yy-mm-dd', x.date).getTime();
+                            var tt = Math.round(Number(x.time30) / 60 / 60);  // convert seconds to hours
+                            var pt = Math.round(Number(x.problem_time30) / 60 / 60);  // convert seconds to hours
+                            var vt = Math.round(Number(x.video_time30) / 60 / 60);  // convert seconds to hours
+
+                            var cert_tt = Math.round(Number(x.cert_time30) / 60 / 60);  // convert seconds to hours
+                            var cert_pt = Math.round(Number(x.cert_problem_time30) / 60 / 60);  // convert seconds to hours
+                            var cert_vt = Math.round(Number(x.cert_video_time30) / 60 / 60);  // convert seconds to hours
+
+                        var avg_tt = (Number(x.cert_avg_time30) / 60 / 60);  // convert seconds to hours
+                        var avg_pt = (Number(x.cert_avg_problem_time30) / 60 / 60);  // convert seconds to hours
+                            var avg_vt = (Number(x.cert_avg_video_time30) / 60 / 60);  // convert seconds to hours
+
+                        total_time_sum += tt;
+                                    problem_time_sum += pt;
+                                    video_time_sum += vt;
+
+                        cert_total_time_sum += cert_tt;
+                        cert_problem_time_sum += cert_pt;
+                        cert_video_time_sum += cert_vt;
+
+                                total_time.push( [date, tt] );
+                        problem_time.push( [date, pt] );
+                        video_time.push( [date, vt] );
+
+                                avg_total_time.push( [date, avg_tt] );
+                        avg_problem_time.push( [date, avg_pt] );
+                        avg_video_time.push( [date, avg_vt] );
+
+                                cert_total_time.push( [date, cert_tt] );
+                                cert_problem_time.push( [date, cert_pt] );
+                                cert_video_time.push( [date, cert_vt] );
+            });
+            // console.log(series3);
+
+            // plot data
+            $('#plot-{{report_name}}').highcharts({
+                chart: {  zoomType: 'xy'  },
+                credits: {  enabled: false  },
+                title : {  text : 'Time on task for viewers in ' + parameters.course_id,  },
+                // subtitle: { text: "(hours per day)" },
+                xAxis: [ { type: 'datetime',
+                       // categories: xaxis_data,
+                     } ],
+                yAxis: [ {    // labels: { style: { color: Highcharts.getOptions().colors[2] } },
+                              title: { text: 'Time (hours per day)',
+                                      // style: { color: Highcharts.getOptions().colors[2] }
+                                     },
+                              min: 0,
+                              },
+                       ],
+                series : series,
+            });
+
+            $('#plot2-{{report_name}}').highcharts({
+                chart: {  zoomType: 'xy'  },
+                credits: {  enabled: false  },
+                title : {  text : 'Time on task for certificate earners in' + parameters.course_id,  },
+                // subtitle: { text: "(hours per day)" },
+                xAxis: [ { type: 'datetime',
+                       // categories: xaxis_data,
+                     } ],
+                yAxis: [ {    // labels: { style: { color: Highcharts.getOptions().colors[2] } },
+                              title: { text: 'Time (hours per day)',
+                                      // style: { color: Highcharts.getOptions().colors[2] }
+                                     },
+                              min: 0,
+                              },
+                       ],
+                series : series2,
+            });
+
+
+            $('#plot3-{{report_name}}').highcharts({
+                chart: {  zoomType: 'xy'  },
+                credits: {  enabled: false  },
+                title : {  text : 'Average individual time on task for certificate earners in ' + parameters.course_id,  },
+                // subtitle: { text: "(hours per day)" },
+                xAxis: [ { type: 'datetime',
+                       // categories: xaxis_data,
+                     } ],
+                yAxis: [ {    // labels: { style: { color: Highcharts.getOptions().colors[2] } },
+                              title: { text: 'Time (hours per day) per certified',
+                                      // style: { color: Highcharts.getOptions().colors[2] }
+                                     },
+                              min: 0,
+                              },
+                       ],
+                series : series3,
+            });
+
+
+
+            // now show stats table, with average and total times; need number of certified users for this
+
+            $.getJSON('/get/' + parameters.course_id + '/usage_stats',
+
+              function(data){
+
+                            var nview = Number(data['data'][0]['viewed_sum']);
+                            var ncert = Number(data['data'][0]['certified_sum']);
+                    // console.log('ncert=', ncert);
+                var tabdat = [{'name': 'Total time on system (hours - all viewers)',
+                               'value': Math.round(total_time_sum)},
+                              {'name': 'Time doing problems (hours - all viewers)',
+                               'value': Math.round(problem_time_sum)},
+                              {'name': 'Time accessing videos (hours - all viewers)',
+                               'value': Math.round(video_time_sum)},
+
+                              {'name': '', 'value': ''},
+
+                              {'name': 'Number of viewers',
+                               'value': nview},
+                              {'name': 'Total time on system per user (hours - viewers)',
+                               'value': (total_time_sum / ncert).toFixed(2)},
+                              {'name': 'Time doing problems, per user (hours - viewers)',
+                               'value': (problem_time_sum / ncert).toFixed(2)},
+                              {'name': 'Time accessing video, per user (hours - viewers)',
+                               'value': (video_time_sum / ncert).toFixed(2)},
+
+                              {'name': '', 'value': ''},
+
+                              {'name': 'Total time on system (hours - certificate earners)',
+                               'value': Math.round(cert_total_time_sum)},
+                              {'name': 'Time doing problems (hours - certificate earners)',
+                               'value': Math.round(cert_problem_time_sum)},
+                              {'name': 'Time accessing videos (hours - certificate earners)',
+                               'value': Math.round(cert_video_time_sum)},
+
+                              {'name': '', 'value': ''},
+
+                              {'name': 'Number of certificate earners',
+                               'value': ncert},
+                              {'name': 'Total time on system per user (hours - certificate earners)',
+                               'value': (cert_total_time_sum / ncert).toFixed(2)},
+                              {'name': 'Time doing problems, per user (hours - certificate earners)',
+                               'value': (cert_problem_time_sum / ncert).toFixed(2)},
+                              {'name': 'Time accessing video, per user (hours - certificate earners)',
+                               'value': (cert_video_time_sum / ncert).toFixed(2)},
+                          ];
+                            var tablecolumns = [ {'data': 'name', 'title': "Statistic Name", 'class': 'dt-center'},
+                                 {'data': 'value', 'title': "Value", 'class': 'dt-center'},
+                               ];
+                var table = $('#table-{{report_name}}').DataTable({
+                    "columns": tablecolumns,
+                    paging: false,
+                    info: false,
+                    searching: false,
+                    ordering: false,
+                    data: tabdat,
+                });
+
+            });
+        } );
+  "meta_info":
+    !!python/unicode "require_table": !!python/unicode |-
+      time_on_task
+  "name": |-
+    time-on-task
+  "sql": |
+    SELECT date,
+        # sum(TT.total_time_5) as time5,
+        sum(TT.total_time_30) as time30,
+        # sum(TT.total_video_time_5) as video_time5,
+        sum(TT.total_video_time_30) as video_time30,
+        # sum(TT.total_problem_time_5) as problem_time5,
+        sum(TT.total_problem_time_30) as problem_time30,
+        # sum(case when PC.certified then TT.total_time_5 end) as cert_time5,
+        sum(case when PC.certified then TT.total_time_30 end) as cert_time30,
+        # sum(case when PC.certified then TT.total_video_time_5 end) as cert_video_time5,
+        sum(case when PC.certified then TT.total_video_time_30 end) as cert_video_time30,
+        # sum(case when PC.certified then TT.total_problem_time_5 end) as cert_problem_time5,
+        sum(case when PC.certified then TT.total_problem_time_30 end) as cert_problem_time30,
+        avg(TT.total_time_30) as avg_time30,
+        avg(TT.total_video_time_30) as avg_video_time30,
+        avg(TT.total_problem_time_30) as avg_problem_time30,
+        avg(case when PC.certified then TT.total_time_30 end) as cert_avg_time30,
+        avg(case when PC.certified then TT.total_video_time_30 end) as cert_avg_video_time30,
+        avg(case when PC.certified then TT.total_problem_time_30 end) as cert_avg_problem_time30,
+    from [{dataset}.time_on_task] as TT
+    JOIN [{dataset}.person_course] as PC
+    on TT.username = PC.username
+    group by date
+    order by date
+  "table_name": |-
+    stats_time_on_task_by_date
+  "title": |-
+    Time on Task Report

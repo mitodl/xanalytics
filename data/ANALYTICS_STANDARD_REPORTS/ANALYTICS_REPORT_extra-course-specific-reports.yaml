@@ -14,6 +14,7 @@
 
             <hr width="100%"/>
             {{custom_report["attempts-correct-percentages"]}}
+            {{custom_report["time-on-task"]}}
 
 
     </div>
