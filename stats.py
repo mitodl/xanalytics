@@ -944,7 +944,7 @@ class DataStats(object):
         courses = self.get_course_listings(check_individual_auth=False)
         
         all_tags  = []
-        tagsets = [ self.make_course_tags_list(x['tags']) for x in courses['data'] ]
+        tagsets = [ self.make_course_tags_list(x.get('tags', '')) for x in courses['data'] ]
         for tags in tagsets:
             all_tags += tags
         unique_tags = list(set(all_tags))

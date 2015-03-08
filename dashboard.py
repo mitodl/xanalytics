@@ -111,6 +111,7 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                 'table': bqdat['data'],
                 'totals': totals,
                 'last_updated': str(bqdat['lastModifiedTime']).rsplit(':',1)[0],
+                'orgname': self.ORGNAME,
         }
 
         self.response.headers['Content-Type'] = 'application/json'   
@@ -239,7 +240,7 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         self.fix_bq_dates(bqdata)
 
         # keep only courses in the course listings table, with matching tag
-        known_course_ids_with_tags = {x['course_id']: x['tags'] for x in courses['data']}
+        known_course_ids_with_tags = {x['course_id']: x.get('tags', None) for x in courses['data']}
         data_by_cid = OrderedDict()
 
         for row in bqdata['data']:

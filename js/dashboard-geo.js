@@ -43,7 +43,68 @@ var get_geo = function() {
 	    ],
         });
 
-    $('#geo_totals tbody tr').each( function() {
+	// make series data for pie chart
+	var make_pie_chart = function(data_field, plot_title, div_id){
+	    var total_reg = 0;
+	    var reg_pcts = [];
+	    var total_other = 0;
+	    var pie_series = [{type: 'pie', name: 'Country', data: reg_pcts}];
+	    
+	    var top_by_country = [];
+	    // gather data by country, so we can sort it
+	    data['table'].forEach(function(x){ 
+		var name = x['countryLabel'];
+		var nreg = Number(x[data_field]);
+		if ((!name) || (name=='Unknown')){
+		    return;
+		}
+		top_by_country.push({name: name, nreg: nreg});
+		total_reg += nreg;
+	    });
+	    top_by_country.sort(function(a,b){ return b.nreg - a.nreg });
+	    
+	    // now copy to the data series array and turn into percents
+	    cnt = 0;
+	    var scale = 100.0 / total_reg;
+	    top_by_country.forEach(function(x){
+		if (cnt < 16){
+		    reg_pcts.push([x.name, x.nreg * scale]);
+		}else{
+		    total_other += x.nreg;
+		}
+		cnt += 1;
+	    });
+	    // add other
+	    reg_pcts.push([ 'other', total_other * scale]);
+	    // console.log('reg_pcts = ', reg_pcts);
+	    
+	    $(div_id).highcharts({ chart: { plotBackgroundColor: null,  plotBorderWidth: null, plotShadow: false }, 
+				   title: { text: plot_title},
+				   tooltip: { pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'  },
+				   credits: {  enabled: false  },
+				   plotOptions: {
+				       pie: {
+					   allowPointSelect: true,
+					   cursor: 'pointer',
+					   dataLabels: {
+					       enabled: true,
+					       format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+					       style: {
+						   color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+					       }
+					   }
+				       }
+				   },
+				   series: pie_series,
+				 });
+	};
+	      
+        make_pie_chart('nregistered', data.orgname + ' on edX Registrants by Country', '#geopie');
+        make_pie_chart('nviewed', data.orgname + ' on edX Viewers by Country', '#geopie-viewed');
+        make_pie_chart('ncertified', data.orgname + ' on edX Certified by Country', '#geopie-cert');
+        make_pie_chart('nverified', data.orgname + ' on edX ID Verified by Country', '#geopie-idV');
+	      
+        $('#geo_totals tbody tr').each( function() {
         var nTds = $('td', this);
 	nTds[0].setAttribute('title', 'Ever registered does not subtract those who un-register');
 	nTds[1].setAttribute('title', 'Viewed = visited the course registered for, at least once');
