@@ -51,38 +51,46 @@
             var total_time = [];
             var problem_time = [];
             var video_time = [];
+            var forum_time = [];
 
             var total_time_sum = 0;
             var problem_time_sum = 0;
             var video_time_sum = 0;
+            var forum_time_sum = 0;
 
                     var cert_total_time_sum = 0;
                     var cert_problem_time_sum = 0;
                     var cert_video_time_sum = 0;
+                    var cert_forum_time_sum = 0;
 
             var cert_total_time = [];
             var cert_problem_time = [];
             var cert_video_time = [];
+            var cert_forum_time = [];
 
             var avg_total_time = [];
             var avg_problem_time = [];
             var avg_video_time = [];
+            var avg_forum_time = [];
 
-            var series = [{name: 'All Actions (hours)', data: total_time},
-                          {name: 'Problem Time (hours)', data: problem_time},
-                          {name: 'Video Time (hours)', data: video_time},
+            var series = [{name: 'All Actions', data: total_time},
+                          {name: 'Problem Time', data: problem_time},
+                          {name: 'Video Time', data: video_time},
+                          {name: 'Forum Time', data: forum_time},
                           ];
 
             var series2 = [
-                           {name: 'Certificate Earners - All Actions (hours)', data: cert_total_time},
-                           {name: 'Certificate Earners - Problem Time (hours)', data: cert_problem_time},
-                           {name: 'Certificate Earners - Video Time (hours)', data: cert_video_time},
+                           {name: 'All Actions', data: cert_total_time},
+                           {name: 'Problem Time', data: cert_problem_time},
+                           {name: 'Video Time', data: cert_video_time},
+                           {name: 'Forum Time', data: cert_forum_time},
                          ];
 
 
             var series3 = [{name: 'All Actions', data: avg_total_time},
                           {name: 'Problem Time', data: avg_problem_time},
                           {name: 'Video Time', data: avg_video_time},
+                          {name: 'Forum Time', data: avg_forum_time},
                           ];
 
             data['data'].forEach(function(x){
@@ -90,34 +98,42 @@
                             var tt = Math.round(Number(x.time30) / 60 / 60);  // convert seconds to hours
                             var pt = Math.round(Number(x.problem_time30) / 60 / 60);  // convert seconds to hours
                             var vt = Math.round(Number(x.video_time30) / 60 / 60);  // convert seconds to hours
+                            var ft = Math.round(Number(x.forum_time30) / 60 / 60);  // convert seconds to hours
 
                             var cert_tt = Math.round(Number(x.cert_time30) / 60 / 60);  // convert seconds to hours
                             var cert_pt = Math.round(Number(x.cert_problem_time30) / 60 / 60);  // convert seconds to hours
                             var cert_vt = Math.round(Number(x.cert_video_time30) / 60 / 60);  // convert seconds to hours
+                            var cert_ft = Math.round(Number(x.cert_forum_time30) / 60 / 60);  // convert seconds to hours
 
                         var avg_tt = (Number(x.cert_avg_time30) / 60 / 60);  // convert seconds to hours
                         var avg_pt = (Number(x.cert_avg_problem_time30) / 60 / 60);  // convert seconds to hours
                             var avg_vt = (Number(x.cert_avg_video_time30) / 60 / 60);  // convert seconds to hours
+                            var avg_ft = (Number(x.cert_avg_forum_time30) / 60 / 60);  // convert seconds to hours
 
                         total_time_sum += tt;
                                     problem_time_sum += pt;
                                     video_time_sum += vt;
+                                    forum_time_sum += ft;
 
                         cert_total_time_sum += cert_tt;
                         cert_problem_time_sum += cert_pt;
                         cert_video_time_sum += cert_vt;
+                        cert_forum_time_sum += cert_ft;
 
                                 total_time.push( [date, tt] );
                         problem_time.push( [date, pt] );
                         video_time.push( [date, vt] );
+                        forum_time.push( [date, ft] );
 
                                 avg_total_time.push( [date, avg_tt] );
                         avg_problem_time.push( [date, avg_pt] );
                         avg_video_time.push( [date, avg_vt] );
+                        avg_forum_time.push( [date, avg_ft] );
 
                                 cert_total_time.push( [date, cert_tt] );
                                 cert_problem_time.push( [date, cert_pt] );
                                 cert_video_time.push( [date, cert_vt] );
+                                cert_forum_time.push( [date, cert_ft] );
             });
             // console.log(series3);
 
@@ -194,17 +210,21 @@
                                'value': Math.round(problem_time_sum)},
                               {'name': 'Time accessing videos (hours - all viewers)',
                                'value': Math.round(video_time_sum)},
+                              {'name': 'Time on forum (hours - all viewers)',
+                               'value': Math.round(forum_time_sum)},
 
                               {'name': '', 'value': ''},
 
                               {'name': 'Number of viewers',
                                'value': nview},
                               {'name': 'Total time on system per user (hours - viewers)',
-                               'value': (total_time_sum / ncert).toFixed(2)},
+                               'value': (total_time_sum / nview).toFixed(2)},
                               {'name': 'Time doing problems, per user (hours - viewers)',
-                               'value': (problem_time_sum / ncert).toFixed(2)},
+                               'value': (problem_time_sum / nview).toFixed(2)},
                               {'name': 'Time accessing video, per user (hours - viewers)',
-                               'value': (video_time_sum / ncert).toFixed(2)},
+                               'value': (video_time_sum / nview).toFixed(2)},
+                              {'name': 'Time on forum, per user (hours - viewers)',
+                               'value': (forum_time_sum / nview).toFixed(2)},
 
                               {'name': '', 'value': ''},
 
@@ -214,6 +234,8 @@
                                'value': Math.round(cert_problem_time_sum)},
                               {'name': 'Time accessing videos (hours - certificate earners)',
                                'value': Math.round(cert_video_time_sum)},
+                              {'name': 'Time on forum (hours - certificate earners)',
+                               'value': Math.round(cert_forum_time_sum)},
 
                               {'name': '', 'value': ''},
 
@@ -225,6 +247,8 @@
                                'value': (cert_problem_time_sum / ncert).toFixed(2)},
                               {'name': 'Time accessing video, per user (hours - certificate earners)',
                                'value': (cert_video_time_sum / ncert).toFixed(2)},
+                              {'name': 'Time on forum, per user (hours - certificate earners)',
+                               'value': (cert_forum_time_sum / ncert).toFixed(2)},
                           ];
                             var tablecolumns = [ {'data': 'name', 'title': "Statistic Name", 'class': 'dt-center'},
                                  {'data': 'value', 'title': "Value", 'class': 'dt-center'},
@@ -253,18 +277,29 @@
         sum(TT.total_video_time_30) as video_time30,
         # sum(TT.total_problem_time_5) as problem_time5,
         sum(TT.total_problem_time_30) as problem_time30,
+
+        sum(TT.total_forum_time_30) as forum_time30,
+        # sum(TT.total_text_time_30) as text_time30,
+
         # sum(case when PC.certified then TT.total_time_5 end) as cert_time5,
         sum(case when PC.certified then TT.total_time_30 end) as cert_time30,
         # sum(case when PC.certified then TT.total_video_time_5 end) as cert_video_time5,
         sum(case when PC.certified then TT.total_video_time_30 end) as cert_video_time30,
         # sum(case when PC.certified then TT.total_problem_time_5 end) as cert_problem_time5,
         sum(case when PC.certified then TT.total_problem_time_30 end) as cert_problem_time30,
+
+        sum(case when PC.certified then TT.total_forum_time_30 end) as cert_forum_time30,
+        # sum(case when PC.certified then TT.total_text_time_30 end) as cert_text_time30,
+
         avg(TT.total_time_30) as avg_time30,
         avg(TT.total_video_time_30) as avg_video_time30,
         avg(TT.total_problem_time_30) as avg_problem_time30,
+        avg(TT.total_forum_time_30) as avg_forum_time30,
+
         avg(case when PC.certified then TT.total_time_30 end) as cert_avg_time30,
         avg(case when PC.certified then TT.total_video_time_30 end) as cert_avg_video_time30,
         avg(case when PC.certified then TT.total_problem_time_30 end) as cert_avg_problem_time30,
+        avg(case when PC.certified then TT.total_forum_time_30 end) as cert_avg_forum_time30,
     from [{dataset}.time_on_task] as TT
     JOIN [{dataset}.person_course] as PC
     on TT.username = PC.username
