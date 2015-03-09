@@ -5,7 +5,7 @@
   "depends_on": |-
     ["{dataset}.problem_analysis"]
   "description": "Histogram showing distribution of percentages of attempts which\
-    \ are correct, \r\ncomputed for each certified user, for {course_id}."
+    \ are correct, \r\ncomputed for each certified user, for {course_id}.  Only available when there are certified learners."
   "group_tags":
   - !!python/unicode |-
     course
