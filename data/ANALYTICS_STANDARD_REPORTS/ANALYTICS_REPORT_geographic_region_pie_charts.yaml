@@ -45,7 +45,17 @@
   "icon": |-
     None
   "javascript": |+
+    parameters = {{parameters}};
+
     var make_reg_pie_charts = function(the_geo_stats){
+
+      // total ncertified and nverified, to gate plots (not shown if zero)
+      var nverified = 0;
+      var ncertified = 0;
+      for (cc in the_geo_stats){
+        nverified += Number(the_geo_stats[cc]['nverified']);
+        ncertified += Number(the_geo_stats[cc]['ncertified']);
+      }
 
             // pie charts by geographic region
             $.getJSON('/get/datafile/geographic_regions_by_country', function (data) {
@@ -100,31 +110,43 @@
                                      });
             };
 
+                    if (parameters.course_id){
+              var thead = parameters.course_id;
+            }else{
+              var thead = data.orgname + ' on edX';
+            }
 
                     // viewers
             make_plot('#geopie-continents', 'continent', 'nviewed',
-                      data.orgname + ' on edX Viewers by Continent');
+                      thead + ' Viewers by Continent');
             make_plot('#geopie-econ-group', 'econ_group', 'nviewed',
-                      data.orgname + ' on edX Viewers by U.N. Geographic Economic Region');
+                      thead + ' Viewers by U.N. Geographic Economic Region');
             make_plot('#geopie-un-region', 'un_region', 'nviewed',
-                      data.orgname + ' on edX Viewers by U.N. World Regions');
+                      thead + ' Viewers by U.N. World Regions');
 
-                    // certifid
-            make_plot('#geopie-continents_cert', 'continent', 'ncertified',
-                      data.orgname + ' on edX Certified by Continent');
-            make_plot('#geopie-econ-group_cert', 'econ_group', 'ncertified',
-                      data.orgname + ' on edX Certified by U.N. Geographic Economic Region');
-            make_plot('#geopie-un-region_cert', 'un_region', 'ncertified',
-                      data.orgname + ' on edX Certified by U.N. World Regions');
+                    if (ncertified > 0){
+              // certifid
+              make_plot('#geopie-continents_cert', 'continent', 'ncertified',
+                        thead + ' Certified by Continent');
+              make_plot('#geopie-econ-group_cert', 'econ_group', 'ncertified',
+                        thead + ' Certified by U.N. Geographic Economic Region');
+              make_plot('#geopie-un-region_cert', 'un_region', 'ncertified',
+                        thead + ' Certified by U.N. World Regions');
+            }else{
+              $('#geopie-continents_cert').html("None");
+            }
 
-                    // idV
-            make_plot('#geopie-continents_idv', 'continent', 'nverified',
-                      data.orgname + ' on edX ID Verified by Continent');
-            make_plot('#geopie-econ-group_idv', 'econ_group', 'nverified',
-                      data.orgname + ' on edX ID Verified by U.N. Geographic Economic Region');
-            make_plot('#geopie-un-region_idv', 'un_region', 'nverified',
-                      data.orgname + ' on edX ID Verified by U.N. World Regions');
-
+                    if (nverified > 0){
+              // idV
+              make_plot('#geopie-continents_idv', 'continent', 'nverified',
+                        thead + ' ID Verified by Continent');
+              make_plot('#geopie-econ-group_idv', 'econ_group', 'nverified',
+                        thead + ' ID Verified by U.N. Geographic Economic Region');
+              make_plot('#geopie-un-region_idv', 'un_region', 'nverified',
+                        thead + ' ID Verified by U.N. World Regions');
+            }else{
+              $('#geopie-continents_idv').html("None");
+            }
 
             // display totals from UN Least Developed Countries
 
@@ -163,7 +185,11 @@
     }
 
     if (typeof geo_stats == 'undefined'){
-      $.getJSON('/dashboard/get/geo_stats', function (data) {
+
+      if (parameters.course_id){  var url = "/get/" + parameters.course_id + "/geo_stats"; }
+      else { var url = '/dashboard/get/geo_stats'; }
+
+      $.getJSON(url, function (data) {
         geo_stats = {};
         data['table'].forEach(function(x){ geo_stats[x['cc']] = x; });
             make_reg_pie_charts(geo_stats);

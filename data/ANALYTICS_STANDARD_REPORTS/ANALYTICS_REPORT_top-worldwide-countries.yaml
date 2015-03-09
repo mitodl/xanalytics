@@ -30,10 +30,11 @@
     </div>
   "icon": |-
     None
-  "javascript": |-
-    // assumes the geo_stats and gs_data variables are already defined in the local context
+  "javascript": |
+    parameters = {{parameters}};
 
-    // make series data for pie chart
+    var make_twc_plots = function(the_geo_stats, orgname){
+            // make series data for pie chart
             var make_pie_chart = function(data_field, plot_title, div_id){
                 var total_reg = 0;
                 var reg_pcts = [];
@@ -69,6 +70,10 @@
                 reg_pcts.push([ 'other', total_other * scale]);
                 // console.log('reg_pcts = ', reg_pcts);
 
+              console.log('field=', data_field, '  total_reg=', total_reg);
+
+              if (total_reg){
+
                 $(div_id).highcharts({ chart: { plotBackgroundColor: null,  plotBorderWidth: null, plotShadow: false },
                                        title: { text: plot_title},
                                        tooltip: { pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'  },
@@ -88,12 +93,34 @@
                                        },
                                        series: pie_series,
                                      });
+              }else{
+                          $(div_id).html("No data for " + plot_title);
+              }
+
             };
 
-            make_pie_chart('nregistered', gs_data.orgname + ' on edX Registrants by Country', '#geopie');
-            make_pie_chart('nviewed', gs_data.orgname + ' on edX Viewers by Country', '#geopie-viewed');
-            make_pie_chart('ncertified', gs_data.orgname + ' on edX Certified by Country', '#geopie-cert');
-            make_pie_chart('nverified', gs_data.orgname + ' on edX ID Verified by Country', '#geopie-idV');
+                    if (parameters.course_id){ var thead = parameters.course_id; }
+            else{ var thead = orgname + " on edX"; }
+
+            make_pie_chart('nregistered', thead + ' Registrants by Country', '#geopie');
+            make_pie_chart('nviewed', thead + ' Viewers by Country', '#geopie-viewed');
+            make_pie_chart('ncertified', thead + ' Certified by Country', '#geopie-cert');
+            make_pie_chart('nverified', thead + ' ID Verified by Country', '#geopie-idV');
+    }
+
+    if (typeof geo_stats == 'undefined'){
+
+      if (parameters.course_id){  var url = "/get/" + parameters.course_id + "/geo_stats"; }
+      else { var url = '/dashboard/get/geo_stats'; }
+
+      $.getJSON(url, function (data) {
+        geo_stats = {};
+        data['table'].forEach(function(x){ geo_stats[x['cc']] = x; });
+            make_twc_plots(geo_stats, parameters.orgname);
+      });
+    }else{
+            make_twc_plots(geo_stats, parameters.orgname);
+    }
   "meta_info": {}
   "name": |-
     top-worldwide-countries

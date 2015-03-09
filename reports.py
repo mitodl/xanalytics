@@ -95,6 +95,7 @@ class Reports(object):
                 title = JINJA_ENVIRONMENT.from_string(crm.title)
                 title_rendered = title.render(pdata)
                 parameters = {x:v for x,v in pdata.items() if v is not None}
+                parameters['orgname'] = other.ORGNAME
                 
                 if 'require_table' in crm.meta_info:
                     table = crm.meta_info['require_table']

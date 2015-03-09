@@ -646,6 +646,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
             x['verified_cert_pct'] = mkpct(x['n_verified_certified'], x['n_verified_id'])
             x['avg_hours'] = "%8.1f" % (float(x['avg_of_sum_dt'] or 0)/60/60)	# hours
             x['avg_hours_certified'] = "%8.1f" % (float(x['certified_sum_dt'] or 0)/60/60)	# hours
+            x['nverified'] = x['n_verified_id'] # for compatibility with report_geo_stats
             return { 'z': int(x['nregistered']),
                      'cc': x['cc'],
                      'name': x['countryLabel'],

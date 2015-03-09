@@ -246,6 +246,12 @@ $(document).ready(function() {
 
 <div id="geomap" style="height: 500px; min-width: 310px; max-width: 800px; margin: 0 auto"><img src="/images/loading_icon.gif"/></div>
 
+<div id="geopie-container" style="display:none">
+    {% autoescape off %}
+          {% autoescape off %}{{ custom_report["top-worldwide-countries"] }}{% endautoescape %}
+          {% autoescape off %}{{ custom_report["geographic_region_pie_charts"] }}{% endautoescape %}
+    {% endautoescape %}
+</div>
 
 <div><p>Top countries by registration:</p><table id="geo_top"></table></div>
 
@@ -266,6 +272,8 @@ $(document).ready(function() {
         });
 
 	// console.log(data['top_by_reg']);
+
+        $('#geopie-container').show();
 
         $('#geodat_info').html('<h3>Data computed ' + data['data_date'] + '</h3>');
 
