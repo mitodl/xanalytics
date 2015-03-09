@@ -92,12 +92,19 @@ class Reports(object):
                 if not auth_ok:
                     return ""			# return empty string if not authorized
 
+                # logging.info('[cr] name=%s, title=%s' % (crm.name, crm.title))	# debugging
+
                 title = JINJA_ENVIRONMENT.from_string(crm.title)
-                title_rendered = title.render(pdata)
+                try:
+                    title_rendered = title.render(pdata)
+                except Exception as err:
+                    logging.error('[cr] Failed to render report %s title %s' % (crm.name, crm.title))
+                    title = crm.title
+
                 parameters = {x:v for x,v in pdata.items() if v is not None}
                 parameters['orgname'] = other.ORGNAME
                 
-                if 'require_table' in crm.meta_info:
+                if 'require_table' in (crm.meta_info or []):
                     table = crm.meta_info['require_table']
                     if '.' in table:
                         (dataset, table) = table.split('.', 1)
@@ -122,7 +129,7 @@ class Reports(object):
                     except Exception as err:
                         logging.info('[cr] %s cannot format description %s' % (crm.name, crm.description))
 
-                if self.do_no_embed and 'embedded' in crm.meta_info:
+                if self.do_no_embed and 'embedded' in (crm.meta_info or {}):
                     crm.meta_info.pop('embedded')
 
                 template = JINJA_ENVIRONMENT.get_template('custom_report_container.html')
@@ -130,7 +137,7 @@ class Reports(object):
                         'report': crm,
                         'report_params': json.dumps(parameters),
                         'report_is_staff': pdata.get('staff'),
-                        'report_meta_info': json.dumps(crm.meta_info),
+                        'report_meta_info': json.dumps(crm.meta_info or {}),
                         'immediate_view': json.dumps(self.immediate_view),
                         'title': title_rendered,
                         'id': report_id,
