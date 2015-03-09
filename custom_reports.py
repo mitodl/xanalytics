@@ -307,15 +307,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             self.session['edit_report_parameter_values'] = json.dumps({x:v for x,v in pdata.items() if v is not None})
             logging.info("Saved edit_report_parameter_values = %s" % self.session['edit_report_parameter_values'])
 
-        html = crm.html
-        html += "<script type='text/javascript'>"
-        html += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
-        html += "</script>" 
-
-        template = Template(html)
-        #template = JINJA_ENVIRONMENT.from_string(html)
         parameters = {x:v for x,v in pdata.items() if v is not None}
-        # logging.info("get_report_html name=%s, parameters=%s" % (report_name, parameters))
+        parameters['orgname'] = self.ORGNAME
 
         render_data = {'report_name': report_name,
                        'parameters': json.dumps(parameters),	# for js
@@ -327,7 +320,19 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                        }
         render_data.update(pdata)
 
-        data = {'html': template.render(render_data),
+        #html = crm.html
+        html = JINJA_ENVIRONMENT.from_string(crm.html).render(render_data)	# allows custom reports to be included
+
+        js_src = "<script type='text/javascript'>"
+        js_src += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
+        js_src += "</script>" 
+
+        js = Template(js_src).render(render_data)
+        #template = JINJA_ENVIRONMENT.from_string(html)
+
+        # logging.info("get_report_html name=%s, parameters=%s" % (report_name, parameters))
+
+        data = {'html': html + js,
                 'js': crm.javascript,
                 }
 
