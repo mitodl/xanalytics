@@ -42,6 +42,7 @@
       </div>
 
       <h3>U.N. Least Developed Countries</h3>
+      <h4 id="geopi-ldc-title"/>
       <div><table id="geopie-least-devel" class="display" width="100%"></table></div>
     </div>
   "icon": |-
@@ -112,10 +113,11 @@
                                      });
             };
 
-                    if (parameters.course_id){
+            if (parameters.course_id){
               var thead = parameters.course_id;
             }else{
-              var thead = data.orgname + ' on edX';
+              if (typeof orgname == "undefined"){ orgname = data.orgname; }
+              var thead = orgname + ' on edX';
             }
 
                     // viewers
@@ -157,6 +159,7 @@
                 return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
 
+             $("#geopi-ldc-title").html("Data for " + thead);
 
             var tabdat = [
                 {'name': '# registrants from U.N. Least Developed Countries',
