@@ -192,6 +192,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             return self.no_auth_sorry()
 
         parameter_values = self.session.get('edit_report_parameter_values')
+        if not parameter_values or parameter_values=="None":
+            parameter_values = {}
         # self.session['edit_report_parameter_values'] = parameter_values
 
         msg = ''
