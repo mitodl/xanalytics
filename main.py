@@ -90,6 +90,23 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
 
 
     @auth_required
+    def ajax_get_datafile(self, file_name=''):
+        '''
+        get static datafile
+        only certain files may be accessed.
+        '''
+        allowed_files = [ "geographic_regions_by_country", ]
+        self.response.headers['Content-Type'] = 'application/json'   
+        if file_name not in allowed_files:
+            self.response.out.write(json.dumps({'ok': False, }))
+            return
+
+        the_fn = file_name + '.csv'
+        self.response.out.write(json.dumps({'ok': True, 
+                                            'data': self.get_datafile(the_fn)
+                                        }))
+
+    @auth_required
     def ajax_switch_collection(self):
         '''
         Switch collection to that specified.
@@ -851,6 +868,8 @@ ROUTES = [
     webapp2.Route('/get/<org>/<number>/<semester>/<table>/table_data', handler=MainPage, handler_method='ajax_get_table_data'),
     webapp2.Route('/get/<org>/<number>/<semester>/<problem_url_name>/problem_histories', handler=MainPage, handler_method='ajax_get_problem_answer_histories'),
     webapp2.Route('/get/dashboard/geo_stats', handler=MainPage, handler_method='ajax_dashboard_get_geo_stats'),
+
+    webapp2.Route('/get/datafile/<file_name>', handler=MainPage, handler_method='ajax_get_datafile'),
 
     webapp2.Route('/get/switch_collection', handler=MainPage, handler_method='ajax_switch_collection'),
 ]
