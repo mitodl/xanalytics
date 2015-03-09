@@ -1,0 +1,104 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-09 17:16:48.080324
+  "depends_on": |-
+    None
+  "description": "Pie charts showing top countries around the world from which registrants,\
+    \ viewers, certificate earners, \r\nand ID verified registrants are coming from,\
+    \ based on geoip data."
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+          <div id="geopie" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+            <img src="/images/loading_icon.gif"/>
+            </div>
+
+          <br/>
+          <div id="geopie-viewed" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+            <img src="/images/loading_icon.gif"/></div>
+
+          <br/>
+          <div id="geopie-cert" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+            <img src="/images/loading_icon.gif"/></div>
+
+          <br/>
+          <div id="geopie-idV" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+            <img src="/images/loading_icon.gif"/></div>
+    </div>
+  "icon": |-
+    None
+  "javascript": |-
+    // assumes the geo_stats and gs_data variables are already defined in the local context
+
+    // make series data for pie chart
+            var make_pie_chart = function(data_field, plot_title, div_id){
+                var total_reg = 0;
+                var reg_pcts = [];
+                var total_other = 0;
+                var pie_series = [{type: 'pie', name: 'Country', data: reg_pcts}];
+
+                var top_by_country = [];
+                // gather data by country, so we can sort it
+                Object.keys(geo_stats).forEach(function(k){
+                    var x = geo_stats[k];
+                    var name = x['countryLabel'];
+                    var nreg = Number(x[data_field]);
+                    if ((!name) || (name=='Unknown')){
+                        return;
+                    }
+                    top_by_country.push({name: name, nreg: nreg});
+                    total_reg += nreg;
+                });
+                top_by_country.sort(function(a,b){ return b.nreg - a.nreg });
+
+                // now copy to the data series array and turn into percents
+                cnt = 0;
+                var scale = 100.0 / total_reg;
+                top_by_country.forEach(function(x){
+                    if (cnt < 16){
+                        reg_pcts.push([x.name, x.nreg * scale]);
+                    }else{
+                        total_other += x.nreg;
+                    }
+                    cnt += 1;
+                });
+                // add other
+                reg_pcts.push([ 'other', total_other * scale]);
+                // console.log('reg_pcts = ', reg_pcts);
+
+                $(div_id).highcharts({ chart: { plotBackgroundColor: null,  plotBorderWidth: null, plotShadow: false },
+                                       title: { text: plot_title},
+                                       tooltip: { pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'  },
+                                       credits: {  enabled: false  },
+                                       plotOptions: {
+                                           pie: {
+                                               allowPointSelect: true,
+                                               cursor: 'pointer',
+                                               dataLabels: {
+                                                   enabled: true,
+                                                   format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                                                   style: {
+                                                       color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                                                   }
+                                               }
+                                           }
+                                       },
+                                       series: pie_series,
+                                     });
+            };
+
+            make_pie_chart('nregistered', gs_data.orgname + ' on edX Registrants by Country', '#geopie');
+            make_pie_chart('nviewed', gs_data.orgname + ' on edX Viewers by Country', '#geopie-viewed');
+            make_pie_chart('ncertified', gs_data.orgname + ' on edX Certified by Country', '#geopie-cert');
+            make_pie_chart('nverified', gs_data.orgname + ' on edX ID Verified by Country', '#geopie-idV');
+  "meta_info": {}
+  "name": |-
+    top-worldwide-countries
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Top Worldwide Countries Pie Charts

@@ -102,9 +102,10 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
             return
 
         the_fn = file_name + '.csv'
-        self.response.out.write(json.dumps({'ok': True, 
-                                            'data': self.get_datafile(the_fn)
-                                        }))
+        retdat = self.get_datafile(the_fn)
+        retdat['ok'] = True
+        retdat['orgname'] = self.ORGNAME
+        self.response.out.write(json.dumps(retdat))
 
     @auth_required
     def ajax_switch_collection(self):

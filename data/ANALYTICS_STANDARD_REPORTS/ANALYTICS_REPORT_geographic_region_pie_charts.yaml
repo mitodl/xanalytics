@@ -1,0 +1,182 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-09 16:04:55.593523
+  "depends_on": |-
+    None
+  "description": "Pie charts showing distribution of learners across major geographic\
+    \ regions \r\n(as defined by the United Nations)"
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+      <h3>Viewers</h3>
+      <div id="geopie-continents" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+        <img src="/images/loading_icon.gif"/>
+      </div>
+      <div id="geopie-econ-group" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+      </div>
+      <div id="geopie-un-region" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+      </div>
+      <hr width="50%"/>
+      <h3>Certificate Earners</h3>
+      <div id="geopie-continents_cert" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+        <img src="/images/loading_icon.gif"/>
+      </div>
+      <div id="geopie-econ-group_cert" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+      </div>
+      <div id="geopie-un-region_cert" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+      </div>
+      </div>
+      <hr width="50%"/>
+      <h3>ID Verified Registrants</h3>
+      <div id="geopie-continents_idv" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+        <img src="/images/loading_icon.gif"/>
+      </div>
+      <div id="geopie-econ-group_idv" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+      </div>
+      <div id="geopie-un-region_idv" style="min-width: 310px; max-width: 800px; margin: 0 auto">
+      </div>
+
+      <h3>U.N. Least Developed Countries</h3>
+      <div><table id="geopie-least-devel" class="display" width="100%"></table></div>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    var make_reg_pie_charts = function(the_geo_stats){
+
+            // pie charts by geographic region
+            $.getJSON('/get/datafile/geographic_regions_by_country', function (data) {
+            region_dat = data['data'];
+
+            // aggregate by region, for continents
+            var aggdat = function(region_colname, gs_colname){
+                rtotals = {}
+                region_dat.forEach(function(rrow){
+                    var region = rrow[region_colname]
+                    if (region){
+                        var cc = rrow['cc'];
+                        var gscc = the_geo_stats[cc];
+                        if (gscc){
+                            var ncc = Number(gscc[gs_colname]);
+                            if (rtotals[region]) { rtotals[region] += ncc; }
+                            else { rtotals[region] = ncc; }
+                        }
+                    }
+                });
+                // make series data for plot
+                rsdat = []
+                for (var region in rtotals){
+                    rsdat.push([ region, rtotals[region] ]);
+                }
+                return rsdat;
+            }
+
+            var make_plot = function(div_id, region_colname, gs_colname, plot_title){
+
+                var pdata = aggdat(region_colname, gs_colname);
+                var pie_series = [{type: 'pie', name: 'Region', data: pdata}];
+
+                $(div_id).highcharts({ chart: { plotBackgroundColor: null,  plotBorderWidth: null, plotShadow: false },
+                                       title: { text: plot_title},
+                                       tooltip: { pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'  },
+                                       credits: {  enabled: false  },
+                                       plotOptions: {
+                                           pie: {
+                                               allowPointSelect: true,
+                                               cursor: 'pointer',
+                                               dataLabels: {
+                                                   enabled: true,
+                                                   format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                                                   style: {
+                                                       color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                                                   }
+                                               }
+                                           }
+                                       },
+                                       series: pie_series,
+                                     });
+            };
+
+
+                    // viewers
+            make_plot('#geopie-continents', 'continent', 'nviewed',
+                      data.orgname + ' on edX Viewers by Continent');
+            make_plot('#geopie-econ-group', 'econ_group', 'nviewed',
+                      data.orgname + ' on edX Viewers by U.N. Geographic Economic Region');
+            make_plot('#geopie-un-region', 'un_region', 'nviewed',
+                      data.orgname + ' on edX Viewers by U.N. World Regions');
+
+                    // certifid
+            make_plot('#geopie-continents_cert', 'continent', 'ncertified',
+                      data.orgname + ' on edX Certified by Continent');
+            make_plot('#geopie-econ-group_cert', 'econ_group', 'ncertified',
+                      data.orgname + ' on edX Certified by U.N. Geographic Economic Region');
+            make_plot('#geopie-un-region_cert', 'un_region', 'ncertified',
+                      data.orgname + ' on edX Certified by U.N. World Regions');
+
+                    // idV
+            make_plot('#geopie-continents_idv', 'continent', 'nverified',
+                      data.orgname + ' on edX ID Verified by Continent');
+            make_plot('#geopie-econ-group_idv', 'econ_group', 'nverified',
+                      data.orgname + ' on edX ID Verified by U.N. Geographic Economic Region');
+            make_plot('#geopie-un-region_idv', 'un_region', 'nverified',
+                      data.orgname + ' on edX ID Verified by U.N. World Regions');
+
+
+            // display totals from UN Least Developed Countries
+
+            // now show stats table, with average and total times; need number of certified users for this
+            function numberWithCommas(x) {
+                return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+
+
+            var tabdat = [
+                {'name': '# registrants from U.N. Least Developed Countries',
+                               'value': numberWithCommas(aggdat('developing_nation', 'nregistered')[0][1])},
+                {'name': '# viewers from U.N. Least Developed Countries',
+                               'value': numberWithCommas(aggdat('developing_nation', 'nviewed')[0][1])},
+                {'name': '# certified from U.N. Least Developed Countries',
+                               'value': numberWithCommas(aggdat('developing_nation', 'ncertified')[0][1])},
+                {'name': '# id Verified from U.N. Least Developed Countries',
+                               'value': numberWithCommas(aggdat('developing_nation', 'nverified')[0][1])},
+                          ];
+
+                    // console.log('tabdat=', tabdat);
+
+            // make data table
+                            var tablecolumns = [ {'data': 'name', 'title': "Statistic Name", 'class': 'dt-center'},
+                                 {'data': 'value', 'title': "Value", 'class': 'dt-center'},
+                               ];
+            var table = $('#geopie-least-devel').DataTable({
+                    "columns": tablecolumns,
+                    paging: false,
+                    info: false,
+                    searching: false,
+                    ordering: false,
+                    data: tabdat,
+            });
+        });
+    }
+
+    if (typeof geo_stats == 'undefined'){
+      $.getJSON('/dashboard/get/geo_stats', function (data) {
+        geo_stats = {};
+        data['table'].forEach(function(x){ geo_stats[x['cc']] = x; });
+            make_reg_pie_charts(geo_stats);
+      });
+    }else{
+            make_reg_pie_charts(geo_stats);
+    }
+
+  "meta_info": {}
+  "name": |-
+    geographic_region_pie_charts
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Geographic Region Pie Charts
