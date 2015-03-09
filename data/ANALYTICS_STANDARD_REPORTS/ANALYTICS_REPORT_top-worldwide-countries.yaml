@@ -10,6 +10,8 @@
   "group_tags":
   - !!python/unicode |-
     role:pm
+  - !!python/unicode |-
+    course
   "html": |-
     <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
           <div id="geopie" style="min-width: 310px; max-width: 800px; margin: 0 auto">

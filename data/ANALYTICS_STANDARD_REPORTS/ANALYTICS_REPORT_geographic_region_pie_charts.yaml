@@ -9,6 +9,8 @@
   "group_tags":
   - !!python/unicode |-
     role:pm
+  - !!python/unicode |-
+    course
   "html": |-
     <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
       <h3>Viewers</h3>
