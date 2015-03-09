@@ -116,7 +116,10 @@ class Reports(object):
 
                 report_id = hashlib.sha224("%s %s" % (crm.name, json.dumps(pdata))).hexdigest()
                 if crm.description:
-                    crm.description = crm.description.format(**parameters)
+                    try:
+                        crm.description = crm.description.format(**parameters)
+                    except Exception as err:
+                        logging.info('[cr] %s cannot format description %s' % (crm.name, crm.description))
 
                 if self.do_no_embed and 'embedded' in crm.meta_info:
                     crm.meta_info.pop('embedded')
