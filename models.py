@@ -52,6 +52,8 @@ class CustomReport(ndb.Model):
 
     # defined meta_info keys:
     #
-    # embedded - true makes this report render immediately with no title or description, embedded into html page
-    # is_page  - true makes this report render as its own separate HTML page
+    # embedded      - true makes this report render immediately with no title or description, embedded into html page
+    # is_page       - true makes this report render as its own separate HTML page
     # require_table - provide table name or dataset.table ; if this doesn't exist, then the custom report is not shown
+    # dataset       - used to override BigQuery dataset which would otherwise be used, as long as it's not a course_id specific one
+    # project_id    - used to override BigQuery project_id which would otherwise be used

@@ -230,23 +230,23 @@ def default_logger(msg):
     print msg
 
 def get_bq_table(dataset, tablename, sql=None, key=None, allow_create=True, force_query=False, logger=default_logger,
-                 startIndex=None, maxResults=1000000):
+                 startIndex=None, maxResults=1000000, project_id=DEFAULT_PROJECT_ID):
     '''
     Retrieve data for the specified BQ table if it exists.
     If it doesn't exist, create it, using the provided SQL.
     '''
     if force_query:
-        create_bq_table(dataset, tablename, sql, logger=logger, overwrite=True)
+        create_bq_table(dataset, tablename, sql, logger=logger, overwrite=True, project_id=project_id)
         return get_table_data(dataset, tablename, key=key, logger=logger,
                               startIndex=startIndex, maxResults=maxResults)
     try:
         ret = get_table_data(dataset, tablename, key=key, logger=logger,
-                             startIndex=startIndex, maxResults=maxResults)
+                             startIndex=startIndex, maxResults=maxResults, project_id=project_id)
     except Exception as err:
         if 'Not Found' in str(err) and allow_create and (sql is not None) and sql:
-            create_bq_table(dataset, tablename, sql, logger=logger)
+            create_bq_table(dataset, tablename, sql, logger=logger, project_id=project_id)
             return get_table_data(dataset, tablename, key=key, logger=logger,
-                                  startIndex=startIndex, maxResults=maxResults)
+                                  startIndex=startIndex, maxResults=maxResults, project_id=project_id)
         else:
             raise
     return ret
@@ -257,6 +257,9 @@ def create_bq_table(dataset_id, table_id, sql, verbose=False, overwrite=False, w
     '''
     Run SQL query to create a new table.
     '''
+
+    if not sql:
+        raise Exception('[bqutil] Cannot create_bq_table: sql=%s' % sql)
 
     project_ref = dict(projectId=project_id)
     table_ref = dict(datasetId=dataset_id, projectId=output_project_id, tableId=table_id)

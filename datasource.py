@@ -157,6 +157,7 @@ class DataSource(object):
                             force_newer_than=None,
                             startIndex=0, maxResults=1000000,
                             raise_exception=False,
+                            project_id=None,
     ):
         '''
         Get a dataset from BigQuery; use memcache.
@@ -168,6 +169,8 @@ class DataSource(object):
         if force_newer_than is set (should be a datetime) then in the depends_on
         testing, use that date as an override, such that the SQL is re-run if
         the existing table is older than this date.
+
+        project_id: if specified, overrides the default BigQuery project ID (for the actual query)
         '''
         if logger is None:
             logger = logging.info
@@ -210,12 +213,16 @@ class DataSource(object):
 
             # logging.info("[datasource.cached_get_bq_table] %s.%s table_date=%s, latest=%s, force_query=%s" % (dataset, table, table_date, latest, force_query))
 
+        optargs = {}
+        if project_id:
+            optargs['project_id'] = project_id
+
         if (not data) or ignore_cache or (not data['data']):	# data['data']=None if table was empty, and in that case try again
             try:
                 data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger,
                                            force_query=force_query,
                                            startIndex=startIndex, 
-                                           maxResults=maxResults)
+                                           maxResults=maxResults, **optargs)
             except Exception as err:
                 logging.error(err)
                 if raise_exception:

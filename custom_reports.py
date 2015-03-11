@@ -398,12 +398,19 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if course_id:
             dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
             pdata['person_course'] = '[%s.person_course]' % dataset
+        elif 'dataset' in (crm.meta_info or {}):
+            dataset = crm.meta_info['dataset']
         else:
             dataset = self.get_course_report_dataset()
             # using course report dataset; list the tables, to determine which is the latest
             # person_course dataset, and use that for {person_course}
             pdata['person_course'] = '[%s.%s]' % (dataset, self.find_latest_person_course_table(dataset))
         pdata['dataset'] = dataset
+
+        # project_id specified?
+        optargs = {}
+        if 'project_id' in (crm.meta_info or {}):
+            optargs['project_id'] = crm.meta_info['project_id']
 
         # what table?  get custom course report configuration metadata for report name as specified
         table = crm.table_name
@@ -416,7 +423,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if '{' in table:
             table = table.format(**pdata)
             table = table.replace('-', '_').replace(' ', '_')
-        if not table.startswith('stats_'):
+        if not ('dataset' in (crm.meta_info or {})) and not table.startswith('stats_'):
             table = "stats_" + table
 
         # special handling for person_course table from particular dataset
@@ -433,7 +440,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             org_dataset = self.get_course_report_dataset(orgname=org)
             pdata['course_report__' + org] = org_dataset
 
-        logging.info("Using %s for custom report %s person_course" % (pdata['person_course'], report_name))
+        logging.info("Using %s for custom report %s person_course" % (pdata.get('person_course'), report_name))
 
         # generate SQL and depends_on
         error = None
@@ -480,6 +487,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                                               raise_exception=True,
                                               ignore_cache=force_query,
                                               force_query=force_query,
+                                              **optargs
             )
             self.fix_bq_dates(bqdata)
         except Exception as err:
@@ -501,7 +509,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         tablecolumns = []
         if pdata['get_table_columns']:
             try:
-                tableinfo = bqutil.get_bq_table_info(dataset, table)
+                tableinfo = bqutil.get_bq_table_info(dataset, table, **optargs)
             except Exception as err:
                 error = (error or "\n") + str(err)
                 tableinfo = None
