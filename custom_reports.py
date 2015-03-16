@@ -492,14 +492,14 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             self.fix_bq_dates(bqdata)
         except Exception as err:
             bqdata = {'data': None}
-            error = str(err)
+            error = "<pre>%s</pre>" % (str(err).replace('<','&lt;').replace('<','&gt;'))
             logging.error('custom report error %s' % error)
             logging.error(err)
             logging.error(traceback.format_exc())
             # raise
             if self.is_superuser():
                 msg = ('\n'.join(the_msg))
-                msg = msg.replace('<','&lt;')
+                msg = msg.replace('<','&lt;').replace('<','&gt;')
                 error += "<pre>%s</pre>" % msg
             data = {'error': error}
             self.response.headers['Content-Type'] = 'application/json'   
