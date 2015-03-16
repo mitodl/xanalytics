@@ -43,13 +43,15 @@
 <font color="red"><p>{{msg}}</p></font>
 {% endif %}
 
-<form method="POST">
+<form method="POST" id="cr_form">
+
+<input type="hidden" id="editor_heights" name="editor_heights" value=""/>
 
 <ul>
-<li>HTML: <textarea name='html' data-mode="text/html" rows="10" cols="80">{{report.html}}</textarea></li>
-<li>Javascript: <textarea name='javascript' data-mode="text/javascript" rows="20" cols="80">{{report.javascript}}</textarea></li>
+<li>HTML: <textarea name='html' data-name="html" data-mode="text/html" rows="10" cols="80">{{report.html}}</textarea></li>
+<li>Javascript: <textarea id="edit_js" data-name="js" name='javascript' data-mode="text/javascript" rows="20" cols="80">{{report.javascript}}</textarea></li>
 {% set report_sql_str = report.sql or '' %}
-<li>SQL: <textarea name='sql' data-mode="text/x-sql" rows="10" cols="80">{{report_sql_str}}</textarea></li>
+<li>SQL: <textarea name='sql' data-name="sql" data-mode="text/x-sql" rows="10" cols="80">{{report_sql_str}}</textarea></li>
 <li>Description: <textarea name='description' data-mode="text/html" rows="10" cols="80">{{report.description}}</textarea></li>
 </ul>
 
@@ -62,7 +64,7 @@
 <p>Group tags (comma separated): <input type="text" size="120" name="group_tags" value="{{rgt}}"/></p>
 <p>Meta Info (dict): <input type="text" size="120" name="meta_info" value="{{report.meta_info}}"/></p>
 
-<input type="submit" name="action" value="Save Changes"/>
+<input id="save_changes" type="submit" name="action" value="Save Changes"/>
 </form>
 
 
@@ -70,6 +72,8 @@
 <h2>View Page</h2>
 
 <p>Parameters (json): <input type="text" size="120" id="parameter_values" name="parameter_values" value="{{parameter_values}}"/></p>
+
+<p>common parameter values: {"force_query": true}</p>
 
 <button class="cr-view-button" data-name="{{report.name}}">View</button>
 
@@ -79,7 +83,9 @@
 <script type="text/javascript">
 $(document).ready( function () {
 
-    $('textarea').each(function(){
+    var cmset = {};
+
+    $('textarea').each(function(ta){
 	var data = $(this).data();
 	console.log('mode = ' + data.mode);
 	// $(this).resizable();
@@ -91,6 +97,8 @@ $(document).ready( function () {
 							      'lineNumbers': true,
 							      matchBrackets: true,
 							     });
+            jQuery.data(this, 'cm', myCodeMirror);
+	    cmset[data.name] = myCodeMirror;
 	    }
     });
 
@@ -131,6 +139,33 @@ $(document).ready( function () {
 		     );
 	});
 	
+    });
+
+    // if codemirror heights were provided, then set them now
+    var heights = {% autoescape off %}{{editor_heights}}{% endautoescape %};
+    console.log("heights = ", heights);
+    if (heights && heights.length){
+	heights.forEach(function(x){
+	    cm = cmset[x.name];
+	    if (cm){
+		cm.setSize('100%', x.height);
+		console.log("Resizing ", cm, 'to height ', x.height);
+	    }
+	});
+    }
+
+    // form submission: save codemirror box heights
+    $('#cr_form').submit(function(){
+	var heights = [];
+	$('textarea').each(function(){
+	    var data = $(this).data();
+	    if (data.name && data.cm){
+		heights.push({name: data.name, height: data.cm.getScrollInfo().clientHeight});
+	    }
+	});
+	$('#editor_heights').val(JSON.stringify(heights));
+	console.log('heights = ', heights);
+	console.log("Submitting form!");
     });
 
 });

@@ -196,6 +196,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             parameter_values = {}
         # self.session['edit_report_parameter_values'] = parameter_values
 
+        editor_heights = self.request.POST.get('editor_heights')
+        logging.info('[custom_reports] editor heights=%s' % editor_heights)
+
         msg = ''
         if (self.request.POST.get('action')=='Download Report'):
 
@@ -273,6 +276,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 'msg': msg,
                 'parameter_values': parameter_values,
                 'meta_info': json.dumps(crm.meta_info),
+                'editor_heights': editor_heights or "{}",
         }
         data.update(self.common_data)
 
