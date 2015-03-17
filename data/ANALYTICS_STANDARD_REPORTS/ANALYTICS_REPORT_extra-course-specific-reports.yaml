@@ -15,7 +15,9 @@
             <hr width="100%"/>
       {% autoescape off %}
             {{custom_report["grade-histograms-by-chapter-for-course"]}}
+      {% if parameter_values.dashboard_mode=="mooc" %}
             {{custom_report["attempts-correct-percentages"]}}
+      {% endif %}
             {{custom_report["time-on-task"]}}
      {% endautoescape %}
 
