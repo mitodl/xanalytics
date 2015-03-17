@@ -1,0 +1,302 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-16 20:39:51.346557
+  "depends_on": |-
+    ["{dataset}.problem_grades", "{dataset}.course_axis"]
+  "description": "Plots showing distributions of grades for each chapter.  This is\
+    \ not a true grade report, but it\r\nis an approximation, in which individual\
+    \ problems within a chapter are equally weighted, and summed\r\nto give the chapter\
+    \ grade for each user.  Min, mean, median, max, and standard deviations are given\r\
+    \nwith each distribution."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+
+    $.getJSON(
+      '/custom/get_report_data/{{report_name}}',
+      parameters,
+
+      function(data) {
+
+        var nplots = 0;
+
+        html = '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+        if (data.error){
+          html = "Error!  " + data.error;
+          console.log('error = ', data.error);
+        }
+        $('#contain-{{report_name}}').html(html);
+        if (data.error){ return; }
+
+        // make data table
+        var table = $('#table-{{report_name}}').DataTable({
+          dom: 'T<"clear">lfrtip',
+          "columns": data['tablecolumns'],
+          "pageLength": 10,
+          searching: true,
+          ordering: true,
+          data: data['data'],
+        });
+
+
+        var add_new_plot = function(optarg){
+          optarg = optarg || {};
+
+          nplots += 1;
+          var div_id = "plot" + String(nplots) + "-{{report_name}}";
+          var html = '<div id="' + div_id + '" style="height: ' + (optarg.height || 400) + 'px"></div>'
+          $('#contain-{{report_name}}').append(html);
+          return div_id;
+        }
+
+        var make_scatter_plot = function(plot_title, series, optarg){
+
+          optarg = optarg || {};
+          var div_id = add_new_plot(optarg);
+
+          console.log("series = ", series);
+
+          // plot data
+          var chart = new Highcharts.Chart({
+            chart: { type: 'scatter',  zoomType: 'xy', renderTo: div_id },
+            credits: {  enabled: false  },
+            title : { text : plot_title,},
+            subtitle: { text: optarg.subtitle },
+            xAxis: { title: { text: optarg.xtitle } },
+            yAxis: { title: { text: optarg.ytitle},  min: optarg.ymin },
+            plotOptions: {
+              scatter: {
+                marker: { radius: 10 },
+                tooltip: {
+                  headerFormat: '<b>{series.name}</b><br>',
+                  pointFormat: optarg.pointFormat || '{point.name}',
+                }
+              }
+            },
+            series : series,
+          });
+          return chart;
+        }
+
+        var make_bar_plot = function(plot_title, xcategories, series, optarg){
+
+          optarg = optarg || {};
+          var div_id = add_new_plot(optarg);
+
+          $('#'+div_id).highcharts({
+            chart:   {  type: 'column', zoomType: 'x' },
+            credits: {  enabled: false  },
+            title :  {  text : plot_title },
+            subtitle: { text: optarg.subtitle },
+            xAxis: { categories: xcategories, title: optarg.xtitle  },
+            yAxis: { title: optarg.ytitle },
+            series : series,
+          });
+        }
+
+        // make_bar_plot('test hist', ['a','b','c'], [{name:'test', data:[1,2,3]}]);
+
+
+        var make_series = function(xcol, ycol, optarg){
+          optarg = optarg || {};
+          var sdat = [];
+          var series = [ {name: optarg.name || "Data", data: sdat} ];
+          data['data'].forEach(function(x){
+            if (x[xcol]==null){ return; }
+            if (x[xcol]==null){ return; }
+            xv = Number(x[xcol]);
+            yv = Number(x[ycol]);
+            sdat.push({x: xv, y: yv, name: x[optarg.namecol || 'course_id']});
+          });
+
+          if (optarg.fit_line){
+            series[0]['regression'] = true;
+            series[0]['regressionSettings'] = { type: 'linear',
+                                               // states: { hover: { lineWidth: 0 } },
+                                               enableMouseTracking: false,
+                                              }
+          }
+
+          return series;
+        }
+
+        // specific code for chapter grade histograms
+        // loop over data and generate data series for each chapter
+
+        var chapters = data['data'];
+        chapters.sort(function(a,b){ return a.course_axis_index - b.course_axis_index; });
+
+        chapters.forEach(function(x){
+
+          var max_grade = Number(x.chapter_max_grade);
+          var sdat = [];
+          var series = [{name:'Grade', data: sdat}];
+          var categories = [];
+          var nbins = 10;
+          var dg = max_grade / 10;
+          for (var k=0; k<nbins; k++){
+            categories.push((k*dg).toFixed(2) +" to "+ ((k+1)*dg).toFixed(2));
+            sdat.push(Number(x['n_' + (k+1) + '_of_' + nbins]));
+          }
+          console.log('series for ', x, ' = ', series);
+          make_bar_plot('Grades Histogram for ' + x.chapter_name, categories, series,
+                        {xtitle:"Sum of grades of problems in chapter for a given learner",
+                         ytitle:"Number of learners with grade",
+                         subtitle: ("min=" + Number(x.min_grade).toFixed(2)
+                                    + ", max=" + Number(x.max_grade).toFixed(2)
+                                    + ", avg=" + Number(x.avg_grade).toFixed(2)
+                                    + ", median=" + Number(x.median_grade)
+                                    + ", sdv=" + Number(x.sdv_grade).toFixed(2)
+                                    + ", N=" + Number(x.n_total)
+                                   ),
+                        });
+        });
+
+      } );
+  "meta_info":
+    !!python/unicode "require_table": !!python/unicode |-
+      problem_grades
+  "name": |-
+    grade-histograms-by-chapter-for-course
+  "sql": |-
+    # compute grade histograms by chapter
+    SELECT A.chapter_mid as chapter_mid,
+       CA.name as chapter_name,
+       CA.due as due_date,
+       CA.index as course_axis_index,
+       A.chapter_max_grade as chapter_max_grade,
+       A.n_total as n_total,
+       A.avg_grade as avg_grade,
+       A.median_grade as median_grade,
+       A.min_grade as min_grade,
+       A.max_grade as max_grade,
+       A.sdv_grade as sdv_grade,
+       A.hist_grade_delta as hist_grade_delta,
+       # A.n_1_of_20 as n_1_of_20, A.n_2_of_20 as n_2_of_20,
+       # A.n_3_of_20 as n_3_of_20, A.n_4_of_20 as n_4_of_20,
+       # A.n_5_of_20 as n_5_of_20, A.n_6_of_20 as n_6_of_20,
+       # A.n_7_of_20 as n_7_of_20, A.n_8_of_20 as n_8_of_20,
+       # A.n_9_of_20 as n_9_of_20, A.n_10_of_20 as n_10_of_20,
+       # A.n_11_of_20 as n_11_of_20, A.n_12_of_20 as n_12_of_20,
+       # A.n_13_of_20 as n_13_of_20, A.n_14_of_20 as n_14_of_20, A.n_15_of_20 as n_15_of_20,
+       # A.n_16_of_20 as n_16_of_20, A.n_17_of_20 as n_17_of_20, A.n_18_of_20 as n_18_of_20,
+       # A.n_19_of_20 as n_19_of_20, A.n_20_of_20 as n_20_of_20,
+       A.n_1_of_10 as n_1_of_10, A.n_2_of_10 as n_2_of_10, A.n_3_of_10 as n_3_of_10,
+       A.n_4_of_10 as n_4_of_10, A.n_5_of_10 as n_5_of_10, A.n_6_of_10 as n_6_of_10,
+       A.n_7_of_10 as n_7_of_10, A.n_8_of_10 as n_8_of_10, A.n_9_of_10 as n_9_of_10,
+       A.n_10_of_10 as n_10_of_10
+
+    FROM
+    (
+        # one row for each chapter
+        SELECT
+            chapter_mid,
+            # sum(case when (0*chmax/20 <= chgrade) and (chgrade < 1*chmax/20) then 1 else 0 end) as n_1_of_20,
+            # sum(case when (1*chmax/20 <= chgrade) and (chgrade < 2*chmax/20) then 1 else 0 end) as n_2_of_20,
+            # sum(case when (2*chmax/20 <= chgrade) and (chgrade < 3*chmax/20) then 1 else 0 end) as n_3_of_20,
+            # sum(case when (3*chmax/20 <= chgrade) and (chgrade < 4*chmax/20) then 1 else 0 end) as n_4_of_20,
+            # sum(case when (4*chmax/20 <= chgrade) and (chgrade < 5*chmax/20) then 1 else 0 end) as n_5_of_20,
+            # sum(case when (5*chmax/20 <= chgrade) and (chgrade < 6*chmax/20) then 1 else 0 end) as n_6_of_20,
+            # sum(case when (6*chmax/20 <= chgrade) and (chgrade < 7*chmax/20) then 1 else 0 end) as n_7_of_20,
+            # sum(case when (7*chmax/20 <= chgrade) and (chgrade < 8*chmax/20) then 1 else 0 end) as n_8_of_20,
+            # sum(case when (8*chmax/20 <= chgrade) and (chgrade < 9*chmax/20) then 1 else 0 end) as n_9_of_20,
+            # sum(case when (9*chmax/20 <= chgrade) and (chgrade < 10*chmax/20) then 1 else 0 end) as n_10_of_20,
+            # sum(case when (10*chmax/20 <= chgrade) and (chgrade < 11*chmax/20) then 1 else 0 end) as n_11_of_20,
+            # sum(case when (11*chmax/20 <= chgrade) and (chgrade < 12*chmax/20) then 1 else 0 end) as n_12_of_20,
+            # sum(case when (12*chmax/20 <= chgrade) and (chgrade < 13*chmax/20) then 1 else 0 end) as n_13_of_20,
+            # sum(case when (13*chmax/20 <= chgrade) and (chgrade < 14*chmax/20) then 1 else 0 end) as n_14_of_20,
+            # sum(case when (14*chmax/20 <= chgrade) and (chgrade < 15*chmax/20) then 1 else 0 end) as n_15_of_20,
+            # sum(case when (15*chmax/20 <= chgrade) and (chgrade < 16*chmax/20) then 1 else 0 end) as n_16_of_20,
+            # sum(case when (16*chmax/20 <= chgrade) and (chgrade < 17*chmax/20) then 1 else 0 end) as n_17_of_20,
+            # sum(case when (17*chmax/20 <= chgrade) and (chgrade < 18*chmax/20) then 1 else 0 end) as n_18_of_20,
+            # sum(case when (18*chmax/20 <= chgrade) and (chgrade < 19*chmax/20) then 1 else 0 end) as n_19_of_20,
+            # sum(case when (19*chmax/20 <= chgrade) and (chgrade <= 20*chmax/20) then 1 else 0 end) as n_20_of_20,
+
+            sum(case when (0*chmax/10 <= chgrade) and (chgrade < 1*chmax/10) then 1 else 0 end) as n_1_of_10,
+            sum(case when (1*chmax/10 <= chgrade) and (chgrade < 2*chmax/10) then 1 else 0 end) as n_2_of_10,
+            sum(case when (2*chmax/10 <= chgrade) and (chgrade < 3*chmax/10) then 1 else 0 end) as n_3_of_10,
+            sum(case when (3*chmax/10 <= chgrade) and (chgrade < 4*chmax/10) then 1 else 0 end) as n_4_of_10,
+            sum(case when (4*chmax/10 <= chgrade) and (chgrade < 5*chmax/10) then 1 else 0 end) as n_5_of_10,
+            sum(case when (5*chmax/10 <= chgrade) and (chgrade < 6*chmax/10) then 1 else 0 end) as n_6_of_10,
+            sum(case when (6*chmax/10 <= chgrade) and (chgrade < 7*chmax/10) then 1 else 0 end) as n_7_of_10,
+            sum(case when (7*chmax/10 <= chgrade) and (chgrade < 8*chmax/10) then 1 else 0 end) as n_8_of_10,
+            sum(case when (8*chmax/10 <= chgrade) and (chgrade < 9*chmax/10) then 1 else 0 end) as n_9_of_10,
+            sum(case when (9*chmax/10 <= chgrade) and (chgrade <= 10*chmax/10) then 1 else 0 end) as n_10_of_10,
+
+            chmax as chapter_max_grade,
+            chmax / 20 as hist_grade_delta,
+            count(*) as n_total,
+            median_grade as median_grade,
+            AVG(chgrade) as avg_grade,
+            min(chgrade) as min_grade,
+            max(chgrade) as max_grade,
+            stddev(chgrade) as sdv_grade,
+        FROM
+        (
+            # take the global-within-chapter user_chapter_max_grade over all users as the max_chapter_grade
+            # so we can then use that for computing the histogram
+            SELECT
+                *,
+                PERCENTILE_DISC(0.5) over (partition by chapter_mid order by chgrade) as median_grade,
+                NTH_VALUE(user_chapter_max_grade, 1)
+                    over (partition by chapter_mid order by user_chapter_max_grade desc) as chmax,
+            FROM
+            (
+                # sum grades for each user in chapter, weighting all problems equally within each chapter
+                SELECT
+                    user_id,
+                    chapter_mid,
+                    sum(max_grade) as user_chapter_max_grade,
+                    sum(grade) as chgrade,
+                    max(due_date) as due_date_max,
+                    min(due_date) as due_date_min,
+                FROM
+                (
+                    # get chapter ID's for each problem
+                    SELECT PG.user_id as user_id,
+                      PG.module_id as module_id,
+                      PG.grade as grade,
+                      PG.max_grade as max_grade,
+                      CA.name as name,
+                      CA.gformat as gformat,
+                      CA.chapter_mid as chapter_mid,
+                      CA.due as due_date,
+                    FROM [{dataset}.problem_grades] as PG
+                    JOIN (
+                        SELECT *,
+                            CONCAT('i4x://', module_id) as i4x_module_id,
+                        FROM [{dataset}.course_axis]
+                    ) as CA
+                    ON CA.i4x_module_id = PG.module_id
+                    WHERE PG.grade is not null
+                    order by due_date
+                )
+                group by user_id, chapter_mid,
+                order by due_date_max, chapter_mid, user_id
+            )
+            order by chapter_mid, user_id
+        )
+        group by chapter_mid, chapter_max_grade, hist_grade_delta, median_grade
+        order by chapter_mid
+    ) as A
+    JOIN (
+                        SELECT *,
+                            CONCAT('i4x://', module_id) as i4x_module_id,
+                        FROM [{dataset}.course_axis]
+    ) as CA
+    ON A.chapter_mid = CA.module_id
+    order by course_axis_index
+  "table_name": |-
+    stats_grade_histograms_by_chapter
+  "title": |-
+    Grade histograms by chapter for course
