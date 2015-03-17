@@ -13,7 +13,9 @@
     <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
 
             <hr width="100%"/>
+        {% autoescape off %}
             {{custom_report["age-histogram"]}}
+        {% endautoescape %}
 
 
     </div>
