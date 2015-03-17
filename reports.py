@@ -103,6 +103,7 @@ class Reports(object):
 
                 parameters = {x:v for x,v in pdata.items() if v is not None}
                 parameters['orgname'] = other.ORGNAME
+                parameters['dashboard_mode'] = other.MODE	# 'mooc' or '' (empty meaning residential, non-mooc)
                 
                 if 'require_table' in (crm.meta_info or []):
                     table = crm.meta_info['require_table']

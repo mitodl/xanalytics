@@ -313,6 +313,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         parameters = {x:v for x,v in pdata.items() if v is not None}
         parameters['orgname'] = self.ORGNAME
+        parameters['dashboard_mode'] = self.MODE	# 'mooc' or '' (empty meaning residential, non-mooc)
 
         render_data = {'report_name': report_name,
                        'parameters': json.dumps(parameters),	# for js
