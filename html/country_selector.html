@@ -252,8 +252,25 @@
         <option value="Zambia" data-alternative-spellings="ZM">Zambia</option>
         <option value="Zimbabwe" data-alternative-spellings="ZW">Zimbabwe</option>
       </select>
-      
     </div>
+    <input type="hidden" id="country_two_letter_code" name="country_two_letter_code" value=""/>
 <script>
     $( '#country-selector' ).selectToAutocomplete();
+
+var set_country_two_code = function(){
+  var cname = $('#country-selector').val();
+  if (cname){
+    console.log("looking for cc for ", cname);
+    $('#country-selector').find('option').each(function(){
+      var ocname = $(this).val();
+      if (cname==ocname){
+        var cc = $(this).data().alternativeSpellings.split(' ')[0];
+        $('#country_two_letter_code').val(cc);
+        console.log("setting coutry ", cname, " to cc=", cc);
+      }
+    });
+  }
+}
+
+    $('#country-selector').change(set_country_two_code);
 </script>

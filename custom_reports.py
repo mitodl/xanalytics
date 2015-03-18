@@ -123,7 +123,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         # params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
         params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 
-                  'get_table_columns', 'force_query',
+                  'get_table_columns', 'force_query', 'sql_flags', "ignore_cache",
                   'group_tag']
         pdata = {}
         for param in params:
@@ -399,6 +399,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         force_query = pdata.get('force_query', False)
         if force_query == 'false':
             force_query = False
+        ignore_cache = pdata.get('ignore_cache', False) or force_query
 
         if course_id:
             dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
@@ -447,20 +448,81 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         logging.info("Using %s for custom report %s person_course" % (pdata.get('person_course'), report_name))
 
-        # generate SQL and depends_on
         error = None
-        try:
-            sql = crm.sql.format(**pdata)
-        except Exception as err:
-            logging.error("Custom report data: failed to prepare SQL, err=%s" % str(err))
-            logging.error('pdata = %s' %  pdata)
-            raise
+
+        # dynamic sql: the SQL is allowed to change based on input parameters
+        # do this by treating the SQL as a jinja2 tempate
+        if crm.meta_info.get('dynamic_sql'):
+            if 'sql_flags' in pdata:
+                if not type(pdata['sql_flags'])==dict:
+                    try:
+                        pdata['sql_flags'] = json.loads(pdata['sql_flags'])
+                    except Exception as err:
+                        msg = "Cannot parse sql_flags as JSON!  sql_flags=%s" % pdata['sql_flags']
+                        msg += err
+                        logging.error(msg)
+                        raise Exception(msg)
+
+            # a little sanity checking - disallow spaces in any sql_flags values
+            sf = pdata['sql_flags']
+            for k in sf:
+                if ' ' in sf[k]:
+                    msg = "Illegal sql_flags %s=%s!" % (k, sf[k])
+                    msg += "sql_flags = %s" % json.dumps(sf, indent=4)
+                    error = "<pre>%s</pre>" % (msg.replace('<','&lt;').replace('<','&gt;'))
+                    data = {'error': error}
+                    self.response.headers['Content-Type'] = 'application/json'   
+                    self.response.out.write(json.dumps(data))
+                    return
+
+            try:
+                sql_template = Template(crm.sql)
+                sql = sql_template.render(pdata)
+            except Exception as err:
+                msg = 'Custom report data: failed to render dynamic SQL with pdata=%s, err=%s' % (pdata, err)
+                logging.error(msg)
+                logging.error('sql=%s' % crm.sql)
+                error = "<pre>%s</pre>" % (msg.replace('<','&lt;').replace('<','&gt;'))
+                data = {'error': error}
+                self.response.headers['Content-Type'] = 'application/json'   
+                self.response.out.write(json.dumps(data))
+                return
+
+            force_query = True		# for now, all dynamic_sql is done with force_query
+
+        else:
+            # generate SQL and depends_on
+            try:
+                sql = crm.sql.format(**pdata)
+            except Exception as err:
+                msg = "Custom report data: failed to prepare SQL, err=%s" % str(err)
+                msg += '\npdata = %s' %  pdata
+                logging.error(msg)
+                if self.is_superuser():
+                    error = "<pre>%s</pre>" % (str(msg).replace('<','&lt;').replace('<','&gt;'))
+                    data = {'error': error}
+                    self.response.headers['Content-Type'] = 'application/json'   
+                    self.response.out.write(json.dumps(data))
+                    return
+                raise
+
         def strip_brackets(x):
             x = x.strip()
             if x.startswith('[') and x.endswith(']'):
                 x = x[1:-1]
                 return x
             return x
+
+        if crm.meta_info.get('debug_sql'):
+            msg = "debug_sql is true; not running SQL.  This is the SQL which would have been run:\n"
+            msg += sql
+            msg += "\n\nwith these parameters:\n"
+            msg += json.dumps(pdata, indent=4)
+            error = "<pre>%s</pre>" % (msg.replace('<','&lt;').replace('<','&gt;'))
+            data = {'error': error}
+            self.response.headers['Content-Type'] = 'application/json'   
+            self.response.out.write(json.dumps(data))
+            return
 
         try:
             if crm.depends_on and (not crm.depends_on=="None"):
@@ -490,7 +552,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                                               startIndex=int(pdata['start'] or 0), 
                                               maxResults=int(pdata['length'] or 100000),
                                               raise_exception=True,
-                                              ignore_cache=force_query,
+                                              ignore_cache=ignore_cache,
                                               force_query=force_query,
                                               **optargs
             )
@@ -506,6 +568,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 msg = ('\n'.join(the_msg))
                 msg = msg.replace('<','&lt;').replace('<','&gt;')
                 error += "<pre>%s</pre>" % msg
+                error += "SQL: <pre>%s</pre>" % sql
+                error += "Parameters: <pre>%s</pre>" % json.dumps(pdata, indent=4)
             data = {'error': error}
             self.response.headers['Content-Type'] = 'application/json'   
             self.response.out.write(json.dumps(data))
@@ -528,6 +592,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         data = self.common_data.copy()
         data.update({'data': bqdata['data'],
                      'draw': pdata['draw'],
+                     'fields': bqdata['fields'],
                      'recordsTotal': bqdata.get('numRows', 0),
                      'recordsFiltered': bqdata.get('numRows', 0),
                      'error': error,

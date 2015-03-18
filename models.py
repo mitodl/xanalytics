@@ -57,3 +57,6 @@ class CustomReport(ndb.Model):
     # require_table - provide table name or dataset.table ; if this doesn't exist, then the custom report is not shown
     # dataset       - used to override BigQuery dataset which would otherwise be used, as long as it's not a course_id specific one
     # project_id    - used to override BigQuery project_id which would otherwise be used
+    # dynamic_sql   - true makes the SQL get passed through a jina2 template filter with parameters, before being executed;
+    #                 a hash of the final SQL is also appended to the table name.
+    # debug_sql     - true makes the SQL not actually run, and instead an error message is returned with the SQL which would have been run
