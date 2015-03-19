@@ -104,9 +104,17 @@ class Reports(object):
                 parameters = {x:v for x,v in pdata.items() if v is not None}
                 parameters['orgname'] = other.ORGNAME
                 parameters['dashboard_mode'] = other.MODE	# 'mooc' or '' (empty meaning residential, non-mooc)
+                parameters['course_report'] = other.get_course_report_dataset()
+                parameters['course_report_org'] = other.get_course_report_dataset(force_use_org=True)
+                parameters['orgname'] = self.ORGNAME
                 
                 if 'require_table' in (crm.meta_info or []):
                     table = crm.meta_info['require_table']
+                    if '{' in table:
+                        try:
+                            table = table.format(**parameters)
+                        except Exception as err:
+                            logging.error("Cannot substitute for parameters in require_table=%s, err=%s" % (table, err))
                     if '.' in table:
                         (dataset, table) = table.split('.', 1)
                     else:

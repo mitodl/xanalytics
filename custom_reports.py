@@ -316,6 +316,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         parameters['dashboard_mode'] = self.MODE	# 'mooc' or '' (empty meaning residential, non-mooc)
 
         render_data = {'report_name': report_name,
+                       'orgname': self.ORGNAME,
                        'parameters': json.dumps(parameters),	# for js
                        'parameter_values': parameters,		# for html template variables
                        'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, 
@@ -390,6 +391,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         {person_course} --> person_course table for the specific course
         {dataset} --> dataset for the specific course
+        {course_report} --> course_report_* dataset for the ORG or latest
+        {course_report_org} --> course_report_ORG dataset for ORG = ORGANIZATION_NAME
+        {orgname} --> organization name
         
         '''
         crm, pdata, auth_ok, msg = self.custom_report_auth_check(report_name)	# crm = CourseReport model
@@ -412,6 +416,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             # person_course dataset, and use that for {person_course}
             pdata['person_course'] = '[%s.%s]' % (dataset, self.find_latest_person_course_table(dataset))
         pdata['dataset'] = dataset
+        pdata['course_report'] = self.get_course_report_dataset()
+        pdata['course_report_org'] = self.get_course_report_dataset(force_use_org=True)
+        pdata['orgname'] = self.ORGNAME
 
         # project_id specified?
         optargs = {}

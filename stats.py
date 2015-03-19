@@ -778,11 +778,11 @@ class DataStats(object):
                                         depends_on=['%s.person_course' % dataset])
 
 
-    def get_course_report_dataset(self, orgname=None):
+    def get_course_report_dataset(self, orgname=None, force_use_org=False):
         dataset = "course_report"
         if orgname:
             return dataset + "_" + orgname
-        elif self.use_dataset_latest():
+        elif (self.use_dataset_latest()) and (not force_use_org):
             dataset += '_latest'
         else:
             dataset += '_' + self.ORGNAME.split(' ')[-1]
