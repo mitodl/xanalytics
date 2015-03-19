@@ -489,11 +489,15 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 return
 
             force_query = True		# for now, all dynamic_sql is done with force_query
-
+            ignore_cache = True
+            the_sql = sql
         else:
+            the_sql = crm.sql
+
+        if 1:
             # generate SQL and depends_on
             try:
-                sql = crm.sql.format(**pdata)
+                sql = the_sql.format(**pdata)
             except Exception as err:
                 msg = "Custom report data: failed to prepare SQL, err=%s" % str(err)
                 msg += '\npdata = %s' %  pdata

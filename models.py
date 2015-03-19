@@ -43,12 +43,13 @@ class CustomReport(ndb.Model):
     
     # defined group_tag values:
     #
-    # course   - require course_id
-    # group    - require group_tag
-    # role:pm  - require role "PM" (project manager)
-    # role:XXX - require role XXX 
-    # open     - anyone can access
-    # instructor - require user to be instructor of specified course (pm not sufficient)
+    # course      - require course_id
+    # group       - require group_tag
+    # role:pm     - require role "PM" (project manager)
+    # role:XXX    - if role XXX then authorize
+    # open        - anyone can access
+    # instructor  - require user to be instructor of specified course (pm not sufficient)
+    # require:XXX - require role XXX else deny auth (overrides role:XXX)
 
     # defined meta_info keys:
     #

@@ -1065,6 +1065,13 @@ class DataStats(object):
 
         if self.user in self.AUTHORIZED_USERS:	# superuser gets access
             auth_ok = True
+        else:
+            for tag in (crm.group_tags or []):
+                if tag.startswith('require:'):
+                    role = tag.split(':',1)[1]
+                    if not self.does_user_have_role(role):
+                        auth_ok = False	# override even if was True before
+                        logging.info("Required role=%s for report=%s not authorized for user=%s" % (role, crm.name, self.user))
 
         if not auth_ok:
             logging.error("Authorization DENIED for user=%s report=%s, group_tags=%s" % (self.user, crm.name, crm.group_tags))
