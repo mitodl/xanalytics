@@ -106,7 +106,7 @@ class Reports(object):
                 parameters['dashboard_mode'] = other.MODE	# 'mooc' or '' (empty meaning residential, non-mooc)
                 parameters['course_report'] = other.get_course_report_dataset()
                 parameters['course_report_org'] = other.get_course_report_dataset(force_use_org=True)
-                parameters['orgname'] = self.ORGNAME
+                parameters['orgname'] = other.ORGNAME
                 
                 if 'require_table' in (crm.meta_info or []):
                     table = crm.meta_info['require_table']
