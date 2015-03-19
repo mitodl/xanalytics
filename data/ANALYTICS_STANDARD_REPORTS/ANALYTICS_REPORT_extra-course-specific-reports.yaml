@@ -19,6 +19,9 @@
             {{custom_report["attempts-correct-percentages"]}}
       {% endif %}
             {{custom_report["time-on-task"]}}
+      {% if is_staff %}
+            {{custom_report["cohort-master-report"]}}
+      {% endif %}
      {% endautoescape %}
 
     </div>
