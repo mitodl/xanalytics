@@ -1,0 +1,419 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-18 18:35:34.047320
+  "depends_on": |-
+    None
+  "description": "Report generated for a specific, already filtered, cohort of learners.\r\
+    \nProvides geography, activity, and performance analyses."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  - !!python/unicode |-
+    require:expt
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {{parameters}};
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var nplots = 0;
+      var ntables = 0;
+      var data = {};
+      var course_id;
+
+      var report_div = $('#contain-{{report_name}}');
+
+      // add html
+      var add_html = function(html){
+        report_div.append(html);
+      }
+
+      // make data table
+      var make_table = function(table_title, tablecolumns, tabledata, optarg){
+            optarg = optarg || {};
+        ntables += 1;
+        var div_id = "table_" + ntables + "_{{report_name}}";
+        html = "<h4>" + table_title + "</h4>";
+        html += '<table id="' + div_id + '" class="display" width="100%"></table>';
+        report_div.append(html);
+        // console.log('tablecolumns=', tablecolumns, ', tabledata=', tabledata);
+        var table = $('#' + div_id).DataTable({
+          dom: 'T<"clear">lfrtip',
+          "columns": tablecolumns,
+          "pageLength": 10,
+          searching: true,
+          ordering: true,
+          data: tabledata,
+          order: optarg.order,
+        });
+      }
+
+      var add_new_plot = function(optarg){
+        optarg = optarg || {};
+
+        nplots += 1;
+        var div_id = "plot" + String(nplots) + "-{{report_name}}";
+        var html = '<div id="' + div_id + '" style="height: ' + (optarg.height || 400) + 'px"></div>'
+        report_div.append(html);
+        return div_id;
+      }
+
+      var make_pie_chart = function(pdata, plot_title, optarg){
+        // make a pie chart
+        // pdata should be an array of [region, nregion]
+            var div_id = add_new_plot(optarg);
+        // var pdata = aggdat(region_colname, gs_colname);
+        var pie_series = [{type: 'pie', name: 'Region', data: pdata}];
+        // console.log("pie chart to ", div_id, " pdata=", pdata);
+
+        $('#'+div_id).highcharts({ chart: { plotBackgroundColor: null,  plotBorderWidth: null, plotShadow: false },
+                              title: { text: plot_title},
+                              tooltip: { pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'  },
+                              credits: {  enabled: false  },
+                              plotOptions: {
+                                pie: {
+                                  allowPointSelect: true,
+                                  cursor: 'pointer',
+                                  dataLabels: {
+                                    enabled: true,
+                                    format: '<b>{point.name}</b>: {point.percentage:.1f} % (n={point.y})',
+                                    style: {
+                                      color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                                    }
+                                  }
+                                }
+                              },
+                              series: pie_series,
+                             });
+      };
+
+      var make_histogram_plot = function(plot_title, xcategories, series, optarg){
+
+        optarg = optarg || {};
+        var div_id = add_new_plot(optarg);
+
+        console.log("histogram to ", div_id, "series=", series);
+
+        $('#'+div_id).highcharts({
+          chart: {     type: 'column', zoomType: 'x' },
+          credits: {  enabled: false  },
+          title : {   text : plot_title },
+          xAxis: {        categories: xcategories  },
+          yAxis: {
+            type: 'logarithmic',
+            minorTickInterval: 0.1
+          },
+          series : series,
+          plotOptions: {
+            column: {
+              pointPadding: 0,
+              borderWidth: 0,
+              groupPadding: 0,
+              shadow: false
+            }
+          },
+        });
+      }
+
+      var make_counts = function(tdata, colname){
+        // return counts of number of occurences of each value in a column
+        var totals = {};
+        var sum = 0;
+        tdata.forEach(function(x){
+          var cc = x[colname];
+          if (!cc){ return; }         // ignore blanks
+          if (!totals[cc]){ totals[cc] = 1 }
+          else{ totals[cc] += 1; }
+          sum += 1;
+        });
+
+        var pdata = [];
+        var tabledata = [];
+        Object.keys(totals).forEach(function(cc){
+          pdata.push([cc, totals[cc]]);
+          var pct = totals[cc] / sum * 100;
+          pct = pct.toFixed(2);
+          tabledata.push({'cc': cc, count: totals[cc], percentage: pct});
+        });
+        return({totals: totals,
+                pdata: pdata,
+                tabledata: tabledata,
+               });
+      }
+
+
+      var report_geography = function(tdata){
+        var country_totals = make_counts(tdata, 'countryLabel');
+
+        add_html("<h3>Cohort Report: Geography</h3>");
+
+        country_totals.pdata.sort(function(a,b){ return b[1]-a[1]; });
+        make_pie_chart(country_totals.pdata, "Distribution of countries in cohort from " + course_id);
+        make_table('[' + course_id + '] Cohort Top Countries',
+                   [{data: 'cc', title: 'Country', class: 'dt-center'},
+                    {data: 'count', title: 'Count', class: 'dt-center'},
+                    {data: 'percentage', title: '% of total', class: 'dt-center'}],
+                   country_totals.tabledata,
+                   {order: [1, 'desc']}
+                  );
+
+            var city_totals = make_counts(tdata, 'city');
+        make_table('[' + course_id + '] Cohort Top Cities',
+                   [{data: 'cc', title: 'City', class: 'dt-center'},
+                    {data: 'count', title: 'Count', class: 'dt-center'},
+                    {data: 'percentage', title: '% of total', class: 'dt-center'}],
+                   city_totals.tabledata,
+                   {order: [1, 'desc']}
+                   );
+
+            var email_totals = make_counts(tdata, 'email_domain');
+        make_table('[' + course_id + '] Cohort Top Email Domains',
+                   [{data: 'cc', title: 'Email Domain', class: 'dt-center'},
+                    {data: 'count', title: 'Count', class: 'dt-center'},
+                    {data: 'percentage', title: '% of total', class: 'dt-center'}],
+                   email_totals.tabledata,
+                   {order: [1, 'desc']}
+                   );
+      }
+
+      var zeros = function(n){
+        return Array.apply(null, new Array(n)).map(Number.prototype.valueOf,0);
+      }
+
+      var make_histogram = function(tdata, colname, plot_title, optarg){
+        // histogram of specific column of data
+        optarg = optarg || {};
+        var dvec = [];
+        tdata.forEach(function(x){
+          var xval = x[colname];
+          if (xval){        // skip nulls
+            dvec.push(Number(xval));
+          }
+        });
+        var vmax = math.max(dvec);
+        var vmin = math.min(dvec);
+        // make buckets
+        var nbins = 20;
+        var dv = (vmax-vmin)/nbins;
+        console.log("histogram min=", vmin, ", max=", vmax, ", dv=", dv);
+        var hdata = zeros(nbins);      // histogram counts
+        dvec.forEach(function(x){
+          var idx = math.floor((x-vmin) / dv);
+          if (idx > (nbins-1)){ idx = nbins-1; }  // put max in highest bin
+          hdata[idx] += 1;
+        });
+        var xcategories = [];
+        for(var k=0; k<nbins; k++){
+          xcategories[k] = (vmin + k*dv).toFixed(optarg.xprecision || 2);
+        }
+        make_histogram_plot(plot_title, xcategories, [{name: colname + " counts",
+                                                       data: hdata}], optarg);
+      }
+
+      var report_activity = function(tdata){
+        // histograms of events, etc.
+
+        add_html("<h3>Cohort Report: Activity</h3>");
+
+        make_histogram(tdata, 'n_events_over_interval', 'Histogram of number of tracking log events by cohort [' + course_id + "]");
+        make_histogram(tdata, 'nforum_posts', 'Histogram of number of forum posts by cohort [' + course_id + "]");
+      }
+
+      var report_demographics = function(tdata){
+        // tables of demographics
+
+        add_html("<h3>Cohort Report: Demographics</h3>");
+
+            var loe_totals = make_counts(tdata, 'LoE');
+        make_table('[' + course_id + '] Cohort Level of Education',
+                   [{data: 'cc', title: 'Level of Education', class: 'dt-center'},
+                    {data: 'count', title: 'Count', class: 'dt-center'},
+                    {data: 'percentage', title: '% of total', class: 'dt-center'}],
+                   loe_totals.tabledata,
+                   {order: [1, 'desc']}
+                   );
+            var gender_totals = make_counts(tdata, 'gender');
+        make_table('[' + course_id + '] Cohort Gender',
+                   [{data: 'cc', title: 'Gender', class: 'dt-center'},
+                    {data: 'count', title: 'Count', class: 'dt-center'},
+                    {data: 'percentage', title: '% of total', class: 'dt-center'}],
+                   gender_totals.tabledata,
+                   {order: [1, 'desc']}
+                   );
+      }
+
+      var process_data = function(ajax_data){
+        data['data'] = ajax_data['data'];
+        html = '';
+        // console.log("Processing data ", data);
+        if (data.error){
+          html = "Error!  " + data.error;
+          console.log('error = ', data.error);
+        }
+        report_div.html(html);
+        if (data.error){ return; }
+
+        var tdata = data['data'];
+            course_id = tdata[0]['course_id'];
+        add_html('<h3>Cohort Report for ' + course_id + ': Overall Statistics</h3>');
+
+        stats = '<ul><li>Total number of learners: ' + tdata.length + "</li>";
+        stats += "</ul>";
+        add_html(stats);
+            add_html('<br/>');
+
+        report_geography(tdata);
+        report_demographics(tdata);
+        report_activity(tdata);
+        present_scatter_plot_explorer(ajax_data);
+            add_html('<br/>');
+            make_table('All cohort data', ajax_data['tablecolumns'], ajax_data['data']);
+      }
+
+
+      var present_scatter_plot_explorer = function(bqdata){
+        // interactive scatter plot builder
+
+        add_html("<h3>Cohort Report: Interactive Scatter Plot Builder</h3>");
+
+        var option_html = "<option value='' selected='selected'>Select Column</option>";
+        console.log("bqdata = ", bqdata);
+        var num_fields = [];
+        var field_names = {};
+        bqdata['fields'].forEach(function(x){
+          if ((x.type=="FLOAT") || (x.type=="INTEGER")){
+            num_fields.push(x.name);
+            field_names[x.name] = x.description || x.name;
+          }
+        });
+        num_fields.forEach(function(x){
+          option_html += "<option value='" + x + "'>" + x + "</option>";
+        });
+
+        var html = 'Please choose a column for the x-axis: <select id="xcol" name="xcol">' + option_html + "</select>";
+        html += '<br/> and the y-axis: <select id="ycol" name="ycol">' + option_html + "</select>";
+        html += '<br/> then click <button id="do_scatter_plot">Generate Plot</button>';
+        add_html(html);
+
+        var div_id = add_new_plot();
+
+        var generate_scatter_plot = function(){
+          var xcol = $('#xcol').val();
+          var ycol = $('#ycol').val();
+          var series = make_series(bqdata['data'], xcol, ycol);
+          console.log("Generating plot of " + xcol + " vs " + ycol + " series=", series);
+          make_scatter_plot("Exploratory plot for " + course_id + " cohort", series,
+                            {div_id: div_id,
+                            xtitle: field_names[xcol],
+                            ytitle: field_names[ycol],
+                            }
+                           );
+        }
+
+        $('#do_scatter_plot').click(generate_scatter_plot);
+      }
+
+      var make_scatter_plot = function(plot_title, series, optarg){
+
+        optarg = optarg || {};
+        var div_id = optarg.div_id || add_new_plot(optarg);
+
+        console.log("series = ", series);
+
+        // plot data
+        var chart = new Highcharts.Chart({
+          chart: { type: 'scatter',  zoomType: 'xy', renderTo: div_id },
+          credits: {  enabled: false  },
+          title : { text : plot_title,},
+          xAxis: { title: { text: optarg.xtitle } },
+          yAxis: { title: { text: optarg.ytitle},  min: optarg.ymin },
+          plotOptions: {
+            scatter: {
+              marker: { radius: 10 },
+              tooltip: {
+                headerFormat: '<b>{series.name}</b><br>',
+                pointFormat: optarg.pointFormat || '{point.name}',
+              }
+            },
+            series: { turboThreshold: 0 },
+          },
+          series : series,
+        });
+        return chart;
+      }
+
+      var make_bar_plot = function(plot_title, xcategories, series, optarg){
+
+        optarg = optarg || {};
+        var div_id = add_new_plot(optarg);
+
+        $('#'+div_id).highcharts({
+          chart: {     type: 'column', zoomType: 'x' },
+          credits: {  enabled: false  },
+          title : {   text : plot_title },
+          xAxis: {        categories: xcategories  },
+          series : series,
+        });
+      }
+
+      // make_bar_plot('test hist', ['a','b','c'], [{name:'test', data:[1,2,3]}]);
+
+
+      var make_series = function(tdata, xcol, ycol, optarg){
+        optarg = optarg || {};
+        var sdat = [];
+        var series = [ {name: optarg.name || "Data", data: sdat} ];
+        tdata.forEach(function(x){
+          if (!x[xcol]){ return; }
+          if (!x[xcol]){ return; }
+          xv = Number(x[xcol]);
+          yv = Number(x[ycol]);
+          sdat.push({x: xv, y: yv, name: x[optarg.namecol || 'course_id']});
+        });
+
+        if (optarg.fit_line){
+          series[0]['regression'] = true;
+          series[0]['regressionSettings'] = { type: 'linear',
+                                             // states: { hover: { lineWidth: 0 } },
+                                             enableMouseTracking: false,
+                                            }
+        }
+
+        return series;
+      }
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+             }
+
+    }
+
+    analytics_report = make_report();  // instantiate
+
+    if (typeof(the_cohort_data)=="undefined"){
+      $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+        analytics_report.process_data
+      );
+    }else{
+      console.log("processing data from the_cohort_data");
+      analytics_report.process_data(the_cohort_data);
+    }
+
+  "meta_info": {}
+  "name": |-
+    cohort-specific-report
+  "sql": ""
+  "table_name": |-
+    stats_cohort_report
+  "title": |-
+    Cohort Specific Report
