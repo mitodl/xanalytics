@@ -1,3 +1,10 @@
 username,role,course_id,notes
 pmuser,pm,,
 teacher,instructor,MITx/6.SFMx/1T2014,
+CourseStaff,staff,MITx/6.SFMx/1T2014,
+DrResearch,researcher,MITx/6.SFMx/1T2014,
+ExptTeacher,expt,MITx/6.SFMx/1T2014,
+teacher,instructor,HarvardX/SW12.5x/2T2014,
+CourseStaff,staff,HarvardX/SW12.5x/2T2014,
+DrResearch,researcher,HarvardX/SW12.5x/2T2014,
+ExptTeacher,expt,HarvardX/SW12.5x/2T2014,

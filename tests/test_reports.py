@@ -54,7 +54,7 @@ class TestCustomReports(unittest.TestCase):
 
     def do_import(self):
         self.setup_main_with_auth()
-        rfn = "data/ANALYTICS_REPORT_enrollment-by-day-for-course-from-sql.yaml"
+        rfn = "data/ANALYTICS_STANDARD_REPORTS/ANALYTICS_REPORT_enrollment-by-day-for-course-from-sql.yaml"
         data = open(rfn).read()
         request = webapp2.Request.blank('/custom', POST={'overwrite': "no", 
                                                          'action': 'Upload Custom Report(s)',

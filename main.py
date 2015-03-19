@@ -712,6 +712,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                      'table': tablehtml,
                      'is_staff': self.is_superuser(),
                      'is_pm': self.is_pm(),
+                     'does_user_have_role': self.does_user_have_role,
                      'image': self.get_course_image(course_id),
                      'nav_is_active': self.nav_is_active('onecourse'),
                      'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, 
@@ -776,6 +777,10 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
             if not self.does_user_have_role('instructor', course_id):
                 return self.no_auth_sorry()
 
+        # be more restrictive: researchers only
+        if not (self.does_user_have_role('researcher', course_id)):
+            return self.no_auth_sorry()
+
         # DataTables server-side processing: http://datatables.net/manual/server-side
 
         draw = int(self.request.POST['draw'])
@@ -815,6 +820,10 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
             if ('person' in table) or ('track' in table) or ('student' in table):
                 if not self.does_user_have_role('instructor', course_id):
                     return self.no_auth_sorry()
+
+            # be more restrictive: researchers only
+            if not (self.does_user_have_role('researcher', course_id)):
+                return self.no_auth_sorry()
                     
         else:
             course_id = None

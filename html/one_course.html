@@ -155,14 +155,17 @@ $(document).ready(function() {
 } );
 </script>
 
+{% if does_user_have_role('researcher', course_id) or  does_user_have_role('instructor', course_id)  %}
 <table style="float:right"><tr><td>
 <ul>
-<li><a href="/table/{{course_id}}/person_course">Person-course table</a></li>
-<li><a href="/table/{{course_id}}/stats_module_usage">Module usage statistics</a></li>
-<li><a href="/table/{{course_id}}/user_info_combo">User information</a></li>
+    <li><a href="/table/{{course_id}}/person_course">Person-course table</a></li>
+    <li><a href="/table/{{course_id}}/stats_module_usage">Module usage statistics</a></li>
+    <li><a href="/table/{{course_id}}/user_info_combo">User information</a></li>
 <li><a href="/axis/{{course_id}}">Course axis</a></li>
 </ul>
 </td></tr></table>
+{% endif %}
+
 {% if is_staff %}
 {% endif %}
 

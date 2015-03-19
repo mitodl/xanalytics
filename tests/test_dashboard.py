@@ -46,7 +46,7 @@ class TestDashboard(unittest.TestCase):
     def test_dashboard_page(self):
         request = webapp2.Request.blank('/dashboard')
         response = request.get_response(self.application)
-        assert('Cross-Course Dashboard' in response.text)
+        assert('All-Course Dashboard' in response.text)
 
     def test_dashboard_geo_stats(self):
         request = webapp2.Request.blank('/dashboard/get/geo_stats')

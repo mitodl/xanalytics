@@ -198,7 +198,8 @@ class DataStats(object):
                 exists = False
                 try:
                     crm = self.get_custom_report_metadata(report_name)
-                    exists = True
+                    if crm:
+                        exists = True
                 except Exception as err:
                     pass
                 if exists and not overwrite:

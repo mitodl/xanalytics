@@ -45,9 +45,11 @@ class TestAdmin(unittest.TestCase):
 
     def setup_main_with_auth(self):
         from main import MainPage, auth, application
+        from admin import AdminPages
         def AlwaysAuthenticated(self):
             return 'testuser2'
         MainPage.AUTHORIZED_USERS = ['testuser2']
+        AdminPages.AUTHORIZED_USERS = ['testuser2']
         auth.AuthenticatedHandler.Authenticate = AlwaysAuthenticated
         # auth.AuthenticatedHandler.AUTH_METHOD = 'google'
         self.application = application
@@ -74,6 +76,7 @@ class TestAdmin(unittest.TestCase):
 
         request = webapp2.Request.blank('/get/LogEntries')
         response = request.get_response(self.application)
+        print "log data: ", response
         data = response.json
         flent = data['loglines'][0]
         assert('username' in flent)
