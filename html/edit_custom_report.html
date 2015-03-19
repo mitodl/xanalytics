@@ -61,7 +61,7 @@
 <p>Depends on: <input type="text" size="120" name="depends_on" value="{{report.depends_on}}"/></p>
 <p>Collection (e.g. year2): <input type="text" size="120" name="collection" value="{{report.collection}}"/></p>
 {% set rgt = ', '.join(report.group_tags) %}
-<p>Group tags (comma separated): <input type="text" size="120" name="group_tags" value="{{rgt}}"/></p>
+<p>Group tags (comma separated -- use "course" to indicate course-specific report &amp; access control): <input type="text" size="120" name="group_tags" value="{{rgt}}"/></p>
 <p>Meta Info (dict): <input type="text" size="120" name="meta_info" value="{{report.meta_info}}"/></p>
 
 <input id="save_changes" type="submit" name="action" value="Save Changes"/>
