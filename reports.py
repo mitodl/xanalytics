@@ -156,7 +156,7 @@ class Reports(object):
                         'report_is_staff': pdata.get('staff'),
                         'report_meta_info': json.dumps(crm.meta_info or {}),
                         'immediate_view': json.dumps(self.immediate_view),
-                        'do_embed' : (crm.meta_info or {}).get('embed') or self.force_embed,
+                        'do_embed' : (crm.meta_info or {}).get('embedded') or self.force_embed,
                         'title': title_rendered,
                         'id': report_id,
                 }
