@@ -20,7 +20,7 @@
     // parameters.get_table_columns = true;
 
     $.getJSON(
-      '/custom/get_report_data/{{report_name}}',
+      '/custom/get_report_data/enrollment-by-day-for-course-from-sql',  // note: uses SQL from another report!
       {{parameters}},
 
       function(data) {
@@ -45,7 +45,8 @@
         // create data series
         var nvac = [];
         var nvec = [];
-        var daily_ever = [];
+        var daily_ever = [];  // verified
+        var daily_ever_reg = [];  // registered
         var daily_net = [];
         var xaxis_data = [];
         var total_net = 0;
@@ -53,6 +54,7 @@
         var series = [{name: 'IDV Ever Registered', yAxis: 1, data: nvec},
                       {name: 'IDV Net Registered', yAxis: 1, data: nvac},
                       {name: 'IDV Ever Reg daily', type: 'column', data: daily_ever},
+                      {name: 'Ever Reg daily', type: 'column', yAxis: 2, data: daily_ever_reg},
                       // {name: 'Net Reg daily', type: 'column', data: daily_net}
                      ];
         var active_last = 0;
@@ -61,6 +63,7 @@
         data['data'].forEach(function(x){
           var date = $.datepicker.parseDate('yy-mm-dd', x.date).getTime();
 
+              if (0){
           var nnet_cum = Number(x.nverified_active_cum);
           var nnet = nnet_cum - active_last;
           active_last = nnet_cum;
@@ -68,6 +71,10 @@
           var n_ever_cum = Number(x.nverified_ever_cum);
           var n_ever = n_ever_cum - ever_last;
           ever_last = n_ever_cum;
+          }else{
+            var nnet = Number(x.nverified_net);
+            var n_ever = Number(x.nverified_ever);
+          }
 
           total_net += nnet;
           total_ever += n_ever;
@@ -77,6 +84,10 @@
           nvec.push( [date, total_ever] );
           daily_ever.push( [date, n_ever] );
           daily_net.push( [date, nnet] );
+
+          var n_ever_reg = Number(x.nregistered_ever);
+          daily_ever_reg.push( [date, n_ever_reg] );
+
         });
 
         // plot data
@@ -88,14 +99,19 @@
           xAxis: [ { type: 'datetime',
                     // categories: xaxis_data,
                    } ],
-          yAxis: [ {    labels: { style: { color: Highcharts.getOptions().colors[2] } },
-                    title: { text: 'Daily Enrollment', style: { color: Highcharts.getOptions().colors[2] } },
+          yAxis: [ {    labels: { style: { color: Highcharts.getOptions().colors[3] } },
+                    title: { text: 'Daily IDV Enrollment', style: { color: Highcharts.getOptions().colors[3] } },
                     opposite: true,
                     // min: 0,
                    },
                   { gridLineWidth: 0,
-                   title: { text: 'Cumulative Enrollment', style: { color: Highcharts.getOptions().colors[0] } },
+                   title: { text: 'Cumulative IDV Enrollment', style: { color: Highcharts.getOptions().colors[0] } },
                    labels: {style: { color: Highcharts.getOptions().colors[0] }  },
+                   // min: 0,
+                  },
+                  { gridLineWidth: 0,
+                   title: { text: 'Daily Enrollment (all)', style: { color: Highcharts.getOptions().colors[2] } },
+                   labels: {style: { color: Highcharts.getOptions().colors[2] }  },
                    // min: 0,
                   },
                  ],
