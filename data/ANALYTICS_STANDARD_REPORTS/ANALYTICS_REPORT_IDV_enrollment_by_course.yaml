@@ -53,8 +53,8 @@
         var total_ever = 0;
         var series = [{name: 'IDV Ever Registered', yAxis: 1, data: nvec},
                       {name: 'IDV Net Registered', yAxis: 1, data: nvac},
-                      {name: 'IDV Ever Reg daily', type: 'column', data: daily_ever},
                       {name: 'Ever Reg daily', type: 'column', yAxis: 2, data: daily_ever_reg},
+                      {name: 'IDV Ever Reg daily', type: 'column', data: daily_ever},
                       // {name: 'Net Reg daily', type: 'column', data: daily_net}
                      ];
         var active_last = 0;
