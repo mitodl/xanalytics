@@ -1,0 +1,84 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-20 16:15:49.748407
+  "depends_on": |-
+    None
+  "description": "ID Verified Enrollment Report - across all courses\r\n"
+  "group_tags":
+  - !!python/unicode ""
+  "html": |-
+    <html>
+      <head>
+        <title>All Course Report: ID Verified Enrollment</title>
+
+        {% include 'all_head.html' %}
+      </head>
+      <body role="document">
+
+        {% include 'navbar_standard.html' %}
+
+
+        <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
+
+          <h1>All Course Report: ID Verified Enrollment</h1>
+
+          {% if 1 %}<div><font color="red">{{msg}}</font></div>{% endif %}
+
+          These plots show ID verified enrollment for all courses.
+
+          {% set nlist = course_listings.data_by_key|length %}
+          {% set nstep = 5 %}
+          {% set page = parameter_values.get('start', 0)|int %}
+          {% set offset = page * nstep %}
+          {% set npages = nlist / nstep | round(0, 'ceil') %}
+
+          There are {{ nlist }} courses listed.
+
+          Showing page {{page}} of {{npages}} of the listings.
+
+
+          {% set toshow = course_listings.data_by_key.keys()[offset:offset+nstep] %}
+
+          {% autoescape off %}
+
+          {% for course_id in toshow %}
+          <hr width="100%"/>
+          <h3>Course {{course_id}}</h3>
+                {{custom_report.embed.parameter.course_id[course_id]["IDV_enrollment_by_course"]}}
+          {% endfor %}
+          {% endautoescape %}
+
+          {% if (page > 0) %}
+          <button id="prev">Previous Page</button>
+          {% endif %}
+          {% if (page+nstep < nlist) %} {# ></nlist> #}
+          <button id="next">Next Page</button>
+          {% endif %}
+        </div>
+      </body>
+    </html>
+  "icon": |-
+    None
+  "javascript": |
+    // the_url = window.location.href;
+    the_url = location.protocol + '//' + location.host + location.pathname;
+    curpage = {{page}};
+    $('#next').click(function(){
+      window.location.href = the_url + "?start=" + (curpage+1);
+    });
+    $('#prev').click(function(){
+      window.location.href = the_url + "?start=" + (curpage-1);
+    });
+  "meta_info":
+    !!python/unicode "is_page": !!bool |-
+      true
+    !!python/unicode "need_listings": !!bool |-
+      true
+  "name": |-
+    all-course-report-IDV-enrollment
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    All Course Report - IDV Enrollment

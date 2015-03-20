@@ -1,0 +1,131 @@
+- "author": |-
+    None
+  "date": |-
+    2015-02-01 02:12:24.177493
+  "depends_on": |-
+    [ "{dataset}.user_info_combo" ]
+  "description": |-
+    ID Verified Registrants -- Enrollment by Date
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_uuid}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    // parameters = {{parameters}};
+    // parameters.get_table_columns = true;
+
+    $.getJSON(
+      '/custom/get_report_data/{{report_name}}',
+      {{parameters}},
+
+      function(data) {
+
+        var parameters = {{parameters}};
+        var html = '<table id="table-{{report_uuid}}" class="display" width="100%"></table>';
+        html += '<div id="plot-{{report_uuid}}"></div>';
+        if (data.error){
+          html = "Error!  " + data.error;
+        }
+        $('#contain-{{report_uuid}}').html(html);
+        if (data.error){ return; }
+
+        console.log("IDV plots report uuid = {{report_uuid}}, cid=", parameters.course_id);
+
+        if (data['data'].length==0){
+          html = "No ID Verified Participants data for " + parameters.course_id;
+          $('#contain-{{report_uuid}}').html(html);
+          return
+        }
+
+        // create data series
+        var nvac = [];
+        var nvec = [];
+        var daily_ever = [];
+        var daily_net = [];
+        var xaxis_data = [];
+        var total_net = 0;
+        var total_ever = 0;
+        var series = [{name: 'IDV Ever Registered', yAxis: 1, data: nvec},
+                      {name: 'IDV Net Registered', yAxis: 1, data: nvac},
+                      {name: 'IDV Ever Reg daily', type: 'column', data: daily_ever},
+                      // {name: 'Net Reg daily', type: 'column', data: daily_net}
+                     ];
+        var active_last = 0;
+        var ever_last = 0;
+
+        data['data'].forEach(function(x){
+          var date = $.datepicker.parseDate('yy-mm-dd', x.date).getTime();
+
+          var nnet_cum = Number(x.nverified_active_cum);
+          var nnet = nnet_cum - active_last;
+          active_last = nnet_cum;
+
+          var n_ever_cum = Number(x.nverified_ever_cum);
+          var n_ever = n_ever_cum - ever_last;
+          ever_last = n_ever_cum;
+
+          total_net += nnet;
+          total_ever += n_ever;
+          xaxis_data.push(date);
+
+          nvac.push( [date, total_net] );
+          nvec.push( [date, total_ever] );
+          daily_ever.push( [date, n_ever] );
+          daily_net.push( [date, nnet] );
+        });
+
+        // plot data
+        $('#plot-{{report_uuid}}').highcharts({
+          chart: {  zoomType: 'xy'  },
+          credits: {  enabled: false  },
+          title : {  text : 'IDV Enrollment by date for ' + parameters.course_id,  },
+          subtitle: { text: "Source: SQL" },
+          xAxis: [ { type: 'datetime',
+                    // categories: xaxis_data,
+                   } ],
+          yAxis: [ {    labels: { style: { color: Highcharts.getOptions().colors[2] } },
+                    title: { text: 'Daily Enrollment', style: { color: Highcharts.getOptions().colors[2] } },
+                    opposite: true,
+                    // min: 0,
+                   },
+                  { gridLineWidth: 0,
+                   title: { text: 'Cumulative Enrollment', style: { color: Highcharts.getOptions().colors[0] } },
+                   labels: {style: { color: Highcharts.getOptions().colors[0] }  },
+                   // min: 0,
+                  },
+                 ],
+          series : series,
+        });
+
+      } );
+  "meta_info": {}
+  "name": |-
+    IDV_enrollment_by_course
+  "sql": |-
+    SELECT
+        date,
+        #nverified_active as nverified_active_day,
+        #nverified_ever as nverified_ever_day,
+        sum(nverified_active) over (order by date) as nverified_active_cum,
+        sum(nverified_ever) over (order by date) as nverified_ever_cum,
+    FROM (
+      SELECT
+        date(enrollment_created) as date,
+        sum(case when enrollment_is_active=1 then 1 else 0 end) as nverified_active,
+        count(*) as nverified_ever,
+      FROM [{dataset}.user_info_combo]
+      where
+        enrollment_mode = "verified"
+      group by date
+      order by date
+    )
+    order by date
+  "table_name": |-
+    IDV_enrollment
+  "title": |-
+    ID Verified Registrants
