@@ -15,6 +15,7 @@
             <hr width="100%"/>
         {% autoescape off %}
             {{custom_report["age-histogram"]}}
+            {{custom_report["all-course-report-IDV-enrollment"]}}
         {% endautoescape %}
 
 
