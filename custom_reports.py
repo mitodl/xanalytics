@@ -12,6 +12,8 @@ import webapp2
 import json
 import yaml
 import re
+import string
+import random
 
 import jinja2
 
@@ -164,6 +166,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if crm.meta_info.get('need_tags'):
             render_data['course_tags'] = self.get_course_listings_tags()
 
+        if crm.meta_info.get('need_listings'):
+            render_data['course_listings'] = self.get_course_listings()
+
         if ('course_id' in pdata) and pdata['course_id']:
             render_data['base'] = self.get_base(pdata['course_id'])
             logging.info('[page] base=%s' % render_data['base'])
@@ -315,7 +320,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         parameters['orgname'] = self.ORGNAME
         parameters['dashboard_mode'] = self.MODE	# 'mooc' or '' (empty meaning residential, non-mooc)
 
+        uuid = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+
         render_data = {'report_name': report_name,
+                       'report_uuid': "%s_%s" % (report_name, uuid),
                        'orgname': self.ORGNAME,
                        'parameters': json.dumps(parameters),	# for js
                        'parameter_values': parameters,		# for html template variables

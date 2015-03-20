@@ -51,11 +51,17 @@ class Reports(object):
             def __init__(self, *args, **kwargs):
                 self.immediate_view = False
                 self.do_no_embed = False		# prevent report from rendering as embedded (need for custom_reports.html)
+                self.force_embed = False
                 super(CRContainer, self).__init__(*args, **kwargs)
 
             @property
             def immediate(self):
                 self.immediate_view = True
+                return self
+
+            @property
+            def embed(self):
+                self.force_embed = True
                 return self
 
             @property
@@ -140,6 +146,8 @@ class Reports(object):
 
                 if self.do_no_embed and 'embedded' in (crm.meta_info or {}):
                     crm.meta_info.pop('embedded')
+                if self.force_embed:
+                    crm.meta_info['embedded'] = True
 
                 template = JINJA_ENVIRONMENT.get_template('custom_report_container.html')
                 data = {'is_staff': other.is_superuser(),
@@ -148,11 +156,13 @@ class Reports(object):
                         'report_is_staff': pdata.get('staff'),
                         'report_meta_info': json.dumps(crm.meta_info or {}),
                         'immediate_view': json.dumps(self.immediate_view),
+                        'do_embed' : crm.meta_info.get('embed') or self.force_embed,
                         'title': title_rendered,
                         'id': report_id,
                 }
                 self.immediate_view = False	# return to non-immediate view by default
                 self.do_no_embed = False		# return to default
+                self.force_embed = False		# return to default
                 return template.render(data)
         return CRContainer()
     

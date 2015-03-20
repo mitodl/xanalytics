@@ -1,16 +1,16 @@
-{% if not report.meta_info.embedded %}
+{% if not do_embed %}
     <h2>{{title}}</h2>
 {% endif %}
         <span  style="float:right">
             <button id="view-{{id}}" data-state="init" class="cr-view-button" data-name="{{report.name}}" data-id="{{id}}" 
-		      {% if report.meta_info.embedded %}
+		      {% if do_embed %}
 		        style="display:none"
 		      {% endif %}
 		    >View</button>
             <button id="reload-{{id}}" style="display:none" data-state="init" class="cr-reload-button" data-name="{{report.name}}"  data-id="{{id}}">Reload</button>
     	{% if is_staff %}
             <button id="edit-{{id}}" class="cr-edit-button" data-name="{{report.name}}"  data-id="{{id}}">Edit</button>
-	    {% if not report.meta_info.embedded %}
+	    {% if not do_embed %}
                {% if report_is_staff %}
                          <!-- <button class="cr-export-button" data-name="{{report.name}}">Export</button> -->
                          <form action="/custom/edit_report/{{report.name}}" method="POST">
@@ -20,7 +20,7 @@
 	    {% endif %}
     	{% endif %}
         </span>
-	{% if not report.meta_info.embedded %}
+	{% if not do_embed %}
             <p>{% autoescape off %}{{report.description}}{% endautoescape %}</p>
 	{% endif %}
         <div id="div-{{id}}"></div>

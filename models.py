@@ -61,3 +61,5 @@ class CustomReport(ndb.Model):
     # dynamic_sql   - true makes the SQL get passed through a jina2 template filter with parameters, before being executed;
     #                 a hash of the final SQL is also appended to the table name.
     # debug_sql     - true makes the SQL not actually run, and instead an error message is returned with the SQL which would have been run
+    # need_tags     - provide "course_tags" as a parameter, listing all course tags, e.g. EECS, Physics, ... from the course listings 
+    # need_listings - provide "course_listings" as a parameter
