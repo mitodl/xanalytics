@@ -251,8 +251,8 @@ $(document).ready(function() {
 
 <div id="geopie-container" style="display:none">
     {% autoescape off %}
-          {% autoescape off %}{{ custom_report.immediate['us_map_by_state_generic']}}{% endautoescape %}
-          {% autoescape off %}{{ custom_report.immediate['us_map_by_county_generic']}}{% endautoescape %}
+          {% autoescape off %}{{ custom_report['us_map_by_state_generic']}}{% endautoescape %}
+          {% autoescape off %}{{ custom_report['us_map_by_county_generic']}}{% endautoescape %}
           {% autoescape off %}{{ custom_report["top-worldwide-countries"] }}{% endautoescape %}
           {% autoescape off %}{{ custom_report["geographic_region_pie_charts"] }}{% endautoescape %}
     {% endautoescape %}
