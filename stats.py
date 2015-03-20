@@ -7,6 +7,7 @@
 
 import re
 import datetime
+import calendar
 import bqutil
 import local_config
 import logging
@@ -957,6 +958,17 @@ class DataStats(object):
         if x:
             return str(datetime.datetime.utcfromtimestamp(float(x)))
         return ''
+
+    @staticmethod
+    def json_serializer_with_datetime(obj):
+        if isinstance(obj, datetime.datetime):
+            if obj.utcoffset() is not None:
+                obj = obj - obj.utcoffset()
+        millis = int(
+            calendar.timegm(obj.timetuple()) * 1000 +
+            obj.microsecond / 1000
+        )
+        return millis
 
     @staticmethod
     def datetime2milliseconds(dt=None, dtstr=''):

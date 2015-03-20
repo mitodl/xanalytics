@@ -728,7 +728,24 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         show full course axis -- mainly for debugging
         '''
         course_id = '/'.join([org, number, semester])
+
+        if not self.is_user_authorized_for_course(course_id):
+            return self.no_auth_sorry()
+
         caxis = self.load_course_axis(course_id, dtype='data')
+
+        if self.request.get('ajax'):
+            # return JSON instead of HTML
+            self.response.headers['Content-Type'] = 'application/json'   
+            self.response.out.write(json.dumps(self.course_axis, default=self.json_serializer_with_datetime, indent=4))
+            return
+
+        if self.request.get('chapters'):
+            # return JSON of just chapters
+            chapters = [x for x in caxis if x['category']=='chapter']
+            self.response.headers['Content-Type'] = 'application/json'   
+            self.response.out.write(json.dumps(chapters, indent=4))
+            return
 
         # logging.info("caxis=%s" % json.dumps(caxis, indent=4))
 
