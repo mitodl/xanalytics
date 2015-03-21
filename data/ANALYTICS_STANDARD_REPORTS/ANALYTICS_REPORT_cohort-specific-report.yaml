@@ -15,6 +15,10 @@
     <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
                                    <img src="/images/loading_icon.gif"/>
     </div>
+
+      {% autoescape off %}
+            {{custom_report["cohort-report-us-counties"]}}
+      {% endautoescape %}
   "icon": |-
     None
   "javascript": |+

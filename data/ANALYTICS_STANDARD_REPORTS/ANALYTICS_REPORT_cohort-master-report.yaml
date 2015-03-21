@@ -45,15 +45,84 @@
                     {% include "country_selector.html" %}
                   </div>
                 </span>
+                <h4>Demographics Criteria</h4>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="age_range" value="1"/>
+                  Must have age (in 2014) with a specific range of years
+                  <div style="display:none"  class="c_select">
+                    From: <input type="text" name="age_start"/> years old (inclusive)
+                    To: <input type="text" name="age_end"/>
+                  </div>
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="be_male" value="1"/>
+                  Must be male
+                </span>
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="be_female" value="1"/>
+                  Must be female
+                </span>
+                </span>
+
                 <h4>Activity Criteria</h4>
                 <span>
-                  <input type="checkbox" class="c_criterion" name="activity_interval" value="1"/> Must have activity with a specific date period
+                  <input type="checkbox" class="c_criterion" name="activity_interval" value="1"/>
+                  Must have activity with a specific date period
                   <div id="interval_select" style="display:none"  class="c_select">
                     From: <input type="text" class="dateinput" name="activity_start"/>
                     To: <input type="text" class="dateinput" name="activity_end"/>
                   </div>
                 </span>
-                <!-- <h4>Performance Criteria</h4> -->
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="forum_posts_range" value="1"/>
+                  Must have number of forum posts within range
+                  <div  style="display:none"  class="c_select">
+                    From: <input type="text" name="nforum_start"/>
+                    To: <input type="text" name="nforum_end"/> forum posts (inclusive)
+                  </div>
+                </span>
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="be_active" value="1"/>
+                  Must have active registration, i.e. have not un-registered from the course
+                </span>
+                <br/>
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="be_viewed" value="1"/>
+                  Must be a participant, i.e. viewed the courseware at least once
+                </span>
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="be_explored" value="1"/>
+                  Must have explored, i.e. viewed at least half the chapters in the course published so far
+                </span>
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="be_certified" value="1"/>
+                  Must have earned a certificate (only valid after certificates have been issued)
+                </span>
+                <br/>
+                <span>
+                  <input type="checkbox" class="c_criterion" name="be_verified" value="1"/>
+                  Must have paid for ID verification
+                </span>
+
+                <h4>Performance Criteria</h4>
+                <span>
+                  <input type="checkbox" class="c_criterion"  name="chapter_grade_filter" value="1"/>
+                  Must have earned grade in range for specific chapter's problems
+                  <div id="chapter_select" data-getdat="chapter" style="display:none"  class="c_select">
+                    For chapter <select name="chapter_mid" id="chapter_mid_select" style="display:none">
+                    </select><br/>
+                    With grade from: <input type="" name="grade_start"/>
+                    to: <input type="" name="grade_end"/> (inclusive) -- leave both blank for all who tried a problem in the chapter
+                    <div class="busy"></div>
+                  </div>
+                </span>
+
                 <br/>
                 <br/>
                 2. Click button below to generate cohort and produce initial cohort-specific report
@@ -128,7 +197,7 @@
       var process_cohort = function(data){
         if (data.error){
           html = "<font color='red'>Error!  " + data.error + "</font>";
-          report_div(html);
+          report_div.html(html);
           return;
         }
         $('#cohort-results-busy').hide();    // hide the loading image
@@ -177,6 +246,42 @@
             run_sql_get_cohort(cparams);
       }
 
+      var get_extra_criterion_data = function(elem, gdname){
+        // get data for criterion, via ajax call
+        if (gdname=="chapter"){
+          // get chapter grades
+          elem.find('.busy').html('<img src="/images/loading_icon.gif"/>');
+          $.getJSON(
+            '/custom/get_report_data/grade-histograms-by-chapter-for-course',
+            {"course_id": "MITx/8.05x/1T2015"},
+            function(chdata){
+              var cms = $('#chapter_mid_select');
+              elem.find('.busy').hide();
+              cms.show();
+              console.log("Got chapter data", chdata);
+              console.log("cms=", cms);
+              if (chdata.error){
+                msg = "Error: " + chdata.error;
+                cms.html(msg);
+                console.log(msg);
+              }else{
+                var html = "<option value='' selected='selected'>Select chapter</option>";
+                chdata['data'].forEach(function(x){
+                  html += ("<option value='" + x.chapter_mid + "'>"
+                           + x.chapter_name + " (n=" + x.n_total
+                           + ", avg=" + Number(x.avg_grade).toFixed(2)
+                           + ", median=" + x.median_grade
+                           + ", min=" + x.min_grade
+                           + ", max=" + x.chapter_max_grade
+                           + ")"
+                           + "</option>\n");
+                });
+                cms.html(html);
+              }
+            });
+        }
+      }
+
       var setup = function(ajax_data){
         data = ajax_data;
         html = '';
@@ -203,10 +308,19 @@
         // make criteria inputs appear only when checked
         $('.c_criterion').each(function(){
           var input_select = $(this).closest('span').find('.c_select');
-          $(this).change(function(){
-            if (this.checked){ input_select.show();}
-            else { input_select.hide(); }
-          });
+          if (input_select){
+            $(this).change(function(){
+              if (this.checked){
+                input_select.show();
+                var getdat = input_select.data().getdat;
+                if (getdat){
+                  console.log("Running getdat=" + getdat + " for " + $(this).name);
+                  get_extra_criterion_data(input_select, getdat);
+                }
+              }
+              else { input_select.hide(); }
+            });
+          }
         });
 
         // trigger our code on form submission
@@ -321,10 +435,11 @@
       true
   "name": |-
     cohort-master-report
-  "sql": |+
+  "sql": |
+    {% if sql_flags.chapter_grade_filter %}
     SELECT
     PC.course_id as course_id,
-    PCD.total_nevents as n_events_over_interval,
+    PC.n_events_over_interval as n_events_over_interval,
     PC.user_id as user_id,
     PC.username as username,
     PC.registered as registered,
@@ -373,30 +488,139 @@
     PC.max_dt as max_dt,
     PC.n_dt as n_dt,
     PC.sum_dt as sum_dt,
-    FROM [{dataset}.person_course] as PC
-    JOIN
+    CG.chgrade as chapter_grade,
+    CG.chmax as chapter_max_grade,
+    CG.median_grade as median_grade,
+    FROM
     (
-        SELECT username, sum(nevents) as total_nevents
-        FROM [{dataset}.person_course_day]
-    {% if sql_flags.activity_interval %}
-        where True
-      {% if sql_flags.activity_start %}
-          AND date >= "{{sql_flags.activity_start}}"
-      {% endif %}
-      {% if sql_flags.activity_end %}
-          AND date <= "{{sql_flags.activity_end}}"
-      {% endif %}
     {% endif %}
-        group by username
-        order by total_nevents desc
-    ) as PCD
-    on PC.username=PCD.username
-    where ((PC.forumRoles_isStudent = 1) or (PC.forumRoles_isStudent is null))  # exclude staff
-    {% if sql_flags.geo_specific_country %}
-      AND PC.cc_by_ip = "{{sql_flags.country_two_letter_code}}"
-    {% endif %}
-    order by username
 
+        SELECT
+        PC.course_id as course_id,
+        PCD.total_nevents as n_events_over_interval,
+        PC.user_id as user_id,
+        PC.username as username,
+        PC.registered as registered,
+        PC.viewed as viewed,
+        PC.explored as explored,
+        PC.certified as certified,
+        PC.ip as ip,
+        PC.cc_by_ip as cc_by_ip,
+        PC.countryLabel as countryLabel,
+        PC.city as city,
+        PC.latitude as latitude,
+        PC.longitude as longitude,
+        PC.LoE as LoE,
+        PC.YoB as YoB,
+        PC.gender as gender,
+        PC.grade as grade,
+        PC.start_time as start_time,
+        PC.last_event as last_event,
+        PC.nevents as nevents,
+        PC.ndays_act as ndays_act,
+        PC.nplay_video as nplay_video,
+        PC.nchapters as nchapters,
+        PC.nforum_posts as nforum_posts,
+        PC.nforum_votes as nforum_votes,
+        PC.nforum_endorsed as nforum_endorsed,
+        PC.nforum_threads as nforum_threads,
+        PC.nforum_comments as nforum_comments,
+        PC.nforum_pinned as nforum_pinned,
+        PC.roles as roles,
+        PC.nprogcheck as nprogcheck,
+        PC.nproblem_check as nproblem_check,
+        PC.nforum_events as nforum_events,
+        PC.mode as mode,
+        PC.is_active as is_active,
+        PC.cert_status as cert_status,
+        PC.profile_country as profile_country,
+        PC.email_domain as email_domain,
+        PC.ntranscript as ntranscript,
+        PC.nshow_answer as nshow_answer,
+        PC.nvideo as nvideo,
+        PC.nseq_goto as nseq_goto,
+        PC.nseek_video as nseek_video,
+        PC.npause_video as npause_video,
+        PC.avg_dt as avg_dt,
+        PC.sdv_dt as sdv_dt,
+        PC.max_dt as max_dt,
+        PC.n_dt as n_dt,
+        PC.sum_dt as sum_dt,
+        FROM [{dataset}.person_course] as PC
+        JOIN
+        (
+            SELECT username, sum(nevents) as total_nevents
+            FROM [{dataset}.person_course_day]
+        {% if sql_flags.activity_interval %}
+            where True
+          {% if sql_flags.activity_start %}
+              AND date >= "{{sql_flags.activity_start}}"
+          {% endif %}
+          {% if sql_flags.activity_end %}
+              AND date <= "{{sql_flags.activity_end}}"
+          {% endif %}
+        {% endif %}
+            group by username
+            order by total_nevents desc
+        ) as PCD
+        on PC.username=PCD.username
+        where ((PC.forumRoles_isStudent = 1) or (PC.forumRoles_isStudent is null))  # exclude staff
+        {% if sql_flags.geo_specific_country %}
+          AND PC.cc_by_ip = "{{sql_flags.country_two_letter_code}}"
+        {% endif %}
+        {% if sql_flags.age_range %}
+          {% if sql_flags.age_start %}
+            AND (2014 - PC.YoB) >= {{sql_flags.age_start}}
+          {% endif %}
+          {% if sql_flags.age_end %}
+            AND (2014 - PC.YoB) <= {{sql_flags.age_end}}
+          {% endif %}
+        {% endif %}
+        {% if sql_flags.forum_posts_range %}
+          {% if sql_flags.nforum_start %}
+            AND PC.nforum_posts >= {{sql_flags.nforum_start}}
+          {% endif %}
+          {% if sql_flags.nforum_end %}
+            AND PC.nforum_posts <= {{sql_flags.nforum_end}}
+          {% endif %}
+        {% endif %}
+        {% if sql_flags.be_certified %}
+            AND PC.certified
+        {% endif %}
+        {% if sql_flags.be_explored %}
+            AND PC.explored
+        {% endif %}
+        {% if sql_flags.be_viewed %}
+            AND PC.viewed
+        {% endif %}
+        {% if sql_flags.be_verified %}
+            AND PC.mode = "verified"
+        {% endif %}
+        {% if sql_flags.be_active %}
+            AND PC.is_active
+        {% endif %}
+        {% if sql_flags.be_male %}
+            AND PC.gender = "m"
+        {% endif %}
+        {% if sql_flags.be_female %}
+            AND PC.gender = "f"
+        {% endif %}
+        order by username
+
+    {% if sql_flags.chapter_grade_filter %}
+    ) as PC
+    JOIN [{dataset}.chapter_grades] as CG    # join with chapter grades if filtering on chapter grade range
+    ON PC.user_id = CG.user_id
+    WHERE True
+          AND CG.chapter_mid = "{{sql_flags.chapter_mid}}"  # match chapter module_id
+          {% if sql_flags.grade_start %}
+            AND CG.chgrade >= {{sql_flags.grade_start}}
+          {% endif %}
+          {% if sql_flags.grade_end %}
+            AND CG.chgrade <= {{sql_flags.grade_end}}
+          {% endif %}
+    order by username
+    {% endif %}
   "table_name": |-
     stats_cohort_report
   "title": |-

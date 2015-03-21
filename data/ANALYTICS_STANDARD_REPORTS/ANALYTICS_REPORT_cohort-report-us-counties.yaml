@@ -1,0 +1,223 @@
+- "author": |-
+    None
+  "date": |-
+    2015-03-20 22:55:22.045233
+  "depends_on": |-
+    None
+  "description": |-
+    Show geographic distribution of cohort members among counties in the United States
+  "group_tags":
+  - !!python/unicode ""
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    var crus_parameters = {{parameters}};
+    crus_parameters.get_table_columns = true;
+
+
+    $.getJSON(
+      '/custom/get_report_data/{{report_name}}',
+      crus_parameters,
+
+      function(data) {
+
+        var parameters = crus_parameters;
+        var html = '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+        html += '<div id="plot-{{report_name}}"></div>';
+        if (data.error){
+          html = "Error!  " + data.error;
+        }
+        $('#contain-{{report_name}}').html(html);
+        if (data.error){ return; }
+
+        console.log('crus data=', data);
+
+        // make data table
+        if (0) {
+          var table = $('#table-{{report_name}}').DataTable({
+            dom: 'T<"clear">lfrtip',
+            "columns": data['tablecolumns'],
+            "pageLength": 10,
+            searching: true,
+            ordering: true,
+            data: data['data'],
+          });
+        }
+
+
+        // create data series
+        var series_data = [];
+        var z_data = [];
+        data['data'].forEach(function(x){
+
+          srow = {code: x.COUNTY_CODE,
+                  name: String(x.COUNTY_TEXT),
+                  county: String(x.COUNTY_TEXT),
+                  //value: Number(Number(x.n_viewed)/Number(x.n_registered)*100.00),
+                  //value: Number(Number(x.n_certified)/Number(x.n_viewed)*100.00),
+                  //value: Number(Number(x.n_viewed)/(5941.0) * 100.0),
+                  value: Number(x.n_viewed),
+                  //value: Number(x.norm_reg_pop) // Normalized reg by pop
+                  // value: Number(x.norm_viewed_pop),
+                  reg: Number(x.n_registered),
+                  viewed: Number(x.n_viewed),
+                  cert: Number(x.n_certified),
+                  ver: Number(x.n_verified),
+                  ver_cert: Number(x.n_verified_certified),
+                  //value: Number(Number(x.n_registered) / Number(x.mcz_POPULATION) * 100.00)
+                  //  value: Number(x.mcz_POPULATION) / Number(x.n_registered)
+                  //  value: Number(x.verified),
+                  //     value: Number(x.n_verified),
+                 };
+          series_data.push(srow);
+          z_row = {name: x.COUNTY_TEXT, z: Number(x.n_viewed)}
+          z_data.push(z_row);
+        });
+
+        // make map data
+        //var mapData = Highcharts.geojson(Highcharts.maps['custom/world']);
+        var countiesMap = Highcharts.geojson(Highcharts.maps['countries/us/us-all-all']);
+        var lines = Highcharts.geojson(Highcharts.maps['countries/us/us-all-all'], 'mapline');
+
+
+        //var countiesMap = Highcharts.geojson(Highcharts.maps['custom/us-all-all']);
+        //var countiesMap = Highcharts.geojson(Highcharts.maps['custom/us-all-all']);
+
+        // plot data
+        $('#plot-{{report_name}}').highcharts('Map', {
+          chart : {
+            borderWidth : 1,
+            height: 800,
+            marginRight: 50 // for the legend
+          },
+
+          title : {
+            text: '{{orgname}} Cohort Participants Across U.S. Counties for ' + parameters.course_id,
+          },
+          credits: {  enabled: false  },
+
+
+          mapNavigation: {
+            enabled: true
+          },
+
+          colorAxis: {
+            dataClasses: [{
+              from: 1,
+              to: 2,
+              color: "#F1EEF6"
+            }, {
+              from: 2,
+              to: 4,
+              color: "#D4B9DA"
+            }, {
+              from: 4,
+              to: 8,
+              color: "#C994C7"
+            }, {
+              from: 8,
+              to: 16,
+              color: "#DF65B0"
+            }, {
+              from: 16,
+              to: 32,
+              color: "#DD1C77"
+            }, {
+              from: 32,
+              color: "#980043"
+            }]
+          },
+
+
+          plotOptions: {
+            mapline: {
+              showInLegend: false,
+              enableMouseTracking: false
+            }
+          },
+
+          series : [{
+            mapData : countiesMap,
+            data: series_data,
+            joinBy: ['hc-key', 'code'],
+            name: '# Participants',
+            tooltip: {
+              valueSuffix: '',
+              valueDecimals: 3,
+              pointFormat: '{point.county}<br/>{point.value} normalized<br/>{point.reg} registered<br/>{point.viewed} viewed<br/>{point.cert} certified<br/>{point.ver} verified<br/>{point.ver_cert} verified certified'
+            },
+            borderWidth: 0.5,
+            states: {
+              hover: {
+                color: '#bada55'
+              }
+            }
+          }, {
+            type: 'mapline',
+            name: 'State borders',
+            data: [lines[0]],
+            color: 'black'
+          }, {
+            type: 'mapline',
+            name: 'Separator',
+            data: [lines[1]],
+            color: 'gray'}
+                   ]
+        });
+
+      } );
+  "meta_info": {}
+  "name": |-
+    cohort-report-us-counties
+  "sql": |
+    SELECT
+     mcz.MAP_COUNTY_CODE as COUNTY_CODE,
+     mcz.MAP_COUNTY_TEXT as COUNTY_TEXT,
+     mcz.POPULATION as COUNTY_POPULATION,
+     INTEGER(count(*)) as n_county,
+     sum(pc_data.registered) as n_registered,
+     sum(pc_data.viewed) as n_viewed,
+     sum(pc_data.explored) as n_explored,
+     sum(pc_data.certified) as n_certified,
+     sum(case when pc_data.mode = "verified" then 1 else 0 end) as n_verified,
+     sum(case when pc_data.mode = "verified" and boolean(pc_data.certified) then 1 else 0 end) as n_verified_certified,
+     (sum(pc_data.registered) / float(mcz.POPULATION))*100.00 as norm_reg_pop,
+     (sum(pc_data.viewed) / float(mcz.POPULATION))*100.00 as norm_viewed_pop,
+     (sum(pc_data.certified) / float(mcz.POPULATION))*100.00 as norm_cert_pop,
+     (sum(case when pc_data.mode = "verified" then 1 else 0 end) / float(mcz.POPULATION))*100.00 as norm_ver_pop,
+     (sum(case when pc_data.mode = "verified" and boolean(pc_data.certified) then 1 else 0 end) / float(mcz.POPULATION))*100.00 as norm_vercert_pop,
+     FROM
+    (SELECT * FROM (SELECT country, countryLabel, region, city, postalCode, username, registered, viewed, explored, certified, is_active, mode,
+                FROM (
+                 SELECT
+                   username,
+                   registered,
+                   viewed,
+                   explored,
+                   certified,
+                   is_active,
+                   mode,
+                   INTEGER(PARSE_IP(ip)) AS clientIpNum,
+                   INTEGER(PARSE_IP(ip)/(256*256)) AS classB,
+                 FROM
+                   [{dataset}.stats_cohort_report_{sane_username}]
+                 WHERE ip IS NOT NULL
+                   ) AS a
+                JOIN EACH [fh-bigquery:geocode.geolite_city_bq_b2b] AS b
+                ON a.classB = b.classB
+                WHERE a.clientIpNum BETWEEN b.startIpNum AND b.endIpNum
+                AND city != ''
+                ORDER BY username) as pc_data
+               LEFT JOIN EACH [{course_report_org}.mapping_county_zip] as mcz
+               ON pc_data.postalCode = mcz.ZIP
+               WHERE pc_data.country == "US" and pc_data.postalCode is not null) as pc_data
+     WHERE mcz.MAP_COUNTY_CODE is not null
+     GROUP BY mcz.MAP_COUNTY_CODE, COUNTY_CODE, mcz.MAP_COUNTY_TEXT, COUNTY_TEXT, mcz.POPULATION, COUNTY_POPULATION
+  "table_name": |-
+    stats_cohort_us_counties_{sane_username}
+  "title": |-
+    Cohort Report US Counties
