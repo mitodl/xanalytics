@@ -427,6 +427,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         pdata['course_report'] = self.get_course_report_dataset()
         pdata['course_report_org'] = self.get_course_report_dataset(force_use_org=True)
         pdata['orgname'] = self.ORGNAME
+        pdata['sane_username'] = self.user.replace(' ', '_').replace('.', '_').replace('@', '_')
 
         # project_id specified?
         optargs = {}
@@ -503,6 +504,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 self.response.out.write(json.dumps(data))
                 return
 
+            # append username to table name
+            table = table + "_%s" % pdata['sane_username']
+
             force_query = True		# for now, all dynamic_sql is done with force_query
             ignore_cache = True
             the_sql = sql
@@ -537,6 +541,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             msg += sql
             msg += "\n\nwith these parameters:\n"
             msg += json.dumps(pdata, indent=4)
+            msg += "\n\producing the output table: %s.%s\n" % (dataset, table)
             error = "<pre>%s</pre>" % (msg.replace('<','&lt;').replace('<','&gt;'))
             data = {'error': error}
             self.response.headers['Content-Type'] = 'application/json'   
@@ -616,6 +621,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                      'recordsFiltered': bqdata.get('numRows', 0),
                      'error': error,
                      'tablecolumns': tablecolumns,
+                     'output_table': table,
+                     'output_dataset': dataset,
                  })
         
         
