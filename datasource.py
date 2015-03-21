@@ -207,9 +207,14 @@ class DataSource(object):
                     raise
 
             if table_date and table_date < latest:
-                force_query = True
-                logging.info("[datasource.cached_get_bq_table] Forcing query recomputation of %s.%s, table_date=%s, latest=%s" % (dataset, table,
-                                                                                                                                 table_date, latest))
+                ignore_cache = True
+                if sql:
+                    force_query = True
+                    logging.info("[datasource.cached_get_bq_table] Forcing query recomputation of %s.%s, table_date=%s, latest=%s" % (dataset, table,
+                                                                                                                                      table_date, latest))
+                else:
+                    logging.info("[datasource.cached_get_bq_table] Forcing cache reload of %s.%s, table_date=%s, latest=%s" % (dataset, table,
+                                                                                                                               table_date, latest))
 
             # logging.info("[datasource.cached_get_bq_table] %s.%s table_date=%s, latest=%s, force_query=%s" % (dataset, table, table_date, latest, force_query))
 
