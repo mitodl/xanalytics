@@ -3,16 +3,27 @@ parameters.get_table_columns = true;
 
 var make_report = function() {
 
+  var ntables = 0;
   var nplots = 0; 
   var data = {};
 
   var report_div = $('#contain-{{report_name}}');
+
+  var add_text = function(text){
+    report_div.append("<p>"+text+"</p>");
+  }
+  
+  var new_section = function(title){
+    report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>");
+  }
   
   // make data table
-  var make_table = function(div_id, tablecolumns, tabledata){
-    html = '<table id="' + div_id + '" class="display" width="100%"></table>';
+  var make_table = function(tablecolumns, tabledata){
+    ntables += 1;
+    var div_id = "table-{{report_name}}-" + ntables;
+    var html = '<table id="' + div_id + '" class="display" width="100%"></table>';
     report_div.append(html);
-    console.log('tablecolumns=', tablecolumns, ', tabledata=', tabledata);
+    // console.log('tablecolumns=', tablecolumns, ', tabledata=', tabledata);
     var table = $('#' + div_id).DataTable({
       // dom: 'T<"clear">lfrtip',
       "columns": tablecolumns,
@@ -34,7 +45,7 @@ var make_report = function() {
     report_div.html(html);
     if (data.error){ return; }
 
-      make_table('table-data-{{report_name}}', ajax_data['tablecolumns'], ajax_data['data']);
+      make_table(ajax_data['tablecolumns'], ajax_data['data']);
   }
 
 
@@ -115,6 +126,10 @@ var make_report = function() {
 
     return series;
   }   
+
+  function numberWithCommas(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
 
   return {process_data: process_data,
           self: this,
