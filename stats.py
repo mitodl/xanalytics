@@ -124,7 +124,14 @@ class DataStats(object):
                 return {}
             if xtype==list and not datum:
                 return []
-            return xtype(datum)
+            try:
+                xdt = xtype(datum)
+                return xdt
+            except Exception as err:
+                msg = "Oops, failed in exporting custom report metadata on xtype=%s, datum=%s" % (xtype, datum)
+                msg += "\nError: %s" % str(err)
+                logging.error(msg)
+                raise Exception(msg)
 
         if download:
             if crq:
