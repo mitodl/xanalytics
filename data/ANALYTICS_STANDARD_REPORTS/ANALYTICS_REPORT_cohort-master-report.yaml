@@ -253,7 +253,7 @@
           elem.find('.busy').html('<img src="/images/loading_icon.gif"/>');
           $.getJSON(
             '/custom/get_report_data/grade-histograms-by-chapter-for-course',
-            {"course_id": "MITx/8.05x/1T2015"},
+            {"course_id": parameters.course_id},
             function(chdata){
               var cms = $('#chapter_mid_select');
               elem.find('.busy').hide();
