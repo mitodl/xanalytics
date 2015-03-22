@@ -13,6 +13,11 @@
 
 <link rel="stylesheet" type="text/css" href="/css/codemirror.css">
 <script type="text/javascript" src="/js/codemirror-compressed.js"></script>
+<script type="text/javascript" src="/js/jshint.js"></script>
+<style type="text/css">
+      .lint-error {font-family: arial; font-size: 70%; background: #ffa; color: #a00; padding: 2px 5px 3px; }
+      .lint-error-icon {color: white; background-color: red; font-weight: bold; border-radius: 50%; padding: 0 3px; margin-right: 7px;}
+</style>
 
 </head>
 
@@ -85,6 +90,39 @@ $(document).ready( function () {
 
     var cmset = {};
 
+    // inline jshints with codemirror widgets
+    var widgets = [];
+    updateHints = function() {
+	editor.operation(function(){
+	    for (var i = 0; i < widgets.length; ++i)
+		editor.removeLineWidget(widgets[i]);
+	    widgets.length = 0;
+	    
+	    var options = {asi: true,	// more relaxed about semicolons
+			   sub: true,   // more relaxed about y['x'] vs y.x
+			   multistr: true,  // ok with multiline strings
+			   eqnull: true,    // ok with ==null comparisons
+			  }
+	    JSHINT(editor.getValue(), options);
+	    for (var i = 0; i < JSHINT.errors.length; ++i) {
+		var err = JSHINT.errors[i];
+		if (!err) continue;
+		var msg = document.createElement("div");
+		var icon = msg.appendChild(document.createElement("span"));
+		icon.innerHTML = "!!";
+		icon.className = "lint-error-icon";
+		msg.appendChild(document.createTextNode(err.reason));
+		msg.className = "lint-error";
+		widgets.push(editor.addLineWidget(err.line - 1, msg, {coverGutter: false, noHScroll: true}));
+	    }
+	});
+	var info = editor.getScrollInfo();
+	var after = editor.charCoords({line: editor.getCursor().line + 1, ch: 0}, "local").top;
+	if (info.top + info.clientHeight < after)
+	    editor.scrollTo(null, after - info.clientHeight + 3);
+    }
+    
+    
     $('textarea').each(function(ta){
 	var data = $(this).data();
 	console.log('mode = ' + data.mode);
@@ -101,6 +139,16 @@ $(document).ready( function () {
 	    cmset[data.name] = myCodeMirror;
 	    }
     });
+
+    // jshints
+    window.editor = cmset['js'];
+    var waiting;
+    editor.on("change", function() {
+	clearTimeout(waiting);
+	waiting = setTimeout(updateHints, 500);
+    });
+    setTimeout(updateHints, 100);
+
 
     $('.CodeMirror').resizable({
 	resize: function() {
