@@ -278,6 +278,19 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             logging.error("Cannot get custom report %s" % report_name)
             raise
 
+        # backward compatability: to accommodate jhints, ignore lines in javascript with jinja2 template commands
+        if ('{{parameters}}' in crm.javascript) and not ('jshint ignore' in crm.javascript):
+            newjs = []
+            for k in crm.javascript.split('\n'):
+                if (("{% autoescape" in k)) and not ('jshint ignore' in k):
+                    k += "  // jshint ignore:line"
+                elif ('{{parameters}}' in k) and not ('jshint ignore' in k):
+                    newjs.append("/* jshint ignore:start */")
+                    newjs.append(k)
+                    k = "/* jshint ignore:end */"
+                newjs.append(k)
+            crm.javascript = '\n'.join(newjs)
+
         data = {'html': crm.html,
                 'js': crm.javascript,
                 'report_name': report_name,
