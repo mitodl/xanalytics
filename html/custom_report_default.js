@@ -1,4 +1,4 @@
-parameters = {{parameters}};
+parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
 parameters.get_table_columns = true;
 
 var make_report = function() {
