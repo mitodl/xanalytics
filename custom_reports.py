@@ -202,6 +202,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         # self.session['edit_report_parameter_values'] = parameter_values
 
         editor_heights = self.request.POST.get('editor_heights')
+        if editor_heights:
+            self.session['editor_heights'] = editor_heights		# keep editor heights for session
+        else:
+            editor_heights = self.session.get('editor_heights')
         logging.info('[custom_reports] editor heights=%s' % editor_heights)
 
         msg = ''
