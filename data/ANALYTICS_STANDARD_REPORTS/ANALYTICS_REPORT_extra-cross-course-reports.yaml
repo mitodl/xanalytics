@@ -16,7 +16,8 @@
         {% autoescape off %}
             {{custom_report["age-histogram"]}}
             {{custom_report["all-course-report-IDV-enrollment"]}}
-        {% endautoescape %}
+            {{custom_report["median-incomes-us-participants"]}}
+       {% endautoescape %}
 
 
     </div>
