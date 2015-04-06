@@ -358,7 +358,12 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         js_src += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
         js_src += "</script>" 
 
-        js = Template(js_src).render(render_data)
+        try:
+            js = Template(js_src).render(render_data)
+        except Exception as err:
+            logging.info("Warning: could not render js in custom_reports, err=%s" % str(err))
+            js = JINJA_ENVIRONMENT.from_string(js_src).render(render_data)
+            
         #template = JINJA_ENVIRONMENT.from_string(html)
 
         # logging.info("get_report_html name=%s, parameters=%s" % (report_name, parameters))
@@ -543,6 +548,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                     data = {'error': error}
                     self.response.headers['Content-Type'] = 'application/json'   
                     self.response.out.write(json.dumps(data))
+                    logging.error("Returning with error message")
                     return
                 raise
 

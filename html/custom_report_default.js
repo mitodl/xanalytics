@@ -70,19 +70,18 @@ var make_report = function() {
 
   // main function called to process data from AJAX call
   var process_data = function(ajax_data){
-    data['data'] = ajax_data['data'];
     html = '';
-    // console.log("Processing data ", data);
-    if (data.error){
-      html = "Error!  " + data.error;
-      console.log('error = ', data.error);
+    // console.log("Processing data ", ajax_data);
+    if (ajax_data.error){
+      html = "Error!  " + ajax_data.error;
+      console.log('error = ', ajax_data.error);
     }
     report_div.html(html);
-    if (data.error){ return; }
+    data['data'] = ajax_data['data'];
+    if (ajax_data.error){ return; }
 
       make_table(ajax_data['tablecolumns'], ajax_data['data']);
   }
-
 
   var add_new_plot = function(optarg){
     optarg = optarg || {};
