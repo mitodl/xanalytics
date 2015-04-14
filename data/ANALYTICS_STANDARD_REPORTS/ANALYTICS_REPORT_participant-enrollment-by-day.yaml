@@ -9,7 +9,8 @@
     \ line, but \r\nnot in \"Ever participated\".  A participant is a registrant who\
     \ has clicked\r\ninto the courseware at least once."
   "group_tags":
-  - !!python/unicode ""
+  - !!python/unicode |-
+    course
   "html": |-
     <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
                                    <img src="/images/loading_icon.gif"/>
