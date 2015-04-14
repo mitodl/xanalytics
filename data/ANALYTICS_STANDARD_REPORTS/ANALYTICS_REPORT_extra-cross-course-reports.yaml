@@ -5,7 +5,7 @@
   "depends_on": |-
     None
   "description": |-
-    HTML for extra reports which show up on the cross-course analytics dashboard page
+    HTML for extra reports which show up on the all-course analytics dashboard page
   "group_tags":
   - !!python/unicode |-
     role:pm
@@ -14,6 +14,8 @@
 
             <hr width="100%"/>
         {% autoescape off %}
+            {{custom_report["enrollment-by-day-for-all-courses"]}}
+            {{custom_report["participant-enrollment-by-day-for-all-courses"]}}
             {{custom_report["age-histogram"]}}
             {{custom_report["all-course-report-IDV-enrollment"]}}
             {{custom_report["median-incomes-us-participants"]}}
