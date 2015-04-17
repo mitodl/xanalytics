@@ -179,9 +179,13 @@ class DataSource(object):
             memset += '-%d-%d' % (startIndex, maxResults)
         data = mem.get(memset)
 
+        optargs = {}
+        if project_id:
+            optargs['project_id'] = project_id
+
         if depends_on is not None:
             # get the latest mod time of tables in depends_on:
-            modtimes = [ bqutil.get_bq_table_last_modified_datetime(*(x.split('.',1))) for x in depends_on]
+            modtimes = [ bqutil.get_bq_table_last_modified_datetime(*(x.split('.',1)), **optargs) for x in depends_on]
             latest = max([x for x in modtimes if x is not None])
             
             if not latest:
@@ -217,10 +221,6 @@ class DataSource(object):
                                                                                                                                table_date, latest))
 
             # logging.info("[datasource.cached_get_bq_table] %s.%s table_date=%s, latest=%s, force_query=%s" % (dataset, table, table_date, latest, force_query))
-
-        optargs = {}
-        if project_id:
-            optargs['project_id'] = project_id
 
         if (not data) or ignore_cache or (not data['data']):	# data['data']=None if table was empty, and in that case try again
             try:

@@ -201,11 +201,11 @@ def get_bq_table_creation_datetime(dataset_id, table_id):
         return tinfo['creationTime']
     return None
 
-def get_bq_table_last_modified_datetime(dataset_id, table_id):
+def get_bq_table_last_modified_datetime(dataset_id, table_id, project_id=DEFAULT_PROJECT_ID):
     '''
     Retrieve datetime of table last modification
     '''
-    tinfo = get_bq_table_info(dataset_id, table_id)
+    tinfo = get_bq_table_info(dataset_id, table_id, project_id=project_id)
     if tinfo is not None:
         return tinfo['lastModifiedTime']
     return None
