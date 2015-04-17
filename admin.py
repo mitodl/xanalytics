@@ -53,10 +53,16 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
 
         crssd = 'data/%s' % custom_reports_standard_source_dir
         crssf = 'data/%s' % custom_reports_standard_source_file
+
         if os.path.exists(crssd):
             custom_reports_standard_source = custom_reports_standard_source_dir
         else:
             custom_reports_standard_source = custom_reports_standard_source_file
+
+        try:
+            custom_reports_standard_source = local_config.CUSTOM_REPORTS_SOURCE
+        except Exception as err:
+            pass
 
         if action=='Flush cache':
             memcache.flush_all()
@@ -88,19 +94,21 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
             msg = "Course listings for '%s' reloaded" % collection
 
         elif action=='Reload Standard Reports':
-            crssd = 'data/%s' % custom_reports_standard_source_dir
-            crssf = 'data/%s' % custom_reports_standard_source_file
+            crssd = 'data/%s' % custom_reports_standard_source
             if os.path.exists(crssd):
-                files = glob.glob('%s/*.yaml' % crssd)
-            elif os.path.exists(crssf):
-                files = [crssf]
-            msg = "<ul>"
-            for fn in files:
-                msg += "<li>Standard Reports loading from %s<br/>" % (fn)
-                report_file_data = open(fn).read()
-                msg += self.import_custom_report_from_file_data(report_file_data, overwrite=True)
-                msg += "</li>"
-            msg += "</ul>"
+                if os.path.isdir(crssd):
+                    files = glob.glob('%s/*.yaml' % crssd)
+                elif os.path.isfile(crssd):
+                    files = [crssd]
+                msg = "<ul>"
+                for fn in files:
+                    msg += "<li>Standard Reports loading from %s<br/>" % (fn)
+                    report_file_data = open(fn).read()
+                    msg += self.import_custom_report_from_file_data(report_file_data, overwrite=True)
+                    msg += "</li>"
+                msg += "</ul>"
+            else:
+                msg = "Error: cannot find file or directory %s" % crssd
 
         elif action=='Reload Custom Reports':
             collection = self.request.POST.get('collection')

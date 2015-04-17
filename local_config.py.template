@@ -22,6 +22,7 @@ DEFAULT_COLLECTION = 'latest'
 SESSION_SECRET_KEY = "dkjasf912lkj8d09"
 
 # CUSTOM_REPORTS_PAGE_TITLE = "Custom Reports"
+# CUSTOM_REPORTS_SOURCE = "ANALYTICS_STANDARD_REPORTS"
 
 #-----------------------------------------------------------------------------
 # collections
