@@ -21,6 +21,8 @@ DEFAULT_COLLECTION = 'latest'
 # make this unique to the site and random
 SESSION_SECRET_KEY = "dkjasf912lkj8d09"
 
+# CUSTOM_REPORTS_PAGE_TITLE = "Custom Reports"
+
 #-----------------------------------------------------------------------------
 # collections
 

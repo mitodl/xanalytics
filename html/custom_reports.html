@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>{{orgname}} Analytics Dashboard: Custom Reports</title>
+  <title>{{orgname}} Analytics Dashboard: {{cr_page_title}}</title>
 
   {% include 'all_head.html' %}
 
@@ -28,7 +28,7 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-            <li class="active"><a href="#">Custom Reports</a></li>
+            <li class="active"><a href="#">{{cr_page_title}}</a></li>
 
           </ul>
           <ul class="nav navbar-nav navbar-right">
@@ -42,7 +42,7 @@
     </nav>
 
 <div  class="container theme-showcase" role="main" data-target="#navbar">
-    <h1>Custom Reports</h1>
+    <h1>{{cr_page_title}}</h1>
 
 {% if msg %}
 <font color="red"><p id="msg">{% autoescape off %}{{ msg }}{% endautoescape %}</p></font>

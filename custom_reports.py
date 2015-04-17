@@ -90,6 +90,12 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             overwrite = (self.request.get('overwrite')=='yes')
             msg += self.import_custom_report_from_file_data(report_file_data, overwrite)
                     
+        cr_page_title = "Custom Reports"
+        try:
+            cr_page_title = local_config.CUSTOM_REPORTS_PAGE_TITLE
+        except Exception as err:
+            pass
+
         data = self.common_data.copy()
         data.update({'is_staff': self.is_superuser(),
                      'reports': self.get_custom_report_metadata(single=False),
@@ -97,6 +103,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                      'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, staff=True,
                                                                    group_tag = "{{group_tag}}",
                                                                ),
+                     'cr_page_title': cr_page_title,
                  })
         template = JINJA_ENVIRONMENT.get_template('custom_reports.html')
         self.response.out.write(template.render(data))
