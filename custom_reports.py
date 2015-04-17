@@ -617,6 +617,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 error += "<pre>%s</pre>" % msg
                 error += "SQL: <pre>%s</pre>" % sql
                 error += "Parameters: <pre>%s</pre>" % json.dumps(pdata, indent=4)
+                error += "optargs: <pre>%s</pre>" % json.dumps(optargs, indent=4)
             data = {'error': error}
             self.response.headers['Content-Type'] = 'application/json'   
             self.response.out.write(json.dumps(data))
