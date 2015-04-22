@@ -17,27 +17,30 @@
     None
   "javascript": |-
     var cc_all_enrollment_plot = function(){
-        // stacked horizontal bar chart, each row one course
-        var data = cc_data['data'];
-        $('#cc_enrollment').highcharts({
-            chart: { type: 'bar',  zoomType: 'x' },
-            credits: {  enabled: false  },
-            yAxis: {min: 0},
-            title : { text : 'Number of registrants by course', },
-            subtitle: { text: '(click and drag to zoom)' },
-            xAxis: { categories: data['enrollment_courses'] },
-            yAxis: {  min: 0,   title: { text: 'Registrants' } },
-            legend: {
-                reversed: true
-            },
-            plotOptions: {
-                series: {
-                    stacking: 'normal'
-                }
-            },
-            // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
-            series : data['all_enrollment_series'],
-        });
+      // stacked horizontal bar chart, each row one course
+      var data = cc_data['data'];
+      var the_height = 400+data['all_enrollment_series'].length*350;
+      console.log("the_height=", the_height);
+      $('#cc_enrollment').height(the_height);
+      $('#cc_enrollment').highcharts({
+        chart: { type: 'bar',  zoomType: 'x' },
+        credits: {  enabled: false  },
+        // yAxis: {min: 0},
+        title : { text : 'Number of registrants by course', },
+        subtitle: { text: '(click and drag to zoom)' },
+        xAxis: { categories: data['enrollment_courses'] },
+        yAxis: {  min: 0,   title: { text: 'Registrants' } },
+        legend: {
+          reversed: true
+        },
+        plotOptions: {
+          series: {
+            stacking: 'normal'
+          }
+        },
+        // tooltip: { pointFormat: 'Registrants: <b>{point.y:.1f}</b>' },
+        series : data['all_enrollment_series'],
+      });
     }
 
     $.getJSON('/dashboard/get/broad_stats', function (data) {
