@@ -363,13 +363,15 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         else:
             start_dt = start_dt - datetime.timedelta(days=14)	# start plot 2 weeks before launch
 
-        # logging.info("start_str = %s" % start_str)
-        end_dt = start_dt + datetime.timedelta(days=32*4)	# default position for end selector
-        end_str = end_dt.strftime('%Y-%m-%d')
-
-        if start_dt >= end_dt:
-            start_dt = datetime.datetime(2014, 9, 1)
         start_str = start_dt.strftime('%Y-%m-%d')
+
+        ongoing = self.get_collection_metadata('ONGOING', False)
+        if ongoing:
+            end_dt = datetime.datetime.now()
+        else:
+            # logging.info("start_str = %s" % start_str)
+            end_dt = start_dt + datetime.timedelta(days=32*4)	# default position for end selector
+        end_str = end_dt.strftime('%Y-%m-%d')
         the_end = self.get_collection_metadata('END_DATE', '2015-01-01')
         if end_str > '2015-01-01':
             the_end = end_str

@@ -462,7 +462,12 @@ class DataStats(object):
         dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())	# where to store result
         input_dataset = bqutil.course_id2dataset(course_id, 'pcday')				# source data
 
-        end = self.get_collection_metadata('END_DATE', end)
+        ongoing = self.get_collection_metadata('ONGOING', False)
+        if ongoing:
+            end = datetime.datetime.now().strftime('%Y-%m-%d')
+        else:
+            end = self.get_collection_metadata('END_DATE', end)
+
         start = self.get_collection_metadata('START_DATE', start)
 
         sql_enrollday = """
@@ -595,7 +600,12 @@ class DataStats(object):
         '''
         dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
 
-        end = self.get_collection_metadata('END_DATE', end)
+        ongoing = self.get_collection_metadata('ONGOING', False)
+        if ongoing:
+            end = datetime.datetime.now().strftime('%Y-%m-%d')
+        else:
+            end = self.get_collection_metadata('END_DATE', end)
+
         start = start or self.get_collection_metadata('START_DATE', "2012-08-20")
 
         logging.info('[compute_activity_by_day] start=%s, end=%s' % (start, end))
@@ -805,7 +815,12 @@ class DataStats(object):
         dataset = self.get_course_report_dataset()
         logging.info('enrollment by day dataset=%s' % dataset)
 
-        end = self.get_collection_metadata('END_DATE', end)
+        ongoing = self.get_collection_metadata('ONGOING', False)
+        if ongoing:
+            end = datetime.datetime.now().strftime('%Y-%m-%d')
+        else:
+            end = self.get_collection_metadata('END_DATE', end)
+
         start = self.get_collection_metadata('START_DATE', start)
 
         sql = """
