@@ -371,7 +371,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
             start_dt = datetime.datetime(2014, 9, 1)
         start_str = start_dt.strftime('%Y-%m-%d')
         the_end = self.get_collection_metadata('END_DATE', '2015-01-01')
-        if end_str > '2015-01-01':
+        if end_str > the_end:
             the_end = end_str
 
         try:
