@@ -118,6 +118,8 @@ def get_table_data(dataset_id, table_id, key=None, logger=None, project_id=DEFAU
                   end of table
     '''
     table = get_bq_table_info(dataset_id, table_id, project_id=project_id)
+    if not table:
+        raise Exception("[bqutil] table %s.%s Not Found" % (dataset_id, table_id))
     nrows = int(table['numRows'])
 
     table_ref = dict(datasetId=dataset_id, projectId=project_id, tableId=table_id)
