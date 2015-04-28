@@ -186,7 +186,7 @@ class DataSource(object):
         if depends_on is not None:
             # get the latest mod time of tables in depends_on:
             modtimes = [ bqutil.get_bq_table_last_modified_datetime(*(x.split('.',1)), **optargs) for x in depends_on]
-            latest = max([x for x in modtimes if x is not None])
+            latest = max([x for x in modtimes if x is not None] or [None])
             
             if not latest:
                 raise Exception("[datasource.cached_get_bq_table] Cannot get last mod time for %s (got %s), needed by %s.%s" % (depends_on, modtimes, dataset, table))
