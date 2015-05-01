@@ -30,6 +30,7 @@ var make_report = function() {
       "columns": tablecolumns,
       "pageLength": 10,
       searching: true,
+      search:{"regex": true},
       ordering: optarg.ordering==null ? true : optarg.ordering,
       paging: optarg.paging==null ? true : optarg.paging,
       order: optarg.order,
