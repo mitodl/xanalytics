@@ -77,6 +77,12 @@ tr.shown td.details-control {
 <h3>{{course_id}}</h3>
 <h3>module_id = {{module_id}}</h3>
 
+{% if error.msg %}
+<font color="red"><p>{{error.msg}}</p></font>
+{% endif %}
+
+<h4>[ <a href="/problem/{{course_id}}/{{url_name}}/prev">Previous Problem</a> | <a href="/problem/{{course_id}}/{{url_name}}/next">Next Problem</a> ]
+
 <h2>Problem Stats</h2>
 
 <table id="pstats" class="display"></table>

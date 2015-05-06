@@ -207,7 +207,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         self.response.headers['Content-Type'] = 'application/json'   
         self.response.out.write(json.dumps(data))
         
-    def setup_module_info(self, org=None, number=None, semester=None, url_name=None):
+    def setup_module_info(self, org=None, number=None, semester=None, url_name=None, seq=None):
         '''
         setup common module info for problem, video, html
         '''
@@ -220,6 +220,32 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         chapter_mid = the_module['chapter_mid']
         chapter_url_name = chapter_mid.rsplit('/',1)[-1]
         name = the_module['name']
+        error = None
+
+        # if seq is specified, then look for the problem before or after, as requested
+        if seq in ["next", "prev"]:
+            problems = [x for x in caxis.values() if (x['chapter_mid']==chapter_mid) and x['category']=='problem']
+            problems.sort(cmp=lambda x,y: int(x['index'])-int(y['index']))	# list of problems ordered by course axis index
+            try:
+                pidx = problems.index(the_module)
+            except Exception as err:
+                error = {'msg': "Module %s not found in list of problems %s" % (url_name, problems)}
+                pidx = None
+            if (pidx is not None) and seq=='next':
+                if pidx < len(problems)-1:
+                    the_module = problems[pidx+1]
+                    module_id = the_module['module_id']
+                    url_name = module_id.rsplit('/',1)[-1]
+                    logging.info("got next = %s" % the_module)
+                else:
+                    error = {'msg': "No problem available after %s in this chapter" % (url_name)}
+            if (pidx is not None) and seq=='prev':
+                if pidx > 0:
+                    the_module = problems[pidx-1]
+                    module_id = the_module['module_id']
+                    url_name = module_id.rsplit('/',1)[-1]
+                else:
+                    error = {'msg': "No problem available before %s in this chapter" % (url_name)}
 
         data = self.common_data.copy()
         data.update({'course_id': course_id,
@@ -231,7 +257,9 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                      'module_id': module_id,
                      'module': the_module,
                      'caxis': caxis,
+                     'error': error,
                  })
+        logging.info("error=%s" % error)
         return data
 
     @auth_required
@@ -888,6 +916,7 @@ ROUTES = [
     webapp2.Route('/course/<org>/<number>/<semester>', handler=MainPage, handler_method='get_course'),
     webapp2.Route('/chapter/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_chapter'),
     webapp2.Route('/problem/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_problem'),
+    webapp2.Route('/problem/<org>/<number>/<semester>/<url_name>/<seq>', handler=MainPage, handler_method='get_problem'),	# for next and prev
     webapp2.Route('/video/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_video'),
     webapp2.Route('/html/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_html'),
     webapp2.Route('/axis/<org>/<number>/<semester>', handler=MainPage, handler_method='get_axis'),
