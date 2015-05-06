@@ -221,7 +221,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         chapter_url_name = chapter_mid.rsplit('/',1)[-1]
         name = the_module['name']
 
-        data = self.common_data
+        data = self.common_data.copy()
         data.update({'course_id': course_id,
                      'name': name,
                      'chapter_mid': chapter_mid,
@@ -243,6 +243,14 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         '''
 
         data = self.setup_module_info(**kwargs)
+
+        data.update({'custom_report': self.custom_report_container(self.is_authorized_for_custom_report, 
+                                                                   course_id=data['course_id'],
+                                                                   chapter_id=data['chapter_mid'],
+                                                                   module_id=data['module_id'],
+                                                               ),
+                 })
+
         # template = os.path.join(os.path.dirname(__file__), 'problem.html')
         template = JINJA_ENVIRONMENT.get_template('problem.html')
         self.response.out.write(template.render(data))

@@ -135,7 +135,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         # params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
         params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 
                   'get_table_columns', 'force_query', 'sql_flags', "ignore_cache",
-                  'group_tag']
+                  'group_tag', 'module_id']
         pdata = {}
         for param in params:
             # pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
@@ -461,6 +461,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         pdata['orgname'] = self.ORGNAME
         pdata['sane_username'] = self.user.replace(' ', '_').replace('.', '_').replace('@', '_')
 
+        if 'module_id' in pdata and pdata['module_id']:
+            url_name = pdata['module_id'].rsplit('/',1)[-1]
+            pdata['module_url_name'] = url_name.replace(':','__').replace('-','_')
+
         # project_id specified?
         optargs = {}
         if 'project_id' in (crm.meta_info or {}):
@@ -576,7 +580,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             msg += sql
             msg += "\n\nwith these parameters:\n"
             msg += json.dumps(pdata, indent=4)
-            msg += "\n\producing the output table: %s.%s\n" % (dataset, table)
+            msg += "\n\nproducing the output table: %s.%s\n" % (dataset, table)
             error = "<pre>%s</pre>" % (msg.replace('<','&lt;').replace('<','&gt;'))
             data = {'error': error}
             self.response.headers['Content-Type'] = 'application/json'   
