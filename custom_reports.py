@@ -14,6 +14,8 @@ import yaml
 import re
 import string
 import random
+import hashlib
+import base64
 
 import jinja2
 
@@ -451,7 +453,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             dataset = self.get_course_report_dataset()
             # using course report dataset; list the tables, to determine which is the latest
             # person_course dataset, and use that for {person_course}
-            pdata['person_course'] = '[%s.%s]' % (dataset, self.find_latest_person_course_table(dataset))
+            pdata['person_course_latest'] = self.find_latest_person_course_table(dataset)
+            pdata['person_course'] = '[%s.%s]' % (dataset, pdata['person_course_latest'])
         pdata['dataset'] = dataset
         pdata['course_report'] = self.get_course_report_dataset()
         pdata['course_report_org'] = self.get_course_report_dataset(force_use_org=True)
@@ -474,7 +477,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if '{' in table:
             table = table.format(**pdata)
             table = table.replace('-', '_').replace(' ', '_')
-        if not ('dataset' in (crm.meta_info or {})) and not table.startswith('stats_'):
+        if not ('dataset' in (crm.meta_info or {})) and not table.startswith('stats_') and not (crm.meta_info.get('no_stats_ok')):
             table = "stats_" + table
 
         # special handling for person_course table from particular dataset
@@ -495,9 +498,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         error = None
 
-        # dynamic sql: the SQL is allowed to change based on input parameters
-        # do this by treating the SQL as a jinja2 tempate
-        if crm.meta_info.get('dynamic_sql'):
+        def setup_sql_flags():
             if 'sql_flags' in pdata:
                 if not type(pdata['sql_flags'])==dict:
                     try:
@@ -508,6 +509,10 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                         logging.error(msg)
                         raise Exception(msg)
 
+        # dynamic sql: the SQL is allowed to change based on input parameters
+        # do this by treating the SQL as a jinja2 tempate
+        if crm.meta_info.get('dynamic_sql'):
+            setup_sql_flags()
             # a little sanity checking - disallow spaces in any sql_flags values
             sf = pdata['sql_flags']
             for k in sf:
@@ -598,21 +603,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             logging.info(msg)
             the_msg.append(msg)
 
-        try:
-            bqdata = self.cached_get_bq_table(dataset, table, 
-                                              sql=sql,
-                                              logger=my_logger,
-                                              depends_on=depends_on,
-                                              startIndex=int(pdata['start'] or 0), 
-                                              maxResults=int(pdata['length'] or 100000),
-                                              raise_exception=True,
-                                              ignore_cache=ignore_cache,
-                                              force_query=force_query,
-                                              **optargs
-            )
-            self.fix_bq_dates(bqdata)
-        except Exception as err:
-            bqdata = {'data': None}
+        def output_error(err):
             error = "<pre>%s</pre>" % (str(err).replace('<','&lt;').replace('<','&gt;'))
             logging.error('custom report error %s' % error)
             logging.error(err)
@@ -628,7 +619,185 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             data = {'error': error}
             self.response.headers['Content-Type'] = 'application/json'   
             self.response.out.write(json.dumps(data))
-            return
+
+        # is the request "indexed", meaning only matching rows of the table are to be returned?
+        indexed_column = crm.meta_info.get('indexed')
+        if indexed_column:
+            setup_sql_flags()
+            indexed_value = pdata.get('sql_flags', {}).get('indexed_value')
+            logging.info("[custom_reports] retrieving %s.%s with indexing on %s to match value %s" % (dataset, table, indexed_column, indexed_value))
+            if not indexed_value:
+                my_logger('Error: missing sql_flags.indexed_value to match indexed column %s in %s.%s' % (indexed_column, dataset, table))
+                data = {'error': msg}
+                self.response.headers['Content-Type'] = 'application/json'   
+                self.response.out.write(json.dumps(data))
+                return
+            # ensure existence of indexed version of table.  By convention, that is a table named tablename + "__indexed_" + indexed_column
+            # the table has a SHA1 hash of the indexed column added, and is sorted according to the last few characters
+            # of the SHA1 hash.
+            indexed_table = table + "__indexed_" + indexed_column
+            indexing_sql_template = """select *,
+                                  SUBSTR(TO_BASE64(SHA1({indexed_column})),-3,2) as index_sha1_2ch,
+                                  ROW_NUMBER() over (order by index_sha1_2ch, username) as index_row_number{subnum},
+                              from [{dataset}.{table}]
+                              {where_clause}
+                              order by index_sha1_2ch, {indexed_column}
+                           """
+            indexing_sql = indexing_sql_template.format(dataset=dataset, table=table, indexed_column=indexed_column, 
+                                                        where_clause="",
+                                                        subnum="")
+            try:
+                bqdata = self.cached_get_bq_table(dataset, indexed_table,
+                                                  sql=indexing_sql,
+                                                  logger=my_logger,
+                                                  depends_on=["%s.%s" % (dataset, table)],
+                                                  raise_exception=True,
+                                                  ignore_cache=ignore_cache,
+                                                  force_query=force_query,
+                                                  startIndex=0,
+                                                  maxResults=1,
+                                                  **optargs
+                                                )
+            except Exception as err:
+                if "Response too large to return" in str(the_msg):
+                    # hmm - table too large!  can't workaround using allowLargeResult because the return results
+                    # need to be ordered.  So let's break it up into multiple queries, appending each,
+                    # by index_sha1_2ch
+                    b64chars = "+/0123456789" + ''.join(map(chr,range(ord('A'), ord('Z')+1))) + ''.join(map(chr,range(ord('a'), ord('z')+1)))
+                    # get table size, divide by 64M, to get number of divisions to use
+                    tinfo = bqutil.get_bq_table_info(dataset, table, **optargs)
+                    nbytes = int(tinfo['numBytes'])
+                    ndivs = int(round(nbytes / (64*1024*1024)))
+                    logging.info("Response too large - nbytes=%s, so trying ndivs=%s" % (nbytes, ndivs))
+                    end_idx = None
+                    start_idx = None
+                    dn = int(64 / ndivs)
+                    offset = dn
+                    overwrite = True
+                    nrows = 0
+                    while (offset < 65):
+                        start_idx = end_idx
+                        last_row_index = nrows	# note ROW_NUMBER() starts with 1 (not zero)
+                        if (offset < 64):
+                            end_idx = b64chars[offset] + "+"
+                        else:
+                            end_idx = None	# boundary case
+                        wc = "where "
+                        if start_idx:
+                            wc += '(SUBSTR(TO_BASE64(SHA1(%s)),-3,2) >= "%s") ' % (indexed_column, start_idx)
+                        else:
+                            wc += "True "
+                        if end_idx:
+                            wc += 'AND (SUBSTR(TO_BASE64(SHA1(%s)),-3,2) < "%s") ' % (indexed_column, end_idx)
+                        logging.info("--> start_idx=%s, end_idx=%s, starting row %d" % (start_idx, end_idx, last_row_index))
+                        tmp_sql = indexing_sql_template.format(dataset=dataset, table=table, indexed_column=indexed_column, 
+                                                               where_clause=wc, subnum="_sub")
+                        indexing_sql = "SELECT *, index_row_number_sub + %d as index_row_number FROM (%s)" % (last_row_index, tmp_sql)
+                        try:
+                            bqutil.create_bq_table(dataset, indexed_table,
+                                                   sql=indexing_sql,
+                                                   overwrite=overwrite,
+                                                   logger=my_logger,
+                                                   **optargs
+                                               )
+                            tinfo = bqutil.get_bq_table_info(dataset, indexed_table, **optargs)
+                            nrows = int(tinfo['numRows'])
+                            logging.info("--> Result from %s to %s has %d rows" % (start_idx, end_idx, nrows))
+                        except Exception as err:
+                            bqdata = {'data': None}
+                            sql = indexing_sql
+                            output_error(err)
+                            return
+                        overwrite = "append"
+                        offset += dn
+                        
+                else:
+                    bqdata = {'data': None}
+                    sql = indexing_sql
+                    output_error(err)
+                    return
+
+            # now ensure table index, and retrieve it.  It has just two columns: index_sha1_2ch, start_row
+            tindex_table = table + "__index_for_" + indexed_column
+            tindex_sql = """SELECT index_sha1_2ch, 
+                                min(index_row_number) as start_row,
+                                # max(index_row_number) as end_row,   # don't need this - just take next start_row
+                            FROM [{dataset}.{indexed_table}]
+                            group by index_sha1_2ch
+                            order by index_sha1_2ch
+                         """.format(dataset=dataset, indexed_table=indexed_table)
+            try:
+                bqdata = self.cached_get_bq_table(dataset, tindex_table,
+                                                    sql=tindex_sql,
+                                                    logger=my_logger,
+                                                    depends_on=["%s.%s" % (dataset, indexed_table)],
+                                                    raise_exception=True,
+                                                    ignore_cache=ignore_cache,
+                                                    force_query=force_query,
+                                                    startIndex=0,
+                                                    maxResults=10000,
+                                                    **optargs
+                                                )
+            except Exception as err:
+                bqdata = {'data': None}
+                sql = tindex_sql
+                output_error(err)
+                return
+
+            # find the start and end rows to retrieve, based the last characters of the SHA1 hash of the indexed value
+            sha1_2ch = base64.b64encode(hashlib.sha1(indexed_value).digest())[-3:-1]
+            start_row = None
+            end_row = None
+            for k in bqdata['data']:
+                if start_row and not end_row:
+                    end_row =  int(k['start_row'])
+                if (k['index_sha1_2ch']==sha1_2ch):
+                    start_row = int(k['start_row'])
+            logging.info("Retrieving iv=%s, sha1_2ch=%s, rows %s to %s of %s.%s" % (indexed_value,
+                                                                                    sha1_2ch,
+                                                                                    start_row, end_row, dataset, indexed_table))
+            if not start_row:
+                output_error("Cannot find %s=%s in %s.%s" % (indexed_column, indexed_value,
+                                                             dataset, indexed_table))
+                bqdata = {'data': None}
+                return
+                
+            max_results = (end_row or (start_row+4000)) - start_row
+            bqdata = self.cached_get_bq_table(dataset, indexed_table, ignore_cache=True,
+                                                startIndex=start_row-1,
+                                                maxResults=max_results,
+                                            )
+
+            # extract just the row(s) with indexed_column value matching indexed_value (the hash is many to one)
+            newdata = []
+            for k in range(len(bqdata['data'])):
+                datum = bqdata['data'][k]
+                if (datum[indexed_column]==indexed_value):
+                    newdata.append(datum)
+            logging.info("--> Result has %d items, of which %d match" % (len(bqdata['data']), len(newdata)))
+            bqdata['data'] = newdata                
+            
+            table = indexed_table	# so that columns are retrieved properly
+            
+        if not indexed_column:
+            # retrieve full table
+            try:
+                bqdata = self.cached_get_bq_table(dataset, table, 
+                                                  sql=sql,
+                                                  logger=my_logger,
+                                                  depends_on=depends_on,
+                                                  startIndex=int(pdata['start'] or 0), 
+                                                  maxResults=int(pdata['length'] or 100000),
+                                                  raise_exception=True,
+                                                  ignore_cache=ignore_cache,
+                                                  force_query=force_query,
+                                                  **optargs
+                )
+                self.fix_bq_dates(bqdata)
+            except Exception as err:
+                bqdata = {'data': None}
+                output_error(err)
+                return
 
         tablecolumns = []
         if pdata['get_table_columns']:
