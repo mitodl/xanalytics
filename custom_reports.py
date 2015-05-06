@@ -148,6 +148,18 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         return crm, pdata, auth_ok, msg
 
+    def get_custom_report_library_javascript(self):
+        '''
+        Return javascript from custom report library.
+        Allows frequenly used standard js to be centralized, to reduce clutter.
+        '''
+        class GetLibraryJS(dict):
+            FILES = ["default", "plotting", "tables"]
+            def __getitem__(self, filename):
+                jsfn = "custom_report_%s.js" % filename
+                jsdata, used_jsfn, uptodate = JINJA_ENVIRONMENT.loader.get_source(JINJA_ENVIRONMENT, jsfn)
+                return jsdata
+        return GetLibraryJS()
 
     @auth_required
     def get_custom_report_page(self, report_name):
@@ -191,6 +203,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                             'is_pm': self.is_pm(),
                             'msg': msg,
                             'nav_is_active': self.nav_is_active(report_name),
+                            'cr_js_library': self.get_custom_report_library_javascript(),
                         })
         render_data.update(pdata)
         self.response.out.write(template.render(render_data))
@@ -308,6 +321,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 'parameter_values': parameter_values,
                 'meta_info': json.dumps(crm.meta_info),
                 'editor_heights': editor_heights or "{}",
+                'cr_js_library': self.get_custom_report_library_javascript(),
         }
         data.update(self.common_data)
 
@@ -357,6 +371,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                                                                      **parameters),	# pass pdata so children of page also get parameters
                        'is_staff': self.is_superuser(),
                        'is_pm': self.is_pm(),
+                       'cr_js_library': self.get_custom_report_library_javascript(),
                        }
         render_data.update(pdata)
 
@@ -364,11 +379,11 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         html = JINJA_ENVIRONMENT.from_string(crm.html).render(render_data)	# allows custom reports to be included
 
         js_src = "<script type='text/javascript'>"
-        js_src += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html, and thus gets template vars rendered
+        js_src += "$(document).ready( function () {%s} );" % crm.javascript	# js goes in html
         js_src += "</script>" 
 
         try:
-            js = Template(js_src).render(render_data)
+            js = Template(js_src).render(render_data)	# render template variables, ideally w/o global context
         except Exception as err:
             logging.info("Warning: could not render js in custom_reports, err=%s" % str(err))
             js = JINJA_ENVIRONMENT.from_string(js_src).render(render_data)

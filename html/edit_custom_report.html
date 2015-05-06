@@ -57,7 +57,7 @@
 <li>Javascript: <textarea id="edit_js" data-name="js" name='javascript' data-mode="text/javascript" rows="20" cols="80">{{report.javascript}}</textarea></li>
 {% set report_sql_str = report.sql or '' %}
 <li>SQL: <textarea name='sql' data-name="sql" data-mode="text/x-sql" rows="10" cols="80">{{report_sql_str}}</textarea></li>
-<li>Description: <textarea name='description' data-mode="text/html" rows="10" cols="80">{{report.description}}</textarea></li>
+<li>Description: <textarea name='description' data-name="description" data-mode="text/html" rows="10" cols="80">{{report.description}}</textarea></li>
 </ul>
 
 <p>Report name (no spaces): <input type="text" size="120" name="name" value="{{report.name}}"/></p>
@@ -72,6 +72,34 @@
 <input id="save_changes" type="submit" name="action" value="Save Changes"/>
 </form>
 
+<h3>Custom report javascript libraries available:</h3>
+<div id="jslibs">
+  <ul>
+  {% for jsfn in cr_js_library.FILES %}
+      <li>{{jsfn}} <button id="jsfn_view_{{jsfn}}" data-state="hidden">View</button>
+      </li>
+      <div id="jsfn_div_{{jsfn}}" style="display:none">
+          <textarea  id="jsfn_js_{{jsfn}}">{% autoescape off %}{{cr_js_library[jsfn]}}{% endautoescape %}</textarea>
+      </div>
+      <script type="text/javascript">
+      (function(){
+	var ta = $('#jsfn_js_{{jsfn}}')[0];
+	var cm = CodeMirror.fromTextArea(ta, {'mode': 'text/javascript',
+	                                      'lineNumbers': true,
+				              matchBrackets: true,
+				     });
+	$('#jsfn_view_{{jsfn}}').click(function(){
+	    var da = $('#jsfn_div_{{jsfn}}');
+	    var data = $(this).data();
+	    if (data.state=="hidden"){ da.show(); data.state = "visible"; $(this).html("Hide"); cm.refresh();
+	    }else{ da.hide(); data.state = "hidden"; $(this).html("View");
+            }
+        });
+      })();
+      </script>
+  {% endfor %}
+  </ul>
+</div>
 
 <hr width="100%"/>
 <h2>View Page</h2>
@@ -125,6 +153,7 @@ $(document).ready( function () {
     
     $('textarea').each(function(ta){
 	var data = $(this).data();
+        if (!data.name){ return; }
 	console.log('mode = ' + data.mode);
 	// $(this).resizable();
 	$(this).css({"border-color": "#C1E0FF", 
