@@ -156,6 +156,7 @@ class DataSource(object):
                             force_query=False,
                             force_newer_than=None,
                             startIndex=0, maxResults=1000000,
+                            allowLargeResults=False,
                             raise_exception=False,
                             project_id=None,
     ):
@@ -227,7 +228,9 @@ class DataSource(object):
                 data = bqutil.get_bq_table(dataset, table, sql, key=key, logger=logger,
                                            force_query=force_query,
                                            startIndex=startIndex, 
-                                           maxResults=maxResults, **optargs)
+                                           maxResults=maxResults, 
+                                           allowLargeResults=allowLargeResults,
+                                           **optargs)
             except Exception as err:
                 logging.error(err)
                 if raise_exception:
