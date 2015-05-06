@@ -790,8 +790,9 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                 
             max_results = (end_row or (start_row+4000)) - start_row
             bqdata = self.cached_get_bq_table(dataset, indexed_table, ignore_cache=True,
-                                                startIndex=start_row-1,
-                                                maxResults=max_results,
+                                              startIndex=start_row-1,
+                                              maxResults=max_results,
+                                              **optargs
                                             )
 
             # extract just the row(s) with indexed_column value matching indexed_value (the hash is many to one)
