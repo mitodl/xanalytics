@@ -29,6 +29,12 @@ $(document).ready( function () {
 <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
   <h1>Chapter: {{chapter_name}} of {{course_id}}</h1>
 
+{% if error.msg %}
+<font color="red"><p>{{error.msg}}</p></font>
+{% endif %}
+
+<h4>[ <a href="/chapter/{{course_id}}/{{url_name}}/prev">Previous Chapter</a> | <a href="/chapter/{{course_id}}/{{url_name}}/next">Next Chapter</a> ]
+
 <h2>Content</h2>
 
 {% autoescape off %}{{ table }}{% endautoescape %}

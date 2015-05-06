@@ -236,7 +236,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                     the_module = problems[pidx+1]
                     module_id = the_module['module_id']
                     url_name = module_id.rsplit('/',1)[-1]
-                    logging.info("got next = %s" % the_module)
                 else:
                     error = {'msg': "No problem available after %s in this chapter" % (url_name)}
             if (pidx is not None) and seq=='prev':
@@ -259,7 +258,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                      'caxis': caxis,
                      'error': error,
                  })
-        logging.info("error=%s" % error)
         return data
 
     @auth_required
@@ -561,7 +559,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         self.response.out.write(tabledata)
 
     @auth_required
-    def get_chapter(self, org=None, number=None, semester=None, url_name=None):
+    def get_chapter(self, org=None, number=None, semester=None, url_name=None, seq=None):
         '''
         single chapter analytics view: container for table data
 
@@ -572,6 +570,32 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
 
         # get chapter info
         the_chapter = caxis[url_name]
+
+        # if seq is specified, then look for the chapter before or after, as requested
+        error = None
+        if seq in ["next", "prev"]:
+            chapters = [x for x in caxis.values() if (x['category']=='chapter')]
+            chapters.sort(cmp=lambda x,y: int(x['index'])-int(y['index']))	# list of chapters ordered by course axis index
+            try:
+                cidx = chapters.index(the_chapter)
+            except Exception as err:
+                error = {'msg': "Module %s not found in list of chapters %s" % (url_name, chapters)}
+                cidx = None
+            if (cidx is not None) and seq=='next':
+                if cidx < len(chapters)-1:
+                    the_chapter = chapters[cidx+1]
+                    module_id = the_chapter['module_id']
+                    url_name = module_id.rsplit('/',1)[-1]
+                else:
+                    error = {'msg': "No chapter available after %s in this course" % (url_name)}
+            if (cidx is not None) and seq=='prev':
+                if cidx > 0:
+                    the_chapter = chapters[cidx-1]
+                    module_id = the_chapter['module_id']
+                    url_name = module_id.rsplit('/',1)[-1]
+                else:
+                    error = {'msg': "No chapter available before %s in this course" % (url_name)}
+
         chapter_mid = the_chapter['module_id']
         chapter_name = the_chapter['name']
 
@@ -588,7 +612,6 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                                                 # {'field': 'url_name', 'title': 'url_name'},
                                                ] ]
 
-
         tablehtml = self.list2table(fields, [])
         tablefields = json.dumps([x.colinfo() for x in fields])
 
@@ -598,6 +621,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                      'course_id': course_id,
                      'chapter_name': chapter_name,
                      'url_name': url_name,
+                     'error': error,
                  })
 
         template = JINJA_ENVIRONMENT.get_template('chapter.html')
@@ -915,6 +939,7 @@ ROUTES = [
     webapp2.Route('/', handler=MainPage, handler_method='get_main'),
     webapp2.Route('/course/<org>/<number>/<semester>', handler=MainPage, handler_method='get_course'),
     webapp2.Route('/chapter/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_chapter'),
+    webapp2.Route('/chapter/<org>/<number>/<semester>/<url_name>/<seq>', handler=MainPage, handler_method='get_chapter'),
     webapp2.Route('/problem/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_problem'),
     webapp2.Route('/problem/<org>/<number>/<semester>/<url_name>/<seq>', handler=MainPage, handler_method='get_problem'),	# for next and prev
     webapp2.Route('/video/<org>/<number>/<semester>/<url_name>', handler=MainPage, handler_method='get_video'),
