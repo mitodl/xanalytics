@@ -400,13 +400,20 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         self.response.out.write(json.dumps(data))
         
 
-    def find_latest_person_course_table(self, dataset):
+    def find_latest_person_course_table(self, dataset, project_id=None):
         '''
-        Return the table_id for the most recent person_course table in specified dataset
+        Return the table_id for the most recent person_course table in specified dataset.
+        Uses default project_id if one is not specified.
         '''
         pctable = ""
         pcdate = ""
-        for table in bqutil.get_list_of_table_ids(dataset):
+
+        # project_id specified?
+        optargs = {}
+        if project_id:
+            optargs['project_id'] = project_id
+
+        for table in bqutil.get_list_of_table_ids(dataset, **optargs):
             if not table.startswith('person_course_'):
                 continue
             m = re.search('person_course_.*_(20\d\d_\d\d_\d\d_[0-9]+)', table)
@@ -459,6 +466,11 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             force_query = False
         ignore_cache = pdata.get('ignore_cache', False) or force_query
 
+        # project_id specified?
+        optargs = {}
+        if 'project_id' in (crm.meta_info or {}):
+            optargs['project_id'] = crm.meta_info['project_id']
+
         if course_id:
             dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=self.use_dataset_latest())
             pdata['person_course'] = '[%s.person_course]' % dataset
@@ -468,7 +480,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             dataset = self.get_course_report_dataset()
             # using course report dataset; list the tables, to determine which is the latest
             # person_course dataset, and use that for {person_course}
-            pdata['person_course_latest'] = self.find_latest_person_course_table(dataset)
+            pdata['person_course_latest'] = self.find_latest_person_course_table(dataset, project_id=optargs.get('project_id'))
             pdata['person_course'] = '[%s.%s]' % (dataset, pdata['person_course_latest'])
         pdata['dataset'] = dataset
         pdata['course_report'] = self.get_course_report_dataset()
@@ -479,11 +491,6 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         if 'module_id' in pdata and pdata['module_id']:
             url_name = pdata['module_id'].rsplit('/',1)[-1]
             pdata['module_url_name'] = url_name.replace(':','__').replace('-','_')
-
-        # project_id specified?
-        optargs = {}
-        if 'project_id' in (crm.meta_info or {}):
-            optargs['project_id'] = crm.meta_info['project_id']
 
         # what table?  get custom course report configuration metadata for report name as specified
         table = crm.table_name
@@ -503,7 +510,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         for m in re.findall('{person_course__([^ \}]+)}', crm.sql):
             org = m
             org_dataset = self.get_course_report_dataset(orgname=org)
-            pcd = '[%s.%s]' % (org_dataset, self.find_latest_person_course_table(org_dataset))
+            pcd = '[%s.%s]' % (org_dataset, self.find_latest_person_course_table(org_dataset, project_id=optargs.get('project_id')))
             pdata['person_course__' + org] = pcd
             logging.info('[cr] org=%s, pc=%s.%s' % (org, org_dataset, pcd))
 

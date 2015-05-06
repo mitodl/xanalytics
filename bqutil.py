@@ -95,8 +95,8 @@ def get_tables(dataset_id, project_id=DEFAULT_PROJECT_ID, verbose=False):
         print "[bqutil] get_tables: oops! dataset=%s, no table info in %s" % (dataset_id, json.dumps(table_list, indent=4))
     return table_list
 
-def get_list_of_table_ids(dataset_id):
-    tables_info = get_tables(dataset_id).get('tables', [])
+def get_list_of_table_ids(dataset_id, project_id=DEFAULT_PROJECT_ID):
+    tables_info = get_tables(dataset_id, project_id=project_id).get('tables', [])
     table_id_list = [ x['tableReference']['tableId'] for x in tables_info ]
     return table_id_list
 
