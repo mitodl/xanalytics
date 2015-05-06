@@ -262,9 +262,11 @@ function drawChart() {
 
 <hr width="100%"/>
 
+{% if is_instructor %}
     {% autoescape off %}
         {{custom_report['student-answers-for-specific-problem-in-course']}}
     {% endautoescape %}
+{% endif %}
 
 </body>
 </html>
