@@ -1,0 +1,179 @@
+- "author": |-
+    None
+  "date": |-
+    2015-04-21 20:45:58.182982
+  "depends_on": |-
+    None
+  "description": |-
+    Data about a single user (individual person), from the latest person-course file.
+  "group_tags":
+  - !!python/unicode |-
+    role:researcher
+  "html": |-
+    <html>
+      <head>
+        <title>Individual Person Report</title>
+
+        {% include 'all_head.html' %}
+      </head>
+      <body role="document">
+
+        {% include 'navbar_standard.html' %}
+
+
+        <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
+
+          <h1>Individual Person Report</h1>
+
+          {% if 1 %}<div><font color="red">{{msg}}</font></div>{% endif %}
+
+          <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+            <div id="form-{{report_name}}" style="xdisplay:none">
+              <h2>Person Selection</h2>
+              <form id="person-selection">
+                <p>Username: <input type="text" name="username" value=""/></p>
+                <!-- <p>or user ID: <input type="text" name="user_id" value=""/></p> -->
+                <input type="submit" name="Get Data" value="GetData"/>
+              </form>
+            </div>
+            <hr width="100%">
+            <div id='individual-results-busy' style='display:none'>
+              <img src='/images/loading_icon.gif'/>
+            </div>
+            <div id="results-{{report_name}}">
+            </div>
+            <div id='individual-results-container' style='display:none'>
+              {% autoescape off %}
+              <hr width="100%"/>
+              {{custom_report["person-specific-report"]}}
+              {% endautoescape %}
+            </div>
+
+          </div>
+        </div>
+      </body>
+    </html>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+      var report_name = "{{report_name}}";
+
+      var report_div = $('#results-{{report_name}}');
+      var form_container = $('#form-{{report_name}}');
+      var form_elem = $('#person-selection');
+
+      var add_text = function(text){
+        report_div.append("<p>"+text+"</p>");
+      }
+
+      var new_section = function(title){
+        report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>");
+      }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        // console.log("Processing data ", ajax_data);
+        $('#individual-results-busy').hide();
+        report_div.show();
+
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+            // make a summary table: total number of courses, number certified, etc.
+        var stats = {n: 0, viewed: 0, explored: 0, certified: 0, verified: 0};
+        data.data.forEach(function(x){
+          stats.n += 1;
+          ["viewed", "explored", "certified"].forEach(function(k){
+            if (x[k]=="true") { stats[k] += 1; }
+          });
+          if (x.mode=="verified"){ stats.verified += 1; }
+        });
+
+        var scols = [colent("Course Enrollments", "n"),
+                     colent("Courses Viewed", "viewed"),
+                     colent("Courses Explored", "explored"),
+                     colent("Courses Certified", "certified"),
+                     colent("ID Verified Certs", "verified"),
+                     ];
+        new_section("Summary data");
+        make_table(scols, [stats]);
+
+        // raw data table
+
+        new_section("Raw data from person-course table");
+        make_table(ajax_data['tablecolumns'], ajax_data['data']);
+      }
+
+      var get_and_display_for_username = function(username){
+        parameters.sql_flags = JSON.stringify({"indexed_value": username});
+        $.getJSON(
+          '/custom/get_report_data/{{report_name}}',
+          parameters,
+          process_data
+        );
+      }
+
+      var process_form = function(event){
+        cparams = $( this ).serializeArray();
+        console.log( "form data: ", cparams );
+        event.preventDefault();
+        report_div.hide();
+        $('#individual-results-busy').show();
+        cparams.forEach(function(x){
+          if (x.name=="username"){
+                  get_and_display_for_username(x.value);
+          }
+        });
+      }
+
+      var setup = function(){
+        // trigger our code on form submission
+        form_elem.submit(process_form);
+      }
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              setup: setup,
+             }
+
+    }
+
+    individual_report = make_report();  // instantiate
+    individual_report.setup();
+
+  "meta_info":
+    !!python/unicode "debug_sql": !!bool |-
+      false
+    !!python/unicode "indexed": !!python/unicode |-
+      username
+    !!python/unicode "is_page": !!bool |-
+      true
+    !!python/unicode "no_stats_ok": !!int |-
+      1
+  "name": |-
+    individual-person-report
+  "sql": ""
+  "table_name": |-
+    {person_course_latest}
+  "title": |-
+    Individual Person Report
