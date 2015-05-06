@@ -16,6 +16,7 @@ import string
 import random
 import hashlib
 import base64
+import time
 
 import jinja2
 
@@ -726,7 +727,15 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                                                    logger=my_logger,
                                                    **optargs
                                                )
-                            tinfo = bqutil.get_bq_table_info(dataset, indexed_table, **optargs)
+                            cnt = 0
+                            tinfo = None
+                            while (not tinfo) and (cnt < 10):
+                                tinfo = bqutil.get_bq_table_info(dataset, indexed_table, **optargs)
+                                if not tinfo:
+                                    logging.info("==> ERROR?  got unexpected None for get_bq_table_info %s.%s" % (dataset, indexed_table))
+                                    time.sleep(10)
+                                    cnt += 1
+
                             nrows = int(tinfo['numRows'])
                             logging.info("--> Result from %s to %s has %d rows" % (start_idx, end_idx, nrows))
                         except Exception as err:
