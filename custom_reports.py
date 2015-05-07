@@ -136,7 +136,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         # params = ['course_id', 'chapter_id', 'problem_id', 'start', 'end']
         params = ['course_id', 'chapter_id', 'problem_id', 'draw', 'start', 'end', 'length', 
                   'get_table_columns', 'force_query', 'sql_flags', "ignore_cache",
-                  'group_tag', 'module_id']
+                  'group_tag', 'module_id', 'table_number']
         pdata = {}
         for param in params:
             # pdata[param] = self.request.POST.get(param, self.request.GET.get(param, None))
@@ -501,6 +501,17 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             self.response.headers['Content-Type'] = 'application/json'   
             self.response.out.write(json.dumps(data))
             return
+
+        # multiple table names?  use parameters to select one
+        if ',' in table:
+            tables = table.split(',')
+            try:
+                table_number = int(pdata.get('table_number', 0) or 0)
+                table = tables[table_number]
+            except Exception as err:
+                raise Exception("[custom_reports] Cannot select table from tables=%s, table_number=%s, err=%s" % (tables, pdata.get('table_number'), err))
+
+        # allow parameters in table name
         if '{' in table:
             table = table.format(**pdata)
             table = table.replace('-', '_').replace(' ', '_')
