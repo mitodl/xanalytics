@@ -661,6 +661,15 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         # is the request "indexed", meaning only matching rows of the table are to be returned?
         indexed_column = crm.meta_info.get('indexed')
         if indexed_column:
+            if ',' in indexed_column:
+                indexed_columns = indexed_column.split(',')
+                try:
+                    table_number = int(pdata.get('table_number', 0) or 0)
+                    indexed_column = indexed_columns[table_number]
+                except Exception as err:
+                    raise Exception("[custom_reports] Cannot select indexed_column from indexed_columns=%s, table_number=%s, err=%s" % (indexed_columns, 
+                                                                                                                                        pdata.get('table_number'), 
+                                                                                                                                        err))
             setup_sql_flags()
             indexed_value = pdata.get('sql_flags', {}).get('indexed_value')
             logging.info("[custom_reports] retrieving %s.%s with indexing on %s to match value %s" % (dataset, table, indexed_column, indexed_value))

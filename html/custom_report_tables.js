@@ -4,7 +4,7 @@
     ntables += 1;
     var div_id = "table-" + report_name + "-" + ntables;
     var html = '<table id="' + div_id + '" class="display" width="' + (optarg.width || '100%') + '"></table>';
-    report_div.append(html);
+    (optarg.report_div || report_div).append(html);
     // console.log('tablecolumns=', tablecolumns, ', tabledata=', tabledata);
     var table = $('#' + div_id).DataTable({
       dom: optarg.dom==null ? 'T<"clear">lfrtip' : optarg.dom,
@@ -20,6 +20,7 @@
       //   return toFormat.toString().replace( /\B(?=(\d{3})+(?!\d))/g, "," ); 
       // },
     });
+    return table;
   }
 
   // make table column entry
