@@ -177,7 +177,7 @@ class DataStats(object):
         if (not report_file_data) or (not data):
             msg = "Must select (valid) file to upload!"
         else:
-            logging.info('[cr upload] data=%s' % data)
+            # logging.info('[cr upload] data=%s' % data)
             msg = ""
             msg += "<br/>%d reports in file" % len(data)
             for report in data:

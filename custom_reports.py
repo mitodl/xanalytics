@@ -301,6 +301,11 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             logging.error("Cannot get custom report %s" % report_name)
             raise
 
+        if not crm:
+            msg = "Cannot get custom report %s" % report_name
+            logging.error(msg)
+            raise Exception(msg)
+
         # backward compatability: to accommodate jhints, ignore lines in javascript with jinja2 template commands
         if ('{{parameters}}' in crm.javascript) and not ('jshint ignore' in crm.javascript):
             newjs = []
