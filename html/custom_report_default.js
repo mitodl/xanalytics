@@ -33,9 +33,12 @@ var make_report = function() {
       make_table(ajax_data['tablecolumns'], ajax_data['data']);
   }
 
+  var get = function(x){ return eval(x); }
+
   return {process_data: process_data,
           self: this,
           data: data,
+	  get: get,
          }
 
 }
