@@ -2,7 +2,7 @@
   var make_table = function(tablecolumns, tabledata, optarg){
     optarg = optarg || {};
     ntables += 1;
-    var div_id = "table-" + report_name + "-" + ntables;
+    var div_id = "table-" + (optarg.report_name || report_name) + "-" + ntables;
     var html = '<table id="' + div_id + '" class="display" width="' + (optarg.width || '100%') + '"></table>';
     (optarg.report_div || report_div).append(html);
     // console.log('tablecolumns=', tablecolumns, ', tabledata=', tabledata);

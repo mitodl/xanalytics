@@ -661,8 +661,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         # is the request "indexed", meaning only matching rows of the table are to be returned?
         indexed_column = crm.meta_info.get('indexed')
         if indexed_column:
-            if ',' in indexed_column:
-                indexed_columns = indexed_column.split(',')
+            if type(indexed_column)==list:
+                indexed_columns = indexed_column
                 try:
                     table_number = int(pdata.get('table_number', 0) or 0)
                     indexed_column = indexed_columns[table_number]
@@ -684,8 +684,8 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
             # of the SHA1 hash.
             indexed_table = table + "__indexed_" + indexed_column
             indexing_sql_template = """select *,
-                                  SUBSTR(TO_BASE64(SHA1({indexed_column})),-3,2) as index_sha1_2ch,
-                                  ROW_NUMBER() over (order by index_sha1_2ch, username) as index_row_number{subnum},
+                                  SUBSTR(TO_BASE64(SHA1(STRING({indexed_column}))),-3,2) as index_sha1_2ch,
+                                  ROW_NUMBER() over (order by index_sha1_2ch, {indexed_column}) as index_row_number{subnum},
                               from [{dataset}.{table}]
                               {where_clause}
                               order by index_sha1_2ch, {indexed_column}
@@ -731,11 +731,11 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
                             end_idx = None	# boundary case
                         wc = "where "
                         if start_idx:
-                            wc += '(SUBSTR(TO_BASE64(SHA1(%s)),-3,2) >= "%s") ' % (indexed_column, start_idx)
+                            wc += '(SUBSTR(TO_BASE64(SHA1(STRING(%s))),-3,2) >= "%s") ' % (indexed_column, start_idx)
                         else:
                             wc += "True "
                         if end_idx:
-                            wc += 'AND (SUBSTR(TO_BASE64(SHA1(%s)),-3,2) < "%s") ' % (indexed_column, end_idx)
+                            wc += 'AND (SUBSTR(TO_BASE64(SHA1(STRING(%s))),-3,2) < "%s") ' % (indexed_column, end_idx)
                         logging.info("--> start_idx=%s, end_idx=%s, starting row %d" % (start_idx, end_idx, last_row_index))
                         tmp_sql = indexing_sql_template.format(dataset=dataset, table=table, indexed_column=indexed_column, 
                                                                where_clause=wc, subnum="_sub")
