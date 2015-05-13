@@ -20,6 +20,7 @@
       {% endif %}
             {{custom_report["time-on-task"]}}
       {% if is_staff %}
+            {{custom_report["individual-person-report-by-course"]}}
             {{custom_report["cohort-master-report"]}}
       {% endif %}
      {% endautoescape %}
@@ -28,7 +29,9 @@
   "icon": |-
     None
   "javascript": |
+    /* jshint ignore:start */
     parameters = {{parameters}};
+    /* jshint ignore:end */
     parameters.get_table_columns = true;
   "meta_info":
     !!python/unicode "embedded": !!bool |-

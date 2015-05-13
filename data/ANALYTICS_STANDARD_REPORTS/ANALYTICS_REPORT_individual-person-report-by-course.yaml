@@ -1,0 +1,426 @@
+- "author": |-
+    None
+  "date": |-
+    2015-04-21 20:45:58.182982
+  "depends_on": |-
+    None
+  "description": |-
+    Data about a single user (individual person), for a specific course.
+  "group_tags":
+  - !!python/unicode |-
+    role:researcher
+  - !!python/unicode |-
+    course
+  "html": |2
+      <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+        <div id="form-{{report_name}}" style="xdisplay:none">
+          <form id="person-selection">
+            <p>Username: <input id="username_in" type="text" name="username" value=""/></p>
+            <!-- <p>or user ID: <input type="text" name="user_id" value=""/></p> -->
+            <input id="GetDataButton" type="submit" name="Get Data" value="GetData"/>
+          </form>
+        </div>
+        <hr width="100%">
+        <div id='individual-results-busy' style='display:none'>
+          <img src='/images/loading_icon.gif'/>
+        </div>
+        <div id="results2-{{report_name}}">
+        </div>
+        <div id="results1-{{report_name}}">
+        </div>
+      </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function(optarg) {
+
+      optarg = optarg || {};
+      var ntables = 0;
+      var nplots = 0;
+      var data = optarg.data || {};
+      var report_name = "{{report_name}}";
+      var report_div_name = (optarg.report_div || 'results1-{{report_name}}');
+
+      var report_div = $('#' + report_div_name);
+      var report_div2 = $('#results2-{{report_name}}');
+      var form_container = $('#form-{{report_name}}');
+      var form_elem = $('#person-selection');
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      var test1 = function(){
+        $('#username_in').val("testuser");
+        $('#GetDataButton').click();
+      }
+
+      var add_text = function(text, optarg){
+        optarg = optarg || {};
+        (optarg.report_div || report_div).append("<p>"+text+"</p>");
+      }
+
+      var ndiv_counter = 0;
+      var add_div = function(optarg){
+        optarg = optarg || {};
+        ndiv_counter += 1;
+        var div_id = report_div_name + "__div_" + String(ndiv_counter);
+        optarg = optarg || {};
+        (optarg.report_div || report_div).append("<div id='" + div_id + "'>" + (optarg.contents || "") + "</div>");
+        return div_id;
+      }
+
+      var new_section = function(title, optarg){
+        optarg = optarg || {};
+        (optarg.report_div || report_div).append("<br/><hr width='40%'/><h4>"+title+"</h4>");
+      }
+
+      var nbuttons = 0;
+      var add_button = function(text, optarg){      // add button, return button ID
+          nbuttons += 1;
+          var bid = report_div_name + "button_" + String(nbuttons);
+          add_text("<button type='button' id='" + bid + "'>" + text + "</button>", optarg);
+          return bid;
+      }
+
+      var setup = function(){
+        // trigger our code on form submission
+        form_elem.submit(process_form);
+        // test1();
+      }
+
+      var fixdate = function(x){ d = new Date(0); d.setUTCSeconds(x); return String(d); }
+
+      // -----------------------------------------------------------------------------
+      // generic grab-data then display raw data table (for buttons)
+
+      var make_activity_table_function = function(func_name, indexed_value_name, table_number, table_name, optarg){
+        optarg = optarg || {};
+
+        var process_data_analysis = function(ajax_data){
+          var html = '';
+          $('#' + data.loading_div_id).hide();
+
+          if (ajax_data.error){
+            html = "Error!  " + ajax_data.error;
+            console.log('error = ', ajax_data.error);
+          }
+          if (ajax_data.data && ajax_data.data.length==0){
+            html += "No data for user in " + table_name + " table!";
+            ajax_data.error = true;
+          }
+          report_div.html(html);
+          if (ajax_data.error){ return; }
+          data.problem_analysis = ajax_data.data;
+
+          if (optarg.display_func){
+            optarg.display_func(ajax_data);
+          }else{
+            // raw data table
+            new_section("Raw data from " + table_name + " table");
+            make_table(ajax_data['tablecolumns'], ajax_data.data, {report_name: report_div_name});
+          }
+        }
+
+        var show_activity = function(){
+          var ldiv = add_div({contents: "<img src='/images/loading_icon.gif'/>"});
+          data.loading_div_id = ldiv;
+          console.log(func_name + " called, username=", data.the_username, " table_number=", table_number);
+
+          // get table
+          parameters.sql_flags = JSON.stringify({"indexed_value": data[indexed_value_name]});
+          parameters.table_number = table_number;
+          $.getJSON(
+            '/custom/get_report_data/' + report_name,
+            parameters,
+            process_data_analysis
+          );
+        }
+        return show_activity;
+      }
+
+      // -----------------------------------------------------------------------------
+      // problem analysis table for user
+      var show_problem_responses = make_activity_table_function("show_problem_responses",
+                                                                "the_user_id",
+                                                                2,
+                                                                "problem_analysis");
+
+      // -----------------------------------------------------------------------------
+      // TOT activity table for user
+      var show_tot_activity = make_activity_table_function("show_tot_activity", "the_username", 3, "time_on_task_totals");
+
+      // -----------------------------------------------------------------------------
+      // ORA responses table for user
+      var show_ora_responses = make_activity_table_function("show_ora_responses", "the_username", 4, "ora_events");
+
+      // -----------------------------------------------------------------------------
+      // studentmodule state table for user
+      var show_studentmodule_state = make_activity_table_function("show_studentmodule_state", "the_user_id", 5, "studentmodule");
+
+      // -----------------------------------------------------------------------------
+      // forum activity table for user
+      var show_forum_activity = make_activity_table_function("show_forum_activity", "the_username", 6, "forum");
+
+      // -----------------------------------------------------------------------------
+      // attempts correct stats for user
+      var show_attempts_correct = make_activity_table_function("show_attempts_correct",
+                                                               "the_user_id", 7, "stats_attempts_correct");
+
+      // -----------------------------------------------------------------------------
+      // problem check analysis for user
+      var show_problem_check_analysis = make_activity_table_function("show_problem_check_analysis",
+                                                                     "the_username", 8, "problem_check");
+
+      // -----------------------------------------------------------------------------
+      // main function called to process data from AJAX call (person_course table)
+      var process_data_user_info_combo = function(ajax_data){
+        var html = '';
+        // console.log("Processing data ", ajax_data);
+        $('#individual-results-busy').hide();
+        report_div2.show();
+
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        if (ajax_data.data && ajax_data.data.length==0){
+          html += "No data for user in user_info_combo table!";
+          ajax_data.error = true;
+        }
+        report_div2.html(html);
+        if (ajax_data.error){ return; }
+
+        pcdat2 = ajax_data['data'][0];
+
+        data.the_user_id = pcdat2.user_id;  // got the user ID; save it
+
+        display_table(pcdat2,
+                      "User Profile",
+                      [["profile_name", "Full Name"],
+                       ["user_id", "user ID"],
+                       ["profile_mailing_address", "Mailing address (self-reported)"],
+                       ["email", "email address"],
+                       ["date_joined", "Date first registered at edX.org", fixdate],
+                      ],
+                      { report_div: report_div2 }
+                     );
+      }
+
+      // main function called to process data from AJAX call (person_course table)
+      var process_data_person_course = function(ajax_data){
+        var html = '';
+        // console.log("Processing data ", ajax_data);
+        $('#individual-results-busy').hide();
+        report_div.show();
+
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        if (ajax_data.data && ajax_data.data.length==0){
+          html += "No data for user in person_course table!";
+          ajax_data.error = true;
+        }
+        report_div.html(html);
+        // data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        pcdat = ajax_data['data'][0];
+        console.log('person_course data = ', pcdat);
+
+        var add_sub_report_button = function(title, function_name){
+          var the_bid = add_button(title + data.the_username);
+          var the_div_id = add_div();
+          var the_report = make_report({report_div: the_div_id,
+                                        data: data,
+                                       });
+          $('#' + the_bid).click(the_report.get(function_name));
+        }
+
+        display_table(pcdat,
+                      "Geography",
+                      [["un_major_region", "Geographical Region"],
+                       ["countryLabel", "Country"],
+                       ["city", "City"],
+                       ["subdivision", "State / Geographic subdivision"],
+                       ["longitude", "Longitude"],
+                       ["latitude", "Latitude"],
+                      ]);
+
+
+        display_table(pcdat,
+                      "Demographics",
+                      [["YoB", "Age (in 2015)", function(yob){ return yob ? 2015-Number(yob) : yob; }],
+                       ["gender", "Gender"],
+                       ["LoE", "Level of Education"],
+                      ]);
+
+        display_table(pcdat,
+                      "Overall Course Activity",
+                      [["viewed", "Viewed (clicked courseware)"],
+                       ["explored", "Explored (viewed > half of course)"],
+                       ["certified", "Certified"],
+                       ["mode", "ID verified", function(mode){ return mode=="verified"; }],
+                       ['start_time', "Start date and time", fixdate],
+                       ['last_event', "Last event date and time", fixdate],
+                      ]);
+
+        display_table(pcdat,
+                      "General Content Activity",
+                      [["nchapters", "Number of chapters viewed"],
+                       ['nevents', "Number of tracking log events generated", numberWithCommas],
+                       ['nprogcheck', "Number of progress check clicks"],
+                       ["nseq_goto", "Number of navigation events between sequentials"],
+                       ["ndays_act", "Number of days with any activity (events in tracking logs)"],
+                       ["sum_dt", "Total time spent on system (days)", function(x){ return x ? (Number(x) / 60.0 / 60 / 24).toFixed(2) : ''} ],
+                      ]);
+
+        add_sub_report_button("Show time-on-task (if available) by ", "show_tot_activity");
+        add_sub_report_button("Show all student module state (slow!) by ", "show_studentmodule_state");
+
+        display_table(pcdat,
+                      "Problem Activity",
+                      [['nproblem_check', "Number of problem check events"],
+                       ["nshow_answer", "Number of show answer clicks"],
+                      ]);
+
+        add_sub_report_button("Show problem responses by ", "show_problem_responses");
+        add_sub_report_button("Show open-ended response problem activity (if available) by ", "show_ora_responses");
+        add_sub_report_button("Show attempts correct statistics by ", "show_attempts_correct");
+        add_sub_report_button("Show all problem check attempts from tracking logs (slow!) by ", "show_problem_check_analysis");
+
+        display_table(pcdat,
+                      "Discussion Forum Activity",
+                      [["nforum_posts", "Number of forum postss authored"],
+                       ["nforum_votes", "Number of forum post votes cast"],
+                       ['nprogcheck', "Number of progress check clicks"],
+                       ['nforum_events', "Number of forum events (read, write, etc.)"],
+                      ]);
+
+        add_sub_report_button("Show forum activity by ", "show_forum_activity");
+
+        display_table(pcdat,
+                      "Video Player Activity",
+                      [["nplay_video", "Number of video play events"],
+                       ['nvideo', "Number of video events (play, pause, etc.)"],
+                       ["npause_video", "Number of video pause clicks"],
+                       ["nseek_video", "Number of video seek clicks"],
+                      ]);
+
+        // raw data table
+
+        new_section("Raw data from person-course table");
+        make_table(ajax_data['tablecolumns'], ajax_data.data, {ordering: false, dom: '', paging: false});
+      }
+
+      var display_table = function(data, title, coldat, optarg){
+        optarg = optarg || {};
+        new_section(title, optarg);
+        var tdata = [];
+        coldat.forEach(function(x){
+          var v;
+          try{
+            v = data[x[0]];
+            var vmap = x[2];
+            if (vmap){ v = vmap(v); }
+          }
+          catch(err){
+            console.log("Error ", err);
+            console.log("x[0]=", x[0], " x[2]=", x[2], " data=", data);
+          }
+          tdata.push({key:x[1], val: v});
+        });
+        var optarg2 = {ordering: false, searching: false, dom: '', paging: false, width: 400};
+        // console.log("for ", title, ", optarg2=", optarg2);
+        Object.keys(optarg).forEach(function(k){ optarg2[k] = optarg[k] });
+        make_table([colent('Parameter', 'key'), colent('Value', 'val')], tdata, optarg2);
+      }
+
+      var get_and_display_for_username = function(username){
+        parameters.sql_flags = JSON.stringify({"indexed_value": username});
+        data.the_username = username;
+
+        // process person_course
+        parameters.table_number = 0;
+        $.getJSON(
+          '/custom/get_report_data/' + report_name,
+          parameters,
+          process_data_person_course
+        );
+
+        // process user_info_combo
+        parameters.table_number = 1;
+        $.getJSON(
+          '/custom/get_report_data/' + report_name,
+          parameters,
+          process_data_user_info_combo
+        );
+      }
+
+      var process_form = function(event){
+        cparams = $( this ).serializeArray();
+        console.log( "form data: ", cparams );
+        event.preventDefault();
+        report_div.hide();
+        report_div2.hide();
+        $('#individual-results-busy').show();
+        cparams.forEach(function(x){
+          if (x.name=="username"){
+            get_and_display_for_username(x.value);
+          }
+        });
+      }
+
+      var get = function(x){ return eval(x); }
+
+
+      return {self: this,
+              data: data,
+              setup: setup,
+              report_div: report_div,
+              get: get,
+             }
+
+    }
+
+    individual_report = make_report();  // instantiate
+    individual_report.setup();
+
+  "meta_info":
+    !!python/unicode "debug_sql": !!bool |-
+      false
+    !!python/unicode "indexed":
+    - !!python/unicode |-
+      username
+    - !!python/unicode |-
+      username
+    - !!python/unicode |-
+      user_id
+    - !!python/unicode |-
+      username
+    - !!python/unicode |-
+      username
+    - !!python/unicode |-
+      student_id
+    - !!python/unicode |-
+      author_username
+    - !!python/unicode |-
+      user_id
+    - !!python/unicode |-
+      username
+    !!python/unicode "is_page": !!bool |-
+      false
+    !!python/unicode "no_stats_ok": !!int |-
+      1
+  "name": |-
+    individual-person-report-by-course
+  "sql": ""
+  "table_name": |-
+    person_course,user_info_combo,problem_analysis,time_on_task_totals,ora_events,student module,forum,stats_attempts_correct,problem_check
+  "title": |-
+    Individual Person Report by Course
