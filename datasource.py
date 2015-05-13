@@ -202,7 +202,7 @@ class DataSource(object):
 
             # get the mod time of the computed table, if it exists
             try:
-                table_date = bqutil.get_bq_table_last_modified_datetime(dataset, table)
+                table_date = bqutil.get_bq_table_last_modified_datetime(dataset, table, **optargs)
             except Exception as err:
                 if 'Not Found' in str(err):
                     table_date = None

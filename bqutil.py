@@ -239,15 +239,19 @@ def get_bq_table(dataset, tablename, sql=None, key=None, allow_create=True, forc
     '''
     if force_query:
         create_bq_table(dataset, tablename, sql, logger=logger, overwrite=True, project_id=project_id, 
+                        output_project_id=project_id,
                         allowLargeResults=allowLargeResults)
         return get_table_data(dataset, tablename, key=key, logger=logger,
                               startIndex=startIndex, maxResults=maxResults)
     try:
         ret = get_table_data(dataset, tablename, key=key, logger=logger,
                              startIndex=startIndex, maxResults=maxResults, project_id=project_id)
+        if (ret is None):
+            raise Exception("Table %s.%s Not Found" % (dataset, tablename))
     except Exception as err:
         if 'Not Found' in str(err) and allow_create and (sql is not None) and sql:
-            create_bq_table(dataset, tablename, sql, logger=logger, project_id=project_id,
+            create_bq_table(dataset, tablename, sql, logger=logger, project_id=project_id, 
+                            output_project_id=project_id,
                             allowLargeResults=allowLargeResults)
             return get_table_data(dataset, tablename, key=key, logger=logger,
                                   startIndex=startIndex, maxResults=maxResults, 
