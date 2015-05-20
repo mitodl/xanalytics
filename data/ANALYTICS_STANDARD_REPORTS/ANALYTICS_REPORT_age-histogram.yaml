@@ -1,0 +1,142 @@
+- "author": |-
+    None
+  "date": |-
+    3914-12-16 00:00:00
+  "depends_on": |-
+    ["{person_course}"]
+  "description": |-
+    Histograms of ages of participants, certificate earners, ID Verified registrants, and participants from select countries.
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; height: 400px; margin: 0 auto">
+      <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |2-
+        $.getJSON('/custom/get_report_data/{{report_name}}',
+                  {'get_table_columns': true},
+
+                  function(data) {
+
+
+             html = '';
+              html += '<div id="plot-{{report_name}}"></div>';
+              html += '<div id="plot2-{{report_name}}"></div>';
+              html += '<div id="plot3-{{report_name}}"></div>';
+              html += '<div id="plot4-{{report_name}}"></div>';
+              html += '<div id="plot5-{{report_name}}"></div>';
+              html += '<div id="plot6-{{report_name}}"></div>';
+             html += '<table id="table-{{report_name}}" class="display" width="100%"></table>';
+
+                    if (data.error){
+                html = "Error!  " + data.error;
+              }
+
+                $('#contain-{{report_name}}').html(html);
+
+                          if (data.error){ return; }
+
+                    // make data table
+            var table = $('#table-{{report_name}}').DataTable({
+                          dom: 'T<"clear">lfrtip',
+                          "columns": data['tablecolumns'],
+                          "pageLength": 10,
+                          searching: true,
+                          ordering: true,
+                          data: data['data'],
+            });
+
+           // create data series
+           var registered = [];
+           var certified = [];
+           var verified = [];
+           var categories = [];
+           var na_US = [];
+           var na_CN = [];
+           var na_IN = [];
+           var vsum = 0;
+           var csum = 0;
+            data['data'].forEach(function(x){
+              var age = Number(x.age);
+              if ((age > 9) && (age<80)){
+                      categories.push(age);
+                      registered.push(Number(x.nage));
+                      certified.push(Number(x.nage_certified));
+                       verified.push(Number(x.nage_verified));
+
+                  csum += Number(x.nage_certified);
+                  vsum += Number(x.nage_verified);
+
+                      na_US.push(Number(x.nage_US));
+                      na_CN.push(Number(x.nage_CN));
+                      na_IN.push(Number(x.nage_IN));
+              }
+            });
+
+            // for (var k=0 ; k < categories.length ; k++){
+            //   certified[k] /= csum;
+            //   verified[k] /= vsum;
+            // }
+          series = [{name: 'registered', data: registered}, ];
+
+          series2 = [ {name: 'certified', data: certified}, ];
+          series3 = [ {name: 'verified', data: verified}, ];
+
+          series4 = [ {name: 'na_US', data: na_US} ];
+          series5 = [ {name: 'na_IN', data: na_IN}, ];
+          series6 = [ {name:'na_CN', data: na_CN} ];
+
+          var mkplot = function(id, title, data_series){
+            // plot data
+            var wdata = math.dotMultiply(data_series[0].data, categories);
+            var total = math.sum(data_series[0].data);
+            var mean = (math.sum(wdata) / total).toFixed(2);
+            // to compute the median, add up from start until halfway
+            var median = "";
+            var cnt = 0;
+            for (var k=0; k < categories.length; k++){
+              cnt += data_series[0].data[k];
+              if (cnt >= total/2.0){
+                        median = categories[k];
+                        break;
+              }
+            }
+            $('#'+id+'-{{report_name}}').highcharts({
+                chart: {     type: 'column', zoomType: 'x' },
+                credits: {  enabled: false  },
+                title : {   text : title },
+                    subtitle: { text: 'mean=' + mean + "  median=" + median },
+                xAxis: {        categories: categories  },
+                series : data_series,
+            });
+          }
+
+                    mkplot('plot', '{{orgname}}: Participant Ages -- Histogram', series);
+                    mkplot('plot2', '{{orgname}}: Certified Ages -- Histogram', series2);
+                    mkplot('plot3', '{{orgname}}: Verified Ages -- Histogram', series3);
+                    mkplot('plot4', '{{orgname}}: US Participant Ages -- Histogram', series4);
+                    mkplot('plot5', '{{orgname}}: India Participant Ages -- Histogram', series5);
+                    mkplot('plot6', '{{orgname}}: China Participant Ages -- Histogram', series6);
+
+        } );
+  "name": |-
+    age-histogram
+  "sql": |-
+    SELECT (YEAR(CURRENT_TIMESTAMP())-INTEGER(YoB)+1) as age,
+     count(*) as nage,
+     sum( case when viewed then 1 else 0 end ) as nage_viewed,
+     sum( case when explored then 1 else 0 end ) as nage_explored,
+     sum( case when certified then 1 else 0 end ) as nage_certified,
+     sum( case when mode="verified" then 1 else 0 end ) as nage_verified,
+     sum( case when cc_by_ip="US" then 1 else 0 end ) as nage_US,
+     sum( case when cc_by_ip="CN" then 1 else 0 end ) as nage_CN,
+     sum( case when cc_by_ip="IN" then 1 else 0 end ) as nage_IN,
+
+    FROM {person_course}
+    where (YoB is not null) and viewed
+    group by age
+    order by age
+  "table_name": |-
+    stats_age_histogram_participants
+  "title": |-
+    Age histogram
