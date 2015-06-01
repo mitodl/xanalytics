@@ -1,0 +1,188 @@
+- "author": |-
+    None
+  "date": |-
+    2015-06-01 03:01:07.657080
+  "depends_on": |-
+    ["{dataset}.forum_events"]
+  "description": "When course staff respond to a question from user X, does X read\
+    \ the response?  \r\nThis report analyzes how often staff responses are read by\
+    \ the the\r\nuser asking the question.  The report requires the \"forum_events\"\
+    \ table to have been generated."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        // console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        new_section("Summary statistics:");
+
+        var ntotal = 0;
+        var nread = 0;
+        ajax_data['data'].forEach(function(x){
+          ntotal += 1;
+          if (!x['student_next_read_time']){
+            nread += 1;
+          }
+        });
+
+        add_text("Total number of staff responses to student questions: " + ntotal);
+        add_text("Number of staff responses subsequently read by questioner: " + nread);
+        add_text("Percent of staff responses read: " + (nread / ntotal * 100).toFixed(2) + "%" );
+
+        new_section("Table of question and response times, and when the response was read (if it was):");
+
+          make_table(ajax_data['tablecolumns'], ajax_data['data']);
+      }
+
+      var get = function(x){ return eval(x); }  // jshint ignore:line
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+    analytics_report = make_report();  // instantiate
+
+    if (1){
+      $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+        analytics_report.process_data
+      );
+    }
+
+  "meta_info":
+    !!python/unicode "require_table": !!python/unicode |-
+      {dataset}.forum_events
+  "name": |-
+    forum-staff-response-analysis
+  "sql": |-
+    # This SQL query answers the question "did student X read staff response to X's question?"
+    SELECT
+        *,
+        (student_next_read_time - staff_comment_time)/1.0e6/60/60/24 as dt_staff_to_student_next_read_days,
+    FROM
+    (
+        # get student next read time, by seeing when student next read the original thread
+        SELECT
+            staff_comment_time,
+            student_question_time,
+            MIN(case when FE.time < staff_comment_time then null else FE.time end) as student_next_read_time,
+            staff_username,
+            student_username,
+            staff_action,
+            student_thread_id,
+            original_thread_id,
+            original_thread_title,
+            original_thread_username,
+        FROM
+        (
+            # staff comment reply to student question, with creation times, both usernames, and thread title
+            SELECT
+                staff_comment_time,
+                student_question_time,
+                staff_username,
+                student_username,
+                staff_action,
+                student_thread_id,
+                original_thread_id,
+                CC.title as original_thread_title,
+                CC.author_username as original_thread_username,
+            FROM
+            (
+                # staff comment reply to student question, with creation times, and both usernames
+                SELECT
+                    staff_comment_time,
+                    CC.created_at as student_question_time,
+                    staff_username,
+                    CC.author_username as student_username,
+                    staff_action,
+                    student_thread_id,
+                    original_thread_id,    # ID of the forum thread with all the comments
+                FROM
+                (
+                    # match staff comment reply with students question
+                    SELECT
+                        min(FE.time) as staff_comment_time,
+                        FE.username as staff_username,
+                        FE.forum_action as staff_action,
+                        FE.thread_id as student_thread_id,
+                        comment_thread_id as original_thread_id,
+                    FROM [{dataset}.forum_events] FE
+                    JOIN EACH [{dataset}.forum] CC
+                    ON FE.thread_id = CC.parent_id
+                       AND FE.username = CC.author_username
+                    where ((forum_action="reply") or (forum_action="comment_reply"))
+                    and FE.username in (
+                      SELECT username from [{dataset}.forum_events]
+                      WHERE forum_action="pin" group by username
+                    )
+                    group by staff_username, staff_action, student_thread_id, original_thread_id
+                ) SS
+                JOIN EACH [{dataset}.forum] CC
+                ON SS.student_thread_id = CC.mongoid
+                order by student_question_time
+            ) SS
+            JOIN EACH [{dataset}.forum] CC
+            ON SS.original_thread_id = CC.mongoid
+            order by student_question_time
+        ) SS
+        LEFT JOIN [{dataset}.forum_events] FE  # left join, to get cases when student never reads
+        ON SS.original_thread_id = FE.thread_id
+           AND SS.student_username = FE.username
+        WHERE FE.forum_action = "read"
+        group by
+           staff_comment_time,
+           student_question_time,
+           staff_username,
+           student_username,
+           staff_action,
+           student_thread_id,
+           original_thread_id,
+           original_thread_title,
+           original_thread_username
+        order by student_question_time
+    )
+  "table_name": |-
+    stats_forum_staff_response_analysis
+  "title": |-
+    Forum Staff Response Analysis
