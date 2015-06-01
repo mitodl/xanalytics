@@ -7,7 +7,8 @@
   "description": |-
     Video Viewed and Video Watched Statistics. Viewed is defined as initiating a video event (play, stop, pause, etc..). Watched is defined as having reached at least 95% of the total video duration. The percentage in the tooltip popup represents the video watched completion rate.
   "group_tags":
-  - !!python/unicode ""
+  - !!python/unicode |-
+    course
   "html": |-
     <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
                                    <img src="/images/loading_icon.gif"/>
