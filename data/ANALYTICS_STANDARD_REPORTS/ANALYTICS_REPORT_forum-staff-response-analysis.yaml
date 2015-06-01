@@ -50,7 +50,7 @@
         data['data'] = ajax_data['data'];
         if (ajax_data.error){ return; }
 
-        new_section("Summary statistics:");
+        new_section("Summary forum staff response statistics for {{course_id}}:");
 
         var ntotal = 0;
         var nread = 0;
@@ -154,7 +154,7 @@
                     where ((forum_action="reply") or (forum_action="comment_reply"))
                     and FE.username in (
                       SELECT username from [{dataset}.forum_events]
-                      WHERE forum_action="pin" group by username
+                      WHERE (forum_action="pin" or forum_action="list_forum_members") group by username
                     )
                     group by staff_username, staff_action, student_thread_id, original_thread_id
                 ) SS
