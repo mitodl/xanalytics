@@ -30,10 +30,11 @@ var make_report = function() {
     data['data'] = ajax_data['data'];
     if (ajax_data.error){ return; }
 
-      make_table(ajax_data['tablecolumns'], ajax_data['data']);
+    // show big table of all the data
+    make_table(ajax_data['tablecolumns'], ajax_data['data']);
   }
 
-  var get = function(x){ return eval(x); }
+  var get = function(x){ return eval(x); }  // jshint ignore:line
 
   return {process_data: process_data,
           self: this,
