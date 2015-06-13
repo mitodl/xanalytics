@@ -65,6 +65,13 @@
           total_reads += n * yv;
         });
 
+        var nbins1 = 50;
+        if (nmax > nbins1){   // too many bins - move those more than max to max
+            for (var kk=(nbins1+1); kk<= nmax; kk++){
+              hdat[nbins1] += hdat[kk];
+            }
+            nmax = nbins1;
+        }
         var xdat = [];
         var ydat = [];
         for (var k=0; k <= nmax; k++){
@@ -74,7 +81,8 @@
 
         // plot
 
-        make_bar_plot('Histogram of number of threads with X unique readers', xdat, [{name:'# threads', data: ydat}]);
+        add_text("Note: values for bins > " + nbins1 + " (unique readers) are combined into bin " + nbins1);
+        make_bar_plot('[{{course_id}}] Histogram of number of threads with X unique readers', xdat, [{name:'# threads', data: ydat}]);
 
         add_text("Total number of threads: " + total_threads);
         add_text("Number of threads which have been read by less than 10 unique readers: " + n_threads_lt_10);
@@ -100,16 +108,26 @@
           pinned_reads += n * yv;
         });
 
+        var nbins = 50;
+        var step = 1;
+        if (nmax2 - nmin2 > nbins){   // too many bins: rebin using integer step size
+          step = math.round((nmax2 - nmin2) / nbins);
+        }
+
         var xdat2 = [];
         var ydat2 = [];
-        for (k=nmin2; k <= nmax2; k++){
+        for (k=nmin2; k <= nmax2; k+= step){
           xdat2.push(k);
-          ydat2.push(hdat2[k] || 0);
+          var yv = 0;
+          for (var j=0; j<step; j++){
+            yv += hdat[k + j] || 0;
+          }
+          ydat2.push(yv);
         }
 
         // plot
 
-        make_bar_plot('Histogram of number of PINNED threads with X unique readers', xdat2,
+        make_bar_plot('[{{course_id}}] Histogram of number of PINNED threads with X unique readers', xdat2,
                       [{name:'# pinned threads', data: ydat2}]);
 
         add_text("Total number of pinned threads: " + total_pinned_threads);
