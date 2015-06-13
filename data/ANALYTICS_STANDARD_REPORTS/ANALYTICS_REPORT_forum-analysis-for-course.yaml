@@ -1,0 +1,56 @@
+- "author": |-
+    None
+  "date": |-
+    2015-06-13 19:58:39.317130
+  "depends_on": |-
+    None
+  "description": "Page offering reports available for analysis of forum networks,\
+    \ and forum post statistics, for {{course_id}}.\r\nNot all courses have forum\
+    \ analysis reports available."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <html>
+      <head>
+        <title>Forum Analysis Report</title>
+
+        {% include 'all_head.html' %}
+      </head>
+      <body role="document">
+
+        {% include 'navbar_standard.html' %}
+
+
+        <div  class="container theme-showcase" role="main" data-spy="scroll" data-target="#navbar">
+
+          <h1>Forum Analysis Report: {{course_id}}</h1>
+
+          {% if 1 %}<div><font color="red">{{msg}}</font></div>{% endif %}
+
+          <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+
+              {% autoescape off %}
+              <hr width="100%"/>
+              {{custom_report["forum-histogram-thread-reads"]}}
+              {{custom_report["forum-staff-response-analysis"]}}
+              {{custom_report["forum-post-network"]}}
+              {% endautoescape %}
+
+          </div>
+        </div>
+      </body>
+    </html>
+  "icon": |-
+    None
+  "javascript": ""
+  "meta_info":
+    !!python/unicode "is_page": !!bool |-
+      true
+  "name": |-
+    forum-analysis-for-course
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Forum Analysis Report for Course

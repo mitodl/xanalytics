@@ -56,6 +56,8 @@
       var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
       var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
 
+      var MAX_NUMBER_NODES = 200;
+
       // jshint ignore:start
       {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
       {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
@@ -64,7 +66,6 @@
       // network plot
       var generate_network_plot = function(data){
 
-        var MAX_NUMBER_NODES = 200;
 
         new_section("Forum network plot for {{course_id}}");
         // var div_id = "forum_network_" + report_name;
@@ -188,7 +189,7 @@
             if ($('#switch_autocenter').prop('checked')){
                     network.fit();
             }
-          }, 5000);
+          }, 4000);
 
           $('#switch_animate').change(function(){
             if ($('#switch_animate').prop('checked')){
@@ -252,6 +253,7 @@
     analytics_report = make_report();  // instantiate
 
     if (1){
+      parameters.length = 40000;   // maximum number of lines retrieved from table
       $.getJSON(
         '/custom/get_report_data/{{report_name}}',
         parameters,
@@ -269,8 +271,8 @@
         mongoid as slug_id,
         _type as slug_type,
         (case when comment_thread_id is not null then comment_thread_id else parent_id end) as thread_id,
-        1 as wrote,
-        created_at as first_time,
+        #1 as wrote,
+        #created_at as first_time,
     FROM [{dataset}.forum]
     ORDER by username, first_time
   "table_name": |-
