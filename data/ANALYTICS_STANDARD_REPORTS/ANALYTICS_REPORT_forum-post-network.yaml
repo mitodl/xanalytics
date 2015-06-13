@@ -268,13 +268,13 @@
   "sql": |-
     SELECT
         author_username as username,
-        mongoid as slug_id,
-        _type as slug_type,
+        # mongoid as slug_id,
+        # _type as slug_type,
         (case when comment_thread_id is not null then comment_thread_id else parent_id end) as thread_id,
         #1 as wrote,
         #created_at as first_time,
     FROM [{dataset}.forum]
-    ORDER by username, first_time
+    ORDER by username  # , first_time
   "table_name": |-
     stats_mini_person_post
   "title": |-
