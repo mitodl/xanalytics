@@ -1,0 +1,174 @@
+- "author": |-
+    None
+  "date": |-
+    2015-06-13 18:30:31.594540
+  "depends_on": |-
+    ["{dataset}.forum_events"]
+  "description": |-
+    Histogram depicting number of forum threads which have been read by X unique users
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        // console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        // histogram data
+
+        var hdat = {};
+        var nmax = 0;
+        var n_threads_lt_10 = 0;
+        var total_threads = 0;
+        var total_reads = 0;
+        data['data'].forEach(function(x){
+          var yv = Number(x['n_threads']);
+          var n = Number(x['n_reads']);
+          hdat[n] = yv;
+          if (n > nmax){ nmax = n; }
+          if (n < 10){ n_threads_lt_10 += yv; }
+          total_threads += yv;
+          total_reads += n * yv;
+        });
+
+        var xdat = [];
+        var ydat = [];
+        for (var k=0; k <= nmax; k++){
+          xdat.push(k);
+          ydat.push(hdat[k] || 0);
+        }
+
+        // plot
+
+        make_bar_plot('Histogram of number of threads with X unique readers', xdat, [{name:'# threads', data: ydat}]);
+
+        add_text("Total number of threads: " + total_threads);
+        add_text("Number of threads which have been read by less than 10 unique readers: " + n_threads_lt_10);
+        add_text("Percent of threads which have been read by less than 10 unique readers: " +
+                 (100 * n_threads_lt_10 / total_threads).toFixed(2));
+        add_text("Average number of unique readers for threads: " + (total_reads / total_threads).toFixed(2));
+
+
+        // histogram data: pinned posts
+
+        var hdat2 = {};
+        var nmax2 = 0;
+        var nmin2 = null;
+        var total_pinned_threads = 0;
+        var pinned_reads = 0;
+        data['data'].forEach(function(x){
+          var yv = Number(x['n_pinned_threads']);
+          var n = Number(x['n_reads']);
+          hdat2[n] = yv;
+          if (n > nmax2){ nmax2 = n; }
+          if ((!nmin2) || (n < nmin2)){ nmin2 = n; }
+          total_pinned_threads += yv;
+          pinned_reads += n * yv;
+        });
+
+        var xdat2 = [];
+        var ydat2 = [];
+        for (k=nmin2; k <= nmax2; k++){
+          xdat2.push(k);
+          ydat2.push(hdat2[k] || 0);
+        }
+
+        // plot
+
+        make_bar_plot('Histogram of number of PINNED threads with X unique readers', xdat2,
+                      [{name:'# pinned threads', data: ydat2}]);
+
+        add_text("Total number of pinned threads: " + total_pinned_threads);
+        add_text("Average number of unique readers for pinned threads: " + (pinned_reads / total_pinned_threads).toFixed(2));
+
+
+        // table
+
+          make_table(ajax_data['tablecolumns'], ajax_data['data']);
+      }
+
+      var get = function(x){ return eval(x); }
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+    analytics_report = make_report();  // instantiate
+
+    if (1){
+      $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+        analytics_report.process_data
+      );
+    }
+
+  "meta_info": {}
+  "name": |-
+    forum-histogram-thread-reads
+  "sql": |-
+    # histogram of how many threads have X reads
+    SELECT
+        n_reads,
+        count(*) as n_threads,
+        count(case when pinned then 1 end) as n_pinned_threads,
+    FROM
+    (
+        SELECT      # aggregate to get number of reads for each thread_id
+            F.mongoid as thread_id,
+            count(FE.username) as n_reads,
+            F.pinned as pinned,
+        FROM  [{dataset}.forum] F
+        LEFT JOIN EACH [{dataset}.forum_events] FE
+        ON FE.thread_id = F.mongoid
+        where CASE when (FE.username is not null) then
+                         (FE.username != F.author_username) AND (FE.forum_action in ('read', 'read_inline'))
+                     else True end
+            AND F._type = "CommentThread"
+        group by thread_id, pinned
+        order by n_reads DESC
+    )
+    GROUP BY n_reads,
+    ORDER BY n_reads
+  "table_name": |-
+    stats_forum_thread_reads_distribution
+  "title": |-
+    Forums: Histogram of Thread Reads
