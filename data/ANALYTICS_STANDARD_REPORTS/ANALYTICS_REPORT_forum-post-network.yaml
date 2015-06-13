@@ -1,0 +1,279 @@
+- "author": |-
+    None
+  "date": |-
+    2015-06-03 15:30:29.038194
+  "depends_on": |-
+    ["{dataset}.forum"]
+  "description": "Generate network plot of forum post authors.  Each node is a user\
+    \ who has authored a post or comment on the forum.\r\nTwo nodes are connected\
+    \ if both users have authored within the same thread.  The weight of an edge between\
+    \ two nodes\r\nis given by the number of connections.  Note: be patient!  This\
+    \ visualization requires a capable computer, and can\r\nincrease the load of your\
+    \ machine significantly.  Turn off animation when not needed."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |2
+       <link href="/css/vis.css" rel="stylesheet" type="text/css" />
+    <!-- <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" /> -->
+    <!-- <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script> -->
+    <!-- <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script> -->
+
+      <style type="text/css">
+        #mynetwork {
+          float:left;
+          width: 600px;
+          height: 600px;
+          margin:5px;
+          border: 1px solid lightgray;
+        }
+        #network_config {
+          font: 10pt sans;
+          float:right;
+          width: 300px;
+          height: 600px;
+        }
+      </style>
+
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // network plot
+      var generate_network_plot = function(data){
+
+        var MAX_NUMBER_NODES = 200;
+
+        new_section("Forum network plot for {{course_id}}");
+        // var div_id = "forum_network_" + report_name;
+        var div_id = "mynetwork";
+
+        report_div.append("<font color='red'>Note: only including first " +
+                              MAX_NUMBER_NODES + " users in plot, for now</font>");
+
+        report_div.append("<div id='" + div_id + "'></div>");
+        //$('#' + div_id).width("70%");
+        //$('#' + div_id).height(900);
+        report_div.append("<div id='network_config'></div>");
+
+        report_div.append('<p>Animate: <input type="checkbox" id="switch_animate"></p>');
+        report_div.append('<p>Auto-center: <input type="checkbox" id="switch_autocenter"></p>');
+
+        // simple set object
+        var sset = function(){
+          var set = {};
+          var add = function(x){ set[x] = (set[x] || 0) + 1; return me; }
+          var get = function(){ return Object.keys(set); }
+          var me = {set: set, add: add, get: get}
+          return me;
+        }
+
+        // make array with nodes
+        var nodes_by_username = {};
+        var thread_users = {};       // key = thread id, value = set of users who posted in thread
+        data.forEach(function(x){
+          var uname = x['username'];
+          nodes_by_username[uname] = (nodes_by_username[uname] || 0) + 1;
+          var thread_id = x['thread_id'];
+          thread_users[thread_id] = (thread_users[thread_id] || sset()).add(uname); // add username to thread users
+        });
+
+        console.log('nodes_by_username = ', nodes_by_username);
+        console.log('thread_users = ', thread_users);
+
+        // make edges
+
+        var wthreshold = 4;
+        var edge_data = {};
+        Object.keys(thread_users).forEach(function(x){
+          var users = thread_users[x].get();
+          users.forEach(function(u){
+            users.forEach(function(v){
+              if (u<v){ edge_data[[u,v]] = ( edge_data[[u,v]] || 0 ) + 1; }
+            });
+          });
+        });
+
+        // only include nodes attached by edges
+        var the_nodes = [];
+        var nnodes = 0;
+        var the_edges = [];
+        var node_id = [];
+        Object.keys(edge_data).forEach(function(x){
+          var weight = edge_data[x];
+          var uv = x.split(',');
+          var source = uv[0];
+          var target = uv[1];
+          if (weight < wthreshold){ return; }   // skip edges with too little weight
+          if (nnodes > MAX_NUMBER_NODES){ return; }  // cutoff for debugging
+          if (!node_id[source]){ nnodes += 1; node_id[source] = nnodes; the_nodes.push({id: nnodes, label: source}) }
+          if (!node_id[target]){ nnodes += 1; node_id[target] = nnodes; the_nodes.push({id: nnodes, label: target}) }
+          the_edges.push({from: node_id[source], to: node_id[target]});
+        })
+
+        console.log("nodes and edges: ", {the_nodes: the_nodes, the_edges: the_edges});
+
+        loadJS('/js/vis.min.js', function() {
+          // put your code here to run after script is loaded
+
+          // create an array with nodes
+          var nodes = new vis.DataSet(the_nodes);
+
+          // create an array with edges
+          var edges = new vis.DataSet(the_edges);
+
+          // create a network
+          var container = document.getElementById(div_id);
+
+          // provide the data in the vis format
+          var data = {
+            nodes: nodes,
+            edges: edges
+          };
+          var options = {
+
+            autoResize: true,
+            // height: 900,
+            // width: "90%",
+            // clickToUse: true,
+            physics: {
+              stabilization: false
+            },
+            interaction: {
+              navigationButtons: true,
+              keyboard: true
+            },
+            configure: {
+              filter:function (option, path) {
+                if (path.indexOf('physics') !== -1) {
+                  return true;
+                }
+                if (path.indexOf('smooth') !== -1 || option === 'smooth') {
+                  return true;
+                }
+                return false;
+              },
+              container: document.getElementById('network_config')
+            }
+          };
+
+          // initialize network!
+          var network = new vis.Network(container, data, options);
+          the_network = network; // global variable for debugging
+
+          // automatically zoom fit, every 5 seconds
+          setInterval(function(){
+            if ($('#switch_autocenter').prop('checked')){
+                    network.fit();
+            }
+          }, 5000);
+
+          $('#switch_animate').change(function(){
+            if ($('#switch_animate').prop('checked')){
+              console.log("Starting simulation");
+              the_network.startSimulation();
+            }else{
+              console.log("Stopping simulation");
+                  the_network.stopSimulation();
+            }
+          });
+
+          the_network.stopSimulation();
+          network.fit();
+
+        });
+      }
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        // console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        generate_network_plot(ajax_data['data']);
+
+        make_table(ajax_data['tablecolumns'], ajax_data['data']);
+      }
+
+      function loadJS(src, callback) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onreadystatechange = s.onload = function() {
+          var state = s.readyState;
+          if (!callback.done && (!state || /loaded|complete/.test(state))) {
+            callback.done = true;
+            callback();
+          }
+        };
+        document.getElementsByTagName('head')[0].appendChild(s);
+      }
+
+
+      var get = function(x){ return eval(x); }  // jshint ignore:line
+      parameters.get_table_columns = true;
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+    analytics_report = make_report();  // instantiate
+
+    if (1){
+      $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+        analytics_report.process_data
+      );
+    }
+
+
+  "meta_info": {}
+  "name": |-
+    forum-post-network
+  "sql": |-
+    SELECT
+        author_username as username,
+        mongoid as slug_id,
+        _type as slug_type,
+        (case when comment_thread_id is not null then comment_thread_id else parent_id end) as thread_id,
+        1 as wrote,
+        created_at as first_time,
+    FROM [{dataset}.forum]
+    ORDER by username, first_time
+  "table_name": |-
+    stats_mini_person_post
+  "title": |-
+    Forum Post Network

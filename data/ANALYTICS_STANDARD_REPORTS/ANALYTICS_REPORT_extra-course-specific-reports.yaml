@@ -18,7 +18,7 @@
             {{custom_report["grade-histograms-by-chapter-for-course"]}}
       {% if parameter_values.dashboard_mode=="mooc" %}
             {{custom_report["attempts-correct-percentages"]}}
-            {{custom_report["forum-staff-response-analysis"]}}
+            {{custom_report["forum-analysis-for-course"]}}
       {% endif %}
             {{custom_report["time-on-task"]}}
       {% if is_staff %}
