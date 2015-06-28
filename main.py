@@ -36,6 +36,7 @@ from custom_reports import CustomReportRoutes
 from reports import Reports
 from collections import defaultdict, OrderedDict
 from templates import JINJA_ENVIRONMENT
+from storage import FileStorageRoutes
 
 # from gviz_data_table import encode
 # from gviz_data_table import Table
@@ -970,5 +971,6 @@ ROUTES += DashboardRoutes
 ROUTES += AdminRoutes
 ROUTES += DeveloperRoutes
 ROUTES += CustomReportRoutes
+ROUTES += FileStorageRoutes
 
 application = webapp2.WSGIApplication(ROUTES, debug=True, config=config)
