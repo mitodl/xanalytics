@@ -35,6 +35,7 @@
               {{custom_report["forum-histogram-thread-reads"]}}
               {{custom_report["forum-staff-response-analysis"]}}
               {{custom_report["forum-post-network"]}}
+              {{custom_report["forum-network-plots-from-dist"]}}
               {% endautoescape %}
 
           </div>

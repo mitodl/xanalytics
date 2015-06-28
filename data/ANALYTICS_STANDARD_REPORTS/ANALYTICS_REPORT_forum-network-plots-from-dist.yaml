@@ -1,0 +1,225 @@
+- "author": |-
+    None
+  "date": |-
+    2015-06-14 15:58:50.626040
+  "depends_on": |-
+    None
+  "description": |-
+    Plot pre-computed forum network graph, distributed to course team.
+  "group_tags":
+  - !!python/unicode ""
+  "html": |2-
+      <style type="text/css">
+        #mynetwork {
+          width: 800px;
+          height: 800px;
+          border: 1px solid lightgray;
+        }
+
+        div.nodeContent {
+          position: relative;
+          border: 1px solid lightgray;
+          width: 480px;
+          height: 780px;
+          margin-top: -802px;
+          margin-left: 810px;
+          padding: 10px;
+        }
+
+        pre {
+          padding: 5px;
+          margin: 5px;
+        }
+
+        .string {
+          color: green;
+        }
+
+        .number {
+          color: darkorange;
+        }
+
+        .boolean {
+          color: blue;
+        }
+
+        .null {
+          color: magenta;
+        }
+
+        .key {
+          color: red;
+        }
+      </style>
+
+
+    <span id="file_select"></span>
+    <span id="network_plot" style="display:none">
+      <p>
+        <label><input type="checkbox" id="fixed" checked="checked"/> Fix in place after import.</label><br>
+        <label><input type="checkbox" id="parseColor"/> Parse the color instead of
+          copy (adds borders, highlights etc.)</label>
+      </p>
+      <div id="mynetwork"></div>
+      <div class="nodeContent"><h4>Node Content:</h4>
+        <pre id="nodeContent"></pre>
+      </div>
+    </span>
+  "icon": |-
+    None
+  "javascript": |+
+    function loadJS(src, callback) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onreadystatechange = s.onload = function() {
+        var state = s.readyState;
+        if (!callback.done && (!state || /loaded|complete/.test(state))) {
+          callback.done = true;
+          callback();
+        }
+      };
+      document.getElementsByTagName('head')[0].appendChild(s);
+    }
+
+    loadJS('/js/vis.min.js', function() {
+      var network;
+
+      var nodes = new vis.DataSet();
+      var edges = new vis.DataSet();
+      var gephiImported;
+      var fixedCheckbox = document.getElementById('fixed');
+      var fn = "";
+      fixedCheckbox.onchange = redrawAll;
+
+      var parseColorCheckbox = document.getElementById('parseColor');
+      parseColorCheckbox.onchange = redrawAll;
+
+      var nodeContent = document.getElementById('nodeContent');
+
+      /**
+       * This function fills the DataSets. These DataSets will update the network.
+       */
+      function redrawAll(gephiJSON) {
+        console.log("redtawAll called");
+        var html = "Plotting data from file: " + fn;
+        html += "<br/><p>Use your mouse to zoom in and out.  Click on nodes to highlight connectivity and display ";
+        html += "additional node data.</p>";
+        $('#file_select').html(html);
+
+        if (gephiJSON.nodes === undefined) {
+          gephiJSON = gephiImported;
+        }
+        else {
+          gephiImported = gephiJSON;
+        }
+
+        nodes.clear();
+        edges.clear();
+
+        var fixed = fixedCheckbox.checked;
+        var parseColor = parseColorCheckbox.checked;
+
+        var parsed = vis.network.gephiParser.parseGephi(gephiJSON, {
+          fixed: fixed,
+          parseColor: parseColor
+        });
+
+        // add the parsed data to the DataSets.
+        nodes.add(parsed.nodes);
+        edges.add(parsed.edges);
+
+        var data = nodes.get(2); // get the data from node 2 as example
+        nodeContent.innerHTML = JSON.stringify(data,undefined,3); // show the data in the div
+        network.fit(); // zoom to fit
+      }
+
+      var PlotNetwork = function(){
+
+        fn = $('#file_select').find('select').val()
+        var html = "Retrieving data file: " + fn;
+        html += '<br/><img src="/images/loading_icon.gif"/>';
+        $('#file_select').html(html);
+        $('#network_plot').show();
+
+        console.log("Loading " + fn);
+
+        $.getJSON(
+          '/file/get/course/{{course_id}}',
+          {filename: fn}
+        )
+        .done(redrawAll)
+        .fail(function(err) {console.log('error', err)});
+
+        var container = document.getElementById('mynetwork');
+        var data = {
+          nodes: nodes,
+          edges: edges
+        };
+        var options = {
+          nodes: {
+            shape: 'dot',
+            font: {
+              face: 'Tahoma'
+            }
+          },
+          edges: {
+            width: 0.15,
+            smooth: {
+              type: 'continuous'
+            }
+          },
+          interaction: {
+            tooltipDelay: 200,
+            hideEdgesOnDrag: true
+          },
+          physics: {
+            stabilization: false,
+            barnesHut: {
+              gravitationalConstant: -10000,
+              springConstant: 0.002,
+              springLength: 150
+            }
+          }
+        };
+
+        network = new vis.Network(container, data, options);
+        network.on('click', function (params) {
+          if (params.nodes.length > 0) {
+            var data = nodes.get(params.nodes[0]); // get the data from selected node
+            nodeContent.innerHTML = JSON.stringify(data, undefined, 3); // show the data in the div
+          }
+        })
+
+
+      }
+
+
+      var SelectFile = function(files){
+        console.log("files = ", files);
+        var html = "Please select network to plot: ";
+        html += "<select>";
+        files.forEach(function(x){
+          html += "<option value='"+x+"'>" + x + "</option>";
+        });
+        html += "</select>";
+        html += "<br/><button id='plot_select_action'>Show network plot</button>";
+        $("#file_select").html(html);
+        $('#plot_select_action').click(PlotNetwork);
+      }
+
+      console.log("getting file list");
+      $.getJSON('/file/list/course/{{course_id}}', {filter: ".*_gephi.*"}, SelectFile);
+
+    });
+
+  "meta_info":
+    !!python/unicode "require_file": !!python/unicode |-
+      .*_gephi.*
+  "name": |-
+    forum-network-plots-from-dist
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Forum Network Plots [from pre-computed network files]
