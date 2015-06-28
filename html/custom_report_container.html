@@ -1,3 +1,6 @@
+{% if report.meta_info.require_file and not always_show %}
+  <span id="cr_container_{{id}}" style="display:none">
+{% endif %}
 {% if not do_embed %}
     <h2>{{title}}</h2>
 {% endif %}
@@ -25,11 +28,28 @@
 	{% endif %}
         <div id="div-{{id}}"></div>
         <p></p><br style="clear:both;"/>
+{% if report.meta_info.require_file and not always_show %}
+  </span>
+{% endif %}
     
 <script type="text/javascript">
 var setup_cr_click = function (report_id, report_name, report_params, meta_info, immediate_view) {
 
+    // console.log("report ", report_name, ", meta=", meta_info);
+
     if (meta_info.embedded){  immediate_view = true; }
+
+    var handle_require_file = function(fn_list){
+	// console.log("fn_list = ", fn_list);
+	if (fn_list && (fn_list.length > 0)){
+	    $('#cr_container_{{id}}').show();
+	}
+    }
+
+    if (meta_info.require_file && (!meta_info.always_show)){
+	// console.log("require_file = ", meta_info.require_file);
+	$.getJSON('/file/list/course/' + report_params.course_id, {filter: meta_info.require_file}, handle_require_file);
+    }
 
     $('#view-' + report_id).each(function(){
 	

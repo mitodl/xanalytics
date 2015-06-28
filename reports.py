@@ -52,11 +52,17 @@ class Reports(object):
                 self.immediate_view = False
                 self.do_no_embed = False		# prevent report from rendering as embedded (need for custom_reports.html)
                 self.force_embed = False
+                self.do_always_show = False		# overrides hiding which happens in require_file handling
                 super(CRContainer, self).__init__(*args, **kwargs)
 
             @property
             def immediate(self):
                 self.immediate_view = True
+                return self
+
+            @property
+            def always_show(self):
+                self.do_always_show = True
                 return self
 
             @property
@@ -148,6 +154,9 @@ class Reports(object):
                     crm.meta_info.pop('embedded')
                 if self.force_embed:
                     crm.meta_info['embedded'] = True
+                
+                if self.do_always_show:
+                    crm.meta_info['always_show'] = True
 
                 template = JINJA_ENVIRONMENT.get_template('custom_report_container.html')
                 data = {'is_staff': other.is_superuser(),
@@ -157,6 +166,7 @@ class Reports(object):
                         'report_meta_info': json.dumps(crm.meta_info or {}),
                         'immediate_view': json.dumps(self.immediate_view),
                         'do_embed' : (crm.meta_info or {}).get('embedded') or self.force_embed,
+                        'always_show': self.do_always_show,
                         'title': title_rendered,
                         'id': report_id,
                 }

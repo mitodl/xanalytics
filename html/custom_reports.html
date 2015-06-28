@@ -59,7 +59,7 @@
 
     <hr width="100%"/>
     {% autoescape off %}
-        {{custom_report.no_embed[report.name]}}
+        {{custom_report.no_embed.always_show[report.name]}}
     {% endautoescape %}
 
 {% endfor %}
