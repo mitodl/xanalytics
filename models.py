@@ -65,3 +65,4 @@ class CustomReport(ndb.Model):
     # need_listings - provide "course_listings" as a parameter
     # indexed       - provide column name, and when table is queried, build index and retrieve only rows matching sql_flags.index_value
     # no_stats_ok   - true forces allowing table names which do not start with a "stats_" prefix
+    # require_file  - regexp specifying files which must be available in course's DIST google cloud storage bucket, for report to show
