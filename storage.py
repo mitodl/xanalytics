@@ -111,10 +111,11 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
             return
 
     @auth_required
-    def ajax_get_report(self, filename=None, group_tag=None):
+    def ajax_get_report(self, filename=None, group_tag=None, course_id=None):
         '''
         Return JSON of data from specified CSV file.  Only include courses which have a matching tag
-        (in the "tags" column of the course listings).  Control access based on group_tag.
+        (in the "tags" column of the course listings) or course_id.  Control access based on group_tag
+        and / or course_id.
 
         The file must be in the course_report or course_report_latest bucket.
         '''
@@ -129,16 +130,24 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
             return
         
         group_tag = group_tag or self.request.get('group_tag', None)
+        course_id = course_id or self.request.get('course_id', None)
 
         if not group_tag:
-            if not self.does_user_have_role('pm'):
-                return self.no_auth_sorry()
+            if not course_id:
+                if not self.does_user_have_role('pm'):
+                    return self.no_auth_sorry()
+            else:
+                if not self.is_user_authorized_for_course(course_id):
+                    return self.no_auth_sorry()
         else:
             if not self.is_user_authorized_for_course(group_tag):
                 return self.no_auth_sorry()
 
-        courses = self.get_course_listings(check_individual_auth=False)
-        known_course_ids_with_tags = {x['course_id']: x.get('tags', None) for x in courses['data']}
+        if group_tag:
+            courses = self.get_course_listings(check_individual_auth=False)
+            known_course_ids_with_tags = {x['course_id']: x.get('tags', None) for x in courses['data']}
+        else:
+            known_course_ids_with_tags = {course_id: None}
 
         try:
             cr_dir = self.get_course_report_dataset()
@@ -154,9 +163,10 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
                 cid = row['course_id']
                 if not cid in known_course_ids_with_tags:
                     continue
-                course_tags = known_course_ids_with_tags[cid]
-                if not self.course_listings_row_has_tag(course_tags, group_tag):
-                    continue
+                if group_tag:
+                    course_tags = known_course_ids_with_tags[cid]
+                    if not self.course_listings_row_has_tag(course_tags, group_tag):
+                        continue
                 data_by_cid[cid] = row
                 
             self.response.write(json.dumps(data_by_cid))
