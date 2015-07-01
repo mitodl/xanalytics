@@ -20,7 +20,7 @@
       //   return toFormat.toString().replace( /\B(?=(\d{3})+(?!\d))/g, "," ); 
       // },
     });
-    return table;
+    return div_id;
   }
 
   // make table column entry
@@ -53,4 +53,32 @@
 
   function numberWithCommas(x) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  // put a div within a show / hide enclosure, with toggle button
+  function make_show_hide(title, div_id){
+      var div_elem = $('#' + div_id);
+      var html = "<button style='float:right' id='" + div_id + "_showhide'></button>";
+      div_elem.before(html);
+      var sh_elem = $('#' + div_id + "_showhide");
+      var hide = function(){
+	  div_elem.hide();
+	  sh_elem.html("Show " + title);
+	  sh_elem.data('state', 'hidden');
+      }
+      var show = function(){
+	  div_elem.show();
+	  sh_elem.html("Hide " + title);
+	  sh_elem.data('state', 'visible');
+      }
+      var toggle = function(){
+	  var state = sh_elem.data().state;
+	  if (state=='hidden'){
+	      show();
+	  }else{
+	      hide();
+	  }
+      }
+      sh_elem.click(toggle);
+      hide();
   }

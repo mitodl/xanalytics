@@ -34,7 +34,7 @@
       },
       series : series,
     });
-    return chart;
+    return div_id;
   }
 
   var make_bar_plot = function(plot_title, xcategories, series, optarg){
@@ -52,6 +52,7 @@
       xAxis: {        categories: xcategories  },
       series : series,
     });
+    return div_id;
   }
 
 
@@ -68,11 +69,14 @@
       credits: {  enabled: false  },
       title : {   text : plot_title },
       xAxis: {        categories: xcategories  },
-      yAxis: { title: { text: optarg.ytitle},  min: optarg.ymin },
+      yAxis: { title: { text: optarg.ytitle},  min: optarg.ymin, stackLabels: optarg.stackLabels },
       series : series,
       legend: {reversed: true},
-      plotOptions: { series: { stacking: optarg.stacking } },
+      plotOptions: { series: { stacking: optarg.stacking }, 
+		     bar: { dataLabels: { enabled: optarg.dataLabels } },
+                   },
     });
+    return div_id;
   }
 
   var make_series = function(xcol, ycol, optarg){
