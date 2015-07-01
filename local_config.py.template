@@ -59,3 +59,10 @@ SERVICE_EMAIL = "99353222151-qqc2e5qgkquvdd2c3g9onip3bn90kc99@developer.gservice
 SERVICE_KEY_FILE = "../service-account.pem"
 LOCAL_PORT = '8081'
 ADMIN_PORT = '7081'
+
+#-----------------------------------------------------------------------------
+# feature flags
+
+FEATURE_FLAGS = {
+    'revenue_reports': False,	# set to True if revenue reports are to be available (requires data source)
+}

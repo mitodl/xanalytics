@@ -33,9 +33,14 @@ class DataStats(object):
 
     ORGNAME = local_config.ORGANIZATION_NAME
     MODE = local_config.MODE
+    try:
+        FEATURE_FLAGS = local_config.FEATURE_FLAGS
+    except:
+        FEATURE_FLAGS = {}
 
     common_data = {'orgname': ORGNAME,
                    'mode': MODE,
+                   'feature_flags': FEATURE_FLAGS,
     }
 
     def common_init(self):
