@@ -182,6 +182,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
 
         template = JINJA_ENVIRONMENT.from_string(html)
         parameters = {x:v for x,v in pdata.items() if v is not None}
+        parameters['feature_flags'] = self.FEATURE_FLAGS
 
         render_data = self.common_data.copy()
 
