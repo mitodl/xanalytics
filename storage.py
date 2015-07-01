@@ -166,11 +166,14 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
                     self.response.out.write(json.dumps({"error": "CSV file missing course_id column"}))
                     return
                 cid = row['course_id']
-                if not cid in known_course_ids_with_tags:
-                    continue
                 if group_tag:
+                    if not cid in known_course_ids_with_tags:
+                        continue
                     course_tags = known_course_ids_with_tags[cid]
                     if not self.course_listings_row_has_tag(course_tags, group_tag):
+                        continue
+                elif course_id:
+                    if not (cid==course_id):
                         continue
                 data_by_cid[cid] = row
                 
