@@ -9,6 +9,7 @@
   }
 
   var make_scatter_plot = function(plot_title, series, optarg){
+    // x-y scatter plot
 
     optarg = optarg || {};
     var div_id = add_new_plot(optarg);
@@ -37,6 +38,9 @@
   }
 
   var make_bar_plot = function(plot_title, xcategories, series, optarg){
+    // vertical bar chart (e.g. for histograms)
+    // example:
+    //     make_bar_plot('test hist', ['a','b','c'], [{name:'test', data:[1,2,3]}]);
 
     optarg = optarg || {};
     var div_id = add_new_plot(optarg);
@@ -50,8 +54,26 @@
     });
   }
 
-  // make_bar_plot('test hist', ['a','b','c'], [{name:'test', data:[1,2,3]}]);
 
+  var make_horizontal_bar_plot = function(plot_title, xcategories, series, optarg){
+    // horizontal bar chart
+    // example:
+    //     make_horizontal_bar_plot('test hist', ['a','b','c'], [{name:'test', data:[1,2,3]}]);
+
+    optarg = optarg || {};
+    var div_id = add_new_plot(optarg);
+
+    $('#'+div_id).highcharts({
+      chart: {     type: 'bar', zoomType: 'x' },
+      credits: {  enabled: false  },
+      title : {   text : plot_title },
+      xAxis: {        categories: xcategories  },
+      yAxis: { title: { text: optarg.ytitle},  min: optarg.ymin },
+      series : series,
+      legend: {reversed: true},
+      plotOptions: { series: { stacking: optarg.stacking } },
+    });
+  }
 
   var make_series = function(xcol, ycol, optarg){
     optarg = optarg || {};
