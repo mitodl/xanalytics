@@ -9,7 +9,7 @@
     var table = $('#' + div_id).DataTable({
       dom: optarg.dom==null ? 'T<"clear">lfrtip' : optarg.dom,
       "columns": tablecolumns,
-      "pageLength": 10,
+      "pageLength": optarg.pageLength || 10,
       searching: optarg.searching==null ? true : optarg.searching,
       search:{"regex": true},
       ordering: optarg.ordering==null ? true : optarg.ordering,
