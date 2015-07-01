@@ -29,13 +29,18 @@
 
 
       {% autoescape off %}
-      {{custom_report.immediate.multicourse_report_enrollment }}
+              {{custom_report.immediate.multicourse_report_enrollment }}
       {% endautoescape %}
 
+      {% if parameter_values.feature_flags.revenue_reports %}
+              {% autoescape off %}
+                      {{custom_report.immediate["multicourse-report-revenue"] }}
+              {% endautoescape %}
+      {% endif %}
 
     {% if is_staff %}
       {% autoescape off %}
-      {{custom_report["multicourse-broad-stats-full-table"] }}
+              {{custom_report["multicourse-broad-stats-full-table"] }}
       {% endautoescape %}
     {% endif %}
 
