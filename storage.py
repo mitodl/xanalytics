@@ -96,7 +96,7 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
         filename = self.request.get('filename', None)
         if not filename:
             self.response.headers['Content-Type'] = 'application/json'   
-            self.response.out.write({"error": "No filename specified"})
+            self.response.out.write(json.dumps({"error": "No filename specified"}))
             return
         
         try:
@@ -107,7 +107,7 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
             gcs_file.close()
         except Exception as err:
             self.response.headers['Content-Type'] = 'application/json'   
-            self.response.out.write({"error": str(err)})
+            self.response.out.write(json.dumps({"error": str(err)}))
             return
 
     @auth_required
@@ -122,15 +122,16 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
         filename = self.request.get('filename', None)
         if not filename:
             self.response.headers['Content-Type'] = 'application/json'   
-            self.response.out.write({"error": "No filename specified"})
+            self.response.out.write(json.dumps({"error": "No filename specified"}))
             return
         if not filename.endswith('.csv'):
             self.response.headers['Content-Type'] = 'application/json'   
-            self.response.out.write({"error": "Only CSV files can be specified"})
+            self.response.out.write(json.dumps({"error": "Only CSV files can be specified"}))
             return
         
         group_tag = group_tag or self.request.get('group_tag', None)
         course_id = course_id or self.request.get('course_id', None)
+        gtc = self.request.get('get_table_columns', None)
 
         if not group_tag:
             if not course_id:
@@ -155,10 +156,14 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
             gcs_file = gcs.open(bucket)
             data_by_cid = OrderedDict()
 
-            for row in csv.DictReader(gcs_file):
+            cdr = csv.DictReader(gcs_file)
+            if gtc:
+                tablecolumns = [ { 'data': x, 'title': x, 'class': 'dt-center' } for x in cdr.fieldnames ]
+
+            for row in cdr:
                 if not 'course_id' in row:
                     self.response.headers['Content-Type'] = 'application/json'   
-                    self.response.out.write({"error": "CSV file missing course_id column"})
+                    self.response.out.write(json.dumps({"error": "CSV file missing course_id column"}))
                     return
                 cid = row['course_id']
                 if not cid in known_course_ids_with_tags:
@@ -169,11 +174,15 @@ class FileStoragePages(auth.AuthenticatedHandler, DataStats, DataSource):
                         continue
                 data_by_cid[cid] = row
                 
-            self.response.write(json.dumps(data_by_cid))
+            dout = {'data': data_by_cid.values(),
+                    }
+            if gtc:
+                dout['tablecolumns'] = tablecolumns
+            self.response.write(json.dumps(dout))
             gcs_file.close()
         except Exception as err:
             self.response.headers['Content-Type'] = 'application/json'   
-            self.response.out.write({"error": str(err)})
+            self.response.out.write(json.dumps({"error": str(err)}))
             return
 
 FileStorageRoutes = [
