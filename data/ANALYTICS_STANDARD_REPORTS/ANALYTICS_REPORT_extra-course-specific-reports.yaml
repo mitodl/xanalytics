@@ -20,6 +20,9 @@
             {{custom_report["attempts-correct-percentages"]}}
             {{custom_report["forum-analysis-for-course"]}}
       {% endif %}
+      {% if parameter_values.feature_flags.revenue_reports %}
+            {{custom_report["revenue-report-for-course"]}}
+      {% endif %}
             {{custom_report["time-on-task"]}}
       {% if is_staff %}
             {{custom_report["individual-person-report-by-course"]}}

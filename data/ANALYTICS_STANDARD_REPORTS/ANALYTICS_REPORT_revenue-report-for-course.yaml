@@ -1,0 +1,113 @@
+- "author": |-
+    None
+  "date": |-
+    2015-07-01 01:01:57.078100
+  "depends_on": |-
+    None
+  "description": |-
+    ID Verified Revenue for course (only available for some courses)
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        var row = ajax_data['data'][0];
+
+            new_section("Revenue summary:");
+
+        var show_field = function(title, field, val){
+          if (!val){
+            var valstr = (row[field] || '(n/a)');
+            val = numberWithCommas(Number(valstr));
+            if (val=="NaN"){ val = valstr }
+          }
+          add_text("<font color='brown'>" + title + "</font>: <font color='green'>" + val + "</font><br/>");
+        }
+        show_field("Gross Revenue ($)", "*Gross Rev  $'s (USD)");
+        show_field("Number of orders", "*Gross Rev  # Orders");
+        show_field("Average order price ($)", "", (Number(row["*Gross Rev  $'s (USD)"])/Number(row["*Gross Rev  # Orders"])).toFixed(2));
+        show_field("Refunds ($)", "Refunds  $");
+        show_field("Number of refunds", "Refunds  #");
+
+        new_section("All revenue data:");
+
+        // show big table of all the data - flipped!
+        var fdata = [];
+        ajax_data['tablecolumns'].forEach(function(x){
+          var fname = x['data'];
+          if (fname===""){ return; }
+          fdata.push({'field': fname, 'value': ajax_data['data'][0][fname]});
+        });
+        var tcols = [colent('field', 'field'), colent('value', 'value')];
+        make_table(tcols, fdata, {pageLength: ajax_data['tablecolumns'].length,
+                                  ordering: false,
+                                  paging: false,
+                                 });
+      }
+
+      var get = function(x){ return eval(x); }  // jshint ignore:line
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+    analytics_report = make_report();  // instantiate
+    parameters.filename = "ID_Verified_current.csv";
+
+    if (1){
+      $.getJSON(
+        '/file/get/report',
+        parameters,
+        analytics_report.process_data
+      );
+    }
+
+  "meta_info": {}
+  "name": |-
+    revenue-report-for-course
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Revenue report for course
