@@ -245,11 +245,13 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
 
         for row in bqdata['data']:
             cid = row['course_id']
-            if not cid in known_course_ids_with_tags:
-                continue
-            course_tags = known_course_ids_with_tags[cid]
-            if not self.course_listings_row_has_tag(course_tags, group_tag):
-                continue
+            row['tags'] = self.make_course_tags_list(known_course_ids_with_tags.get(cid, ''))
+            if group_tag:
+                if not cid in known_course_ids_with_tags:
+                    continue
+                course_tags = known_course_ids_with_tags[cid]
+                if not self.course_listings_row_has_tag(course_tags, group_tag):
+                    continue
             data_by_cid[cid] = row
 
         fields = tableinfo['schema']['fields']
