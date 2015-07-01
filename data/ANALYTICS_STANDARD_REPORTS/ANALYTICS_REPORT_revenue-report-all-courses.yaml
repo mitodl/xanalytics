@@ -1,0 +1,218 @@
+- "author": |-
+    None
+  "date": |-
+    2015-07-01 16:37:51.564327
+  "depends_on": |-
+    None
+  "description": |-
+    Revenues from all courses (for which data is available)
+  "group_tags":
+  - !!python/unicode |-
+    role:pm
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        var row = ajax_data['data'][0];
+        var dd = ajax_data['data'];
+
+            new_section("Revenue summary:");
+
+        var courses = [];
+        var grev = [];
+        var refunds = [];
+        var net_rev = [];
+        var norders = 0;
+        var nrefunds = 0;
+        var rdat_by_course = {};   // key = course_id, value = dict of data
+        var rseries = [
+          {name: "Refunds ($)", data: refunds},
+          {name: 'Net revenue ($)', data: net_rev},
+        ];
+        // var refseries = [{name: 'Refunds ($)', data: refunds}];
+        var cdata = [];
+            dd.forEach(function(x){
+          if (courses.indexOf(x['course_id'])>=0){  // remove duplicates!
+                    return;
+          }
+          if (Number(x['*Gross Rev  # Orders'])===0){
+                    return;
+          }
+          var cid = x['course_id'];
+          var x_grev = (Number(x["*Gross Rev  $'s (USD)"]));
+          var x_refunds = (Number(x["Refunds  $"]));
+          var x_net_rev = (Number(x["*Gross Rev  $'s (USD)"]) - Number(x["Refunds  $"]));
+          norders += Number(x['*Gross Rev  # Orders']);
+          nrefunds += Number(x['Refunds  #']);
+          var rdat = {'course_id': cid, grev: x_grev, refunds: x_refunds, net_rev: x_net_rev };
+          cdata.push(rdat);
+          rdat_by_course[cid] = rdat;
+        });
+
+        cdata.sort(function(a,b){ return b.net_rev - a.net_rev; });
+            cdata.forEach(function(x){
+          courses.push(x['course_id']);
+          grev.push(x['grev']);
+          refunds.push(x['refunds']);
+          net_rev.push(x['net_rev']);
+        });
+
+        var bp_div;
+
+        var show_field = function(title, field, val, large){
+          if (!val){
+            var valstr = (row[field] || '(n/a)');
+            val = numberWithCommas(Number(valstr));
+            if (val=="NaN"){ val = valstr }
+          }
+          var html = "<font color='brown'>" + title + "</font>: <font color='green'>" + val + "</font><br/>";
+          if (large){
+            html = "<span style='font-size:200%'>" + html + "</span>";
+          }
+          add_text(html);
+        }
+        show_field("Total Gross Revenue ($)", "", numberWithCommas(math.sum(grev)));
+        show_field("Total Number of orders", "", norders);
+        show_field("Average order price ($)", "", (math.sum(grev)/norders).toFixed(2));
+        show_field("Total Refunds ($)", "", numberWithCommas(math.sum(refunds)));
+        show_field("Number of refunds", "", nrefunds);
+        show_field('Total net revenue = gross - refunds ($)', '', numberWithCommas(math.sum(grev) - math.sum(refunds)), true);
+
+        // get tags, and aggregate by tag
+
+        var aggregate_by_tags = function(bsdat){
+          var tags = {};  // array with key = tag, value = list of courses with that tag
+          bsdat['table'].forEach(function(x){
+            var cid = x['course_id'];
+            x['tags'].forEach(function(tag){
+              tags[tag] = tags[tag] || [];
+              tags[tag].push(cid);
+            });
+          });
+
+          // aggregate revenue by tag
+          var rdat_by_tag = {};
+          var rdat_list = [];
+          Object.keys(tags).forEach(function(tag){
+            var tdat = {grev: 0, refunds: 0, net_rev: 0, courses: tags[tag], 'tag': tag};
+            tags[tag].forEach(function(course_id){
+              var rdat = rdat_by_course[course_id];
+              if (rdat){
+                tdat.grev += rdat.grev;
+                tdat.refunds += rdat.refunds;
+                tdat.net_rev += rdat.net_rev;
+              }
+            });
+            rdat_by_tag[tag] = tdat;
+            rdat_list.push(tdat);
+          });
+
+          var the_tags = [];
+          var tag_net_rev = [];
+          var tag_refunds = [];
+          rdat_list.sort(function(a,b){ return b.net_rev - a.net_rev; });
+          rdat_list.forEach(function(x){
+            the_tags.push(x['tag']);
+            tag_refunds.push(x['refunds']);
+            tag_net_rev.push(x['net_rev']);
+          });
+
+          var trseries = [
+            {name: "Refunds ($)", data: tag_refunds},
+            {name: 'Net revenue ($)', data: tag_net_rev},
+          ];
+
+          make_horizontal_bar_plot('Revenue for all {{parameter_values.orgname}} courses, by department / area',
+                                   the_tags,
+                                   trseries,
+                                   {height: 120+40*tag_refunds.length,
+                                    stacking: "normal",
+                                    dataLabels: false,
+                                    stackLabels: { enabled: true },
+                                   });
+
+        }
+
+        $.getJSON('/dashboard/get/broad_stats', {}, aggregate_by_tags);
+
+        bp_div = make_horizontal_bar_plot('Revenue for all {{parameter_values.orgname}} courses',
+                                              courses,
+                                              rseries,
+                                              {height: 120+40*grev.length,
+                                               stacking: "normal",
+                                               stackLabels: { enabled: true },
+                                              });
+
+        make_show_hide("Revenue chart for each course", bp_div);
+
+
+        // show big table of all the data
+        // new_section("All revenue data:");
+        // make_table(ajax_data['tablecolumns'], ajax_data['data']);
+      }
+
+      var get = function(x){ return eval(x); }  // jshint ignore:line
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+    analytics_report = make_report();  // instantiate
+    parameters.filename = "ID_Verified_current.csv";
+    console.log('parameters=', parameters);
+
+    if (1){
+      $.getJSON(
+        '/file/get/report',
+        parameters,
+        analytics_report.process_data
+      );
+    }
+
+  "meta_info": {}
+  "name": |-
+    revenue-report-all-courses
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Revenue Report - All Courses
