@@ -51,7 +51,7 @@
         var row = ajax_data['data'][0];
         var dd = ajax_data['data'];
 
-            new_section("Revenue summary:");
+        new_section("Revenue summary:");
 
         var courses = [];
         var grev = [];
@@ -59,6 +59,8 @@
         var net_rev = [];
         var norders = 0;
         var nrefunds = 0;
+        var min_end_date = new Date();
+        var max_end_date = new Date(1970);
         var rdat_by_course = {};   // key = course_id, value = dict of data
         var rseries = [
           {name: "Refunds ($)", data: refunds},
@@ -80,9 +82,20 @@
           norders += Number(x['*Gross Rev  # Orders']);
           nrefunds += Number(x['Refunds  #']);
           var rdat = {'course_id': cid, grev: x_grev, refunds: x_refunds, net_rev: x_net_rev };
+          try{
+            rdat['end_date'] = $.datepicker.parseDate('yy-mm-dd', x['Dates Course End'] || "" );
+            if (rdat.end_date && (rdat.end_date < min_end_date)){ min_end_date = rdat.end_date; }
+            if (rdat.end_date && (rdat.end_date > max_end_date)){ max_end_date = rdat.end_date; }
+          }
+          catch(err){
+            console.log("cannot parse date= ", x['Dates Course End'], " for ", cid);
+          }
           cdata.push(rdat);
           rdat_by_course[cid] = rdat;
         });
+
+        console.log('min_end_date = ', min_end_date);
+        console.log('max_end_date = ', max_end_date);
 
         cdata.sort(function(a,b){ return b.net_rev - a.net_rev; });
             cdata.forEach(function(x){
@@ -112,6 +125,145 @@
         show_field("Total Refunds ($)", "", numberWithCommas(math.sum(refunds)));
         show_field("Number of refunds", "", nrefunds);
         show_field('Total net revenue = gross - refunds ($)', '', numberWithCommas(math.sum(grev) - math.sum(refunds)), true);
+
+
+        // aggregate revenue by date period, accepting input for fiscal year date
+
+        var setup_revenue_by_fy = function(bsdat){
+          // bsdat = broad stats data, which includes "Course Wrap" dates
+          // we use those dates as a backup, when the end date is missing in the idv data
+
+          add_text("<span id='revenue-by-fy'></span>");
+          var div_rbf = $('#revenue-by-fy');
+          var html = "Fiscal year starting month: <select id='rbyfy_month'>";
+          for(var k=1; k<=12; k++){
+            html += "<option value='" + k + "' " + ((k==7) ? "selected" : "") + ">" + k + "</option>";
+          }
+          html += "</select>";
+          html += "<button id='rbfy_button'>Compute revenue by fiscal year</button>";
+          div_rbf.html(html);
+
+          var do_revenue_by_fy = function(){
+
+            // fill in missing end dates, if any
+            var wrap_dates = {}
+            bsdat['table'].forEach(function(x){
+              var cid = x['course_id'];
+              try{
+                wrap_dates[cid] = new Date(x['Course Wrap']);
+              }
+              catch(err){
+                console.log("for ", cid, " could not parse broad_stats course_wrap date ", x['Course Wrap']);
+              }
+            });
+            console.log('Wrap dates = ', wrap_dates);
+            var msg = ""
+            cdata.forEach(function(x){
+              if (!x.end_date){
+                var cid = x['course_id'];
+                console.log("--> Missing end date for ", cid);
+                var wd = wrap_dates[cid];
+                if (wd){
+                  x.end_date = wd;
+                  msg += "<p>" + cid + " missing end date in IDV data!  Using Course Wrap from listings: " + wd + "</p>";
+                }else{
+                  msg += "<p>" + cid + " missing end date in IDV data!  Unaccounted revenue = " + x.net_rev + "</p>";
+                }
+              }
+            });
+            console.log(msg);
+
+            // get specified fiscal year start month
+            var fy_month = Number($('#rbyfy_month').val());
+            console.log("fy_month=", fy_month);
+            // aggregate by quarters
+
+            // make list of months when quarters start
+            var quarter_start_months = [];
+            for (var k=0; k<4; k++){
+              var start = (k*3+fy_month-1)%12 + 1;
+              var end = (start-1+3)%12 + 1;
+              quarter_start_months.push(start);
+            }
+            console.log("quarters_start_months = ", quarter_start_months);
+
+            // start with first quarter in year of min_end_date, and end with last quarter
+            // in year of max_end_date.  make list of all quarters, each element as a date object.
+
+            var quarters = [];
+            // beware, javascript Date indexes months starting from 0
+                    var start_date = new Date(min_end_date.getFullYear(), math.min(quarter_start_months)-1, 1);
+            var end_date = new Date(max_end_date.getFullYear(), math.max(quarter_start_months)-1, 1);
+            var the_date = start_date;
+            while (the_date < end_date){
+              quarters.push(new Date(the_date));
+              the_date.setMonth(the_date.getMonth() + 3);   // each quarter is 3 months
+            }
+                    console.log("quarters = ", quarters);
+
+            var monthDelta = function(x,y){ return x.getMonth() - y.getMonth() + (12 * (x.getFullYear() - y.getFullYear())); }
+
+            // iterate over all courses, put data into one quarter.
+
+            var quarterly_revenue = {};
+            var quarterly_ncourses = {};
+            cdata.forEach(function(x){
+              var ed = x['end_date'];
+              if (!ed){
+                x['end_date'] = "n/a";
+                x['quarter'] = "n/a";
+                return;
+              }
+              quarters.forEach(function(q){
+                var dm = monthDelta(ed,q);
+                if ((ed >= q) && (dm < 3)){
+                  var qstr = q.toISOString().substring(0,7);
+                  quarterly_revenue[qstr] = (quarterly_revenue[qstr] || 0) + x['net_rev'];
+                  quarterly_ncourses[qstr] = (quarterly_ncourses[qstr] || 0) + 1;
+                  x['quarter'] = qstr;
+                }
+              });
+            });
+            console.log("quarterly revenue: ", quarterly_revenue);
+            console.log("quarterly ncourses: ", quarterly_ncourses);
+
+            // make into table and display
+            var tabdata = [];
+            var total_revenue = 0;
+            var total_ncourses = 0;
+            quarters.forEach(function(q){
+              var qstr = q.toISOString().substring(0,7);
+              tabdata.push({quarter: qstr, revenue: quarterly_revenue[qstr] || 0, ncourses: quarterly_ncourses[qstr] || 0 });
+              total_revenue += quarterly_revenue[qstr] || 0;
+              total_ncourses += quarterly_ncourses[qstr] || 0;
+            });
+            tabdata.push({quarter:"TOTAL", revenue: total_revenue, ncourses: total_ncourses});
+            add_text("Table of past, current, and future revenue bookings, based on fiscal quarter in which course ends");
+            make_table([colent("Quarter start YYYY-MM", 'quarter'),
+                        colent('Revenue ($)', 'revenue', {fixed:2}),
+                        colent('# courses', 'ncourses'),
+                        ],
+                       tabdata,
+                       {pageLength: 50}
+                      );
+            add_text(msg);
+
+            add_text('<br/>');
+            add_text("Detailed listing of individual courses with revenue and dates");
+            // detailed table with each course, net revenue, gross, and refunds
+            dtab_div = make_table([colent('course_id', 'course_id'),
+                                   colent('Net Revenue ($)', 'net_rev', {fixed:2}),
+                                   colent('Gross Revenue ($)', 'grev', {fixed:2}),
+                                   colent('Refunds ($)', 'refunds', {fixed:2}),
+                                   colent('Course end date', 'end_date', {simpledate: 10}),
+                                   colent('Fiscal quarter', 'quarter'),
+                                  ], cdata);
+            // make_show_hide("Detailed listing of individual courses with revenue and end dates", dtab_div);
+
+          }
+
+          $('#rbfy_button').click(do_revenue_by_fy);
+        };
 
         // get tags, and aggregate by tag
 
@@ -166,6 +318,9 @@
                                     stackLabels: { enabled: true },
                                    });
 
+          // show button for aggregating revenues by fiscal year
+          add_text('<br style="clear:left;"/>'); // otherwise plot obscures stuff below
+          setup_revenue_by_fy(bsdat);
         }
 
         $.getJSON('/dashboard/get/broad_stats', {}, aggregate_by_tags);
