@@ -39,6 +39,16 @@
         }
       }
     }
+    var render_simple_date = function(nchars){
+      return function(x){
+	try{
+          return x.toISOString().substring(0, nchars);
+	}
+	catch(err){
+          return x;
+	}
+      }
+    }
     if (optarg.thousands){
       retdat['render'] = render_scaled(1/1000, 2);
     }
@@ -47,6 +57,9 @@
     }
     if (optarg.fixed != null){
       retdat['render'] = render_scaled(1, optarg.fixed);
+    }
+    if (optarg.simpledate != null){
+      retdat['render'] = render_simple_date(optarg.simpledate);
     }
     return retdat
   }
