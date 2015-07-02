@@ -246,6 +246,7 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         for row in bqdata['data']:
             cid = row['course_id']
             row['tags'] = self.make_course_tags_list(known_course_ids_with_tags.get(cid, ''))
+            row['Course Wrap'] = courses['data_by_key'].get(cid, {}).get('Course Wrap')
             if group_tag:
                 if not cid in known_course_ids_with_tags:
                     continue
