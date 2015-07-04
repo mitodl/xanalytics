@@ -247,8 +247,21 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                 else:
                     error = {'msg': "No problem available before %s in this chapter" % (url_name)}
 
+        # use listings to determine if the course_id is being mangled by opaque keys, so that the correct jump_to link can be created.
+        # specifically, use the "Course Key Version" column.  If that column exists, and has "v1", then the course_key will be
+        # of the form "course-v1:ORG+NUM+SEMESTER", instead of the usual courses_id form of ORG/NUM/SEMESTER.
+        # if this information is unavailable, then use course_id as the course_key.
+        courses = self.get_course_listings()
+        course_key_version = courses['data_by_key'][course_id].get('Course Key Version', "standard").strip().lower()
+        if course_key_version=="v1":
+            (org, num, semester) = course_id.split('/', 3)
+            course_key = "course-v1:%s+%s+%s" % (org, num, semester)
+        else:
+            course_key = course_id
+
         data = self.common_data.copy()
         data.update({'course_id': course_id,
+                     'course_key': course_key,		# used for jump_to_id, for example; handles edX's opaque keys
                      'name': name,
                      'chapter_mid': chapter_mid,
                      'cun': chapter_url_name,
@@ -258,6 +271,7 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
                      'module': the_module,
                      'caxis': caxis,
                      'error': error,
+                     'course_key_version': course_key_version,
                  })
         return data
 
