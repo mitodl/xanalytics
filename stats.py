@@ -951,6 +951,11 @@ class DataStats(object):
             except:
                 logging.error('[get_course_listings] oops, cannot encode title, row=%s' % k)
                 raise
+            try:
+                k['Instructors'] = unidecode(k.get('instructors', k.get('Instructors'))).encode('utf8')
+            except:
+                logging.error('[get_course_listings] oops, cannot encode instructors, row=%s' % k)
+                raise
             (m,d,y) = map(int, k.get('courses_launch', k.get('Course Launch', '')).split('/'))
             ldate = "%04d-%02d-%02d" % (y,m,d)
             k['launch'] = ldate
