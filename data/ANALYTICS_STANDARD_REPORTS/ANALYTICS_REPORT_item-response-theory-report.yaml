@@ -1,0 +1,180 @@
+- "author": |-
+    None
+  "date": |-
+    2015-10-24 03:20:46.612540
+  "depends_on": |-
+    None
+  "description": "Report on all (\"capa\") problems in the course, giving classical\
+    \ test theory statistics \r\n(e.g. item-test correlation, and Cronbach's alpha),\
+    \ and item response theory 2PL parameters \r\n(item difficulty and discrimination)."
+  "group_tags":
+  - !!python/unicode |-
+    course
+  "html": |-
+    <p>IRT parameters are only available for a subset of problems.
+      Sort the table by difficulty or by discrimination, for example</p>
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |
+    function loadJS(src, callback) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onreadystatechange = s.onload = function() {
+        var state = s.readyState;
+        if (!callback.done && (!state || /loaded|complete/.test(state))) {
+          callback.done = true;
+          callback();
+        }
+      };
+      document.getElementsByTagName('head')[0].appendChild(s);
+    }
+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      var add_2pl_plot = function(){
+        var imurl = "/file/get/course/{{course_id}}?filename=mooc-irt-plot5-2pl-icc.png";
+        html3 = "<img width='900' id='plot_2pl_image' src='" + imurl + "' />";
+        $('#irt-2pl-plot').html(html3);
+      }
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        // console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        // parse CSV
+        the_data = Papa.parse(ajax_data, {header:true,
+                                          skipEmptyLines: true,
+                                          dynamicTyping: true});
+        // make table columns
+        tcols = [];
+            the_data.meta.fields.forEach(function(x){
+          tcols.push(colent(x, x));
+        });
+
+        tab_fields = ["problem_nid", "problem_short_id", "problem_label",
+                  "problem_id", "IRT item number",
+                  "avg_problem_raw_score", "avg_problem_pct_score",
+                  "n_unique_users_attempted", "item_test", "item_rest", "alpha",
+                  "Discrimination", "Difficulty"];
+
+        // table with just IRT scores
+        tcols_irt = [
+          colent("Problem #", "problem_nid"),
+          colent("Chapter / Section / Name", "problem_label"),
+          colent("Discrimination", "Discrimination", {fixed: 3}),
+          colent("Difficulty", "Difficulty", {fixed: 3}),
+        ];
+        new_section("IRT Data (for just problems where the data is available)");
+        var html2 = "These results are obtained using Stata using its ";
+        html2 += "<a href='http://www.stata.com/manuals14/irtirt2pl.pdf'>2PL IRT model</a>. ";
+        html2 += "Some problems are dropped from this analysis, e.g. if responses do not vary sufficiently. ";
+        html2 += "A dichotomoous model is employed, in which each item is deemed correct if the raw score";
+        html2 += "is greater than or equal to half of the maximum possible for the problem.";
+        add_text(html2);
+        var just_irt_data = [];
+        the_data.data.forEach(function(x){
+          if ((x.Discrimination!=="")){ just_irt_data.push(x); }
+        });
+        make_table(tcols_irt, just_irt_data);
+        add_text("<div id='irt-2pl-plot'></div>");
+        add_2pl_plot();
+
+        // classical test theory data
+        tcols_ctt = [
+          colent("Problem #", "problem_nid"),
+          colent("Chapter / Section / Name", "problem_label"),
+          colent("item-test correlation", "item_test", {fixed: 3}),
+          colent("item-rest correlation", "item_rest", {fixed: 3}),
+          colent("Cronbach's alpha", "alpha", {fixed: 3}),
+        ];
+        new_section("Classical Test Theory Data");
+        html2 = "These results are obtained using Stata using its 'alpha' analysis,";
+        html2 += "which provides item-test and item-rest correlation values, as well as ";
+        html2 += "<a href='https://en.wikipedia.org/wiki/Cronbach%27s_alpha'>Cronbach's alpha</a>,";
+        html2 += "a measure of the item reliability.";
+        html2 += "<br>Typically a good alpha is above 0.8.";
+        html2 += "<br>The item-test correlation gives a measure of how well performance on a single question";
+        html2 += "correlates with the total score, for each individual, averaged across individuals."
+        add_text(html2);
+        make_table(tcols_ctt, the_data.data);
+
+        // show big table of all the data
+        tcols_all = [
+          colent("Problem #", "problem_nid"),
+          colent("Chapter / Section / Name", "problem_label"),
+          colent("Average raw score", "avg_problem_raw_score", {fixed: 3}),
+          colent("Average percent score (out of 100)", "avg_problem_pct_score", {fixed:1}),
+          colent("Observations (# unique users attempted)", "n_unique_users_attempted"),
+
+          colent("item-test correlation", "item_test", {fixed: 3}),
+          colent("item-rest correlation", "item_rest", {fixed: 3}),
+          colent("Cronbach's alpha", "alpha", {fixed: 3}),
+
+          colent("Discrimination", "Discrimination", {fixed: 3}),
+          colent("Difficulty", "Difficulty", {fixed: 3}),
+        ];
+        new_section("All Problem Data");
+        make_table(tcols_all, the_data.data);
+      }
+
+      var get = function(x){ return eval(x); }  // jshint ignore:line
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+
+    loadJS('/js/papaparse.min.js', function() {
+      analytics_report = make_report();  // instantiate
+
+      parameters.filename = "item_response_theory_report.csv";
+
+      if (1){
+        $.get(
+          '/file/get/course/{{course_id}}',
+          {filename: parameters.filename},
+          analytics_report.process_data
+        );
+      }
+     });
+  "meta_info":
+    !!python/unicode "require_file": !!python/unicode |-
+      item_response_theory_report.csv
+  "name": |-
+    item-response-theory-report
+  "sql": ""
+  "table_name": |-
+    None
+  "title": |-
+    Item Response Theory Report
