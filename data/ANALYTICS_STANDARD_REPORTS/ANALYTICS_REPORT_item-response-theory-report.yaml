@@ -59,6 +59,68 @@
         $('#irt-2pl-plot').html(html3);
       }
 
+      var colorset = [
+        "#CE0000",
+        "#00CE00",
+        "#0000CE",
+        "#8B008B",
+        "#F0E68C",
+        "#FF7F50",
+        "#8A2BE2",
+        "#2F4F4F",
+        "#000BFF",
+      ];
+
+      var add_irt_ab_plot = function(irt_data){
+        var sdata = [];
+        var irt_series = [ {name: "IRT Parameters", data: sdata }];
+        var atypes = {};
+        var ccnt = 0;
+            irt_data.forEach(function(v){
+          var atype = v['assignment_type'];
+          if (!atypes[atype]){
+            atypes[atype] = colorset[ccnt];
+            ccnt += 1;
+          }
+          sdata.push({x: v['Difficulty'], y: v['Discrimination'],
+                      name: ( atype + ": " + v['problem_label'] +
+                             " (" + v['problem_short_id'] + ")" ),
+                      fillColor: atypes[atype],
+                     });
+        });
+        console.log("Generating plot with series=", irt_series);
+        make_scatter_plot("Discrimination vs. difficulty", irt_series,
+                          {height:800,
+                           xtitle: "Difficulty (b)",
+                           ytitle: "Discrimination (a)",
+                          });
+      }
+
+      var add_irt_vs_avg_plot = function(irt_data){
+        var sdata = [];
+        var irt_series = [ {name: "Average pct score vs difficulty", data: sdata }];
+        var atypes = {};
+        var ccnt = 0;
+            irt_data.forEach(function(v){
+          var atype = v['assignment_type'];
+          if (!atypes[atype]){
+            atypes[atype] = colorset[ccnt];
+            ccnt += 1;
+          }
+          sdata.push({x: v['Difficulty'],
+                      y: v['avg_problem_pct_score'],
+                      name: ( atype + ": " + v['problem_label'] +
+                             " (" + v['problem_short_id'] + ")" ),
+                      fillColor: atypes[atype],
+                     });
+        });
+        console.log("Generating plot with series=", irt_series);
+        make_scatter_plot("Average problem score vs. difficulty", irt_series,
+                          {height:800,
+                           xtitle: "Difficulty (b)",
+                           ytitle: "Average percent raw score",
+                          });
+      }
       // main function called to process data from AJAX call
       var process_data = function(ajax_data){
         html = '';
@@ -79,6 +141,8 @@
         });
 
         tab_fields = ["problem_nid", "problem_short_id", "problem_label",
+                     "chapter",
+                      "assignment_type",
                   "problem_id", "IRT item number",
                   "avg_problem_raw_score", "avg_problem_pct_score",
                   "n_unique_users_attempted", "item_test", "item_rest", "alpha",
@@ -87,6 +151,7 @@
         // table with just IRT scores
         tcols_irt = [
           colent("Problem #", "problem_nid"),
+          colent('Assignment', "problem_short_id"),
           colent("Chapter / Section / Name", "problem_label"),
           colent("Discrimination", "Discrimination", {fixed: 3}),
           colent("Difficulty", "Difficulty", {fixed: 3}),
@@ -95,6 +160,7 @@
         var html2 = "These results are obtained using Stata using its ";
         html2 += "<a href='http://www.stata.com/manuals14/irtirt2pl.pdf'>2PL IRT model</a>. ";
         html2 += "Some problems are dropped from this analysis, e.g. if responses do not vary sufficiently. ";
+        html2 += "Also, some multi-part problems may have been combined, to make the analysis robust. ";
         html2 += "A dichotomoous model is employed, in which each item is deemed correct if the raw score";
         html2 += "is greater than or equal to half of the maximum possible for the problem.";
         add_text(html2);
@@ -104,7 +170,9 @@
         });
         make_table(tcols_irt, just_irt_data);
         add_text("<div id='irt-2pl-plot'></div>");
+        add_text("<div id='irt-ab-plot'></div>");
         add_2pl_plot();
+        add_irt_ab_plot(just_irt_data);
 
         // classical test theory data
         tcols_ctt = [
@@ -124,10 +192,13 @@
         html2 += "correlates with the total score, for each individual, averaged across individuals."
         add_text(html2);
         make_table(tcols_ctt, the_data.data);
+        add_irt_vs_avg_plot(just_irt_data);
 
         // show big table of all the data
         tcols_all = [
           colent("Problem #", "problem_nid"),
+          colent("Chapter", "chapter"),
+          colent("Assignment Type", "assignment_type"),
           colent("Chapter / Section / Name", "problem_label"),
           colent("Average raw score", "avg_problem_raw_score", {fixed: 3}),
           colent("Average percent score (out of 100)", "avg_problem_pct_score", {fixed:1}),
