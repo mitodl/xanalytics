@@ -24,6 +24,7 @@
       xAxis: { title: { text: optarg.xtitle } },
       yAxis: { title: { text: optarg.ytitle},  min: optarg.ymin },
       plotOptions: {
+	series: optarg.seriesPlotOptions,
         scatter: {
           marker: { radius: 10 },
           tooltip: {
