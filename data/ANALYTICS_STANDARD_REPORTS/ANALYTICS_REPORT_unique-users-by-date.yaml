@@ -1,0 +1,176 @@
+- "author": |-
+    None
+  "date": |-
+    2016-03-07 14:54:51.684960
+  "depends_on": |-
+    ["{person_course}"]
+  "description": "Cumulative unique user count by date, from SQL records (updated\
+    \ weekly).  "
+  "group_tags":
+  - !!python/unicode ""
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        // console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        // show big table of all the data
+        // make_table(ajax_data['tablecolumns'], ajax_data['data']);
+
+        // show plot
+
+        var sdat = [];
+        var ddat = [];
+        var series = [ {name: "Unique users by date", data: sdat, yAxis:1},
+                       {name:"Daily unique users", data: ddat, type:"column"}];
+        var xcol = "start_date";
+        var ycol = "n_unique_users_tot";
+        data['data'].forEach(function(x){
+
+          if (!x[xcol]){ return; }
+          if (!x[xcol]){ return; }
+          var date = $.datepicker.parseDate('yy-mm-dd', x[xcol]).getTime();
+              //  xv = Number(x[xcol]);
+          xv = date;
+          yv = Number(x[ycol]);
+          sdat.push([xv, yv]);
+          ddat.push([xv, Number(x['n_unique_users_new'])]);
+        });
+        the_series = series;
+
+        console.log("Generating unique users vs date plot, series=", series);
+        //make_scatter_plot("# unique users by date", series,
+        //                  {xtitle: 'Date',
+        //                   ytitle: 'Cumulative # unique users',
+        //                  }
+        //                );
+
+        // plot data
+        var pdiv = add_new_plot();
+
+        var chart = new Highcharts.Chart({
+          chart: {  zoomType: 'xy', renderTo: pdiv  },
+          credits: {  enabled: false  },
+          title : {  text : 'Unique users by date for all {{orgname}} courses' ,  },
+          subtitle: { text: "Source: SQL" },
+          xAxis: [ { type: 'datetime',
+                    // categories: xaxis_data,
+                   } ],
+          yAxis: [ {    labels: { style: { color: Highcharts.getOptions().colors[2] } },
+                    title: { text: 'Daily Enrollment', style: { color: Highcharts.getOptions().colors[2] } },
+                    opposite: true,
+                    // min: 0,
+                   },
+                  { gridLineWidth: 0,
+                   title: { text: 'Cumulative Enrollment', style: { color: Highcharts.getOptions().colors[0] } },
+                   labels: {style: { color: Highcharts.getOptions().colors[0] }  },
+                   // min: 0,
+                  },
+                 ],
+          series : series,
+        });
+
+      }
+
+      var get = function(x){ return eval(x); }  // jshint ignore:line
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+          var make_series2 = function(tdata, xcol, ycol, optarg){
+            optarg = optarg || {};
+            var sdat = [];
+            var series = [ {name: optarg.name || "Data", data: sdat} ];
+            tdata.forEach(function(x){
+              if (!x[xcol]){ return; }
+              if (!x[xcol]){ return; }
+              xv = Number(x[xcol]);
+              yv = Number(x[ycol]);
+              sdat.push({x: xv, y: yv, name: x[optarg.namecol || 'course_id']});
+            });
+
+            if (optarg.fit_line){
+              series[0]['regression'] = true;
+              series[0]['regressionSettings'] = { type: 'linear',
+                                                 // states: { hover: { lineWidth: 0 } },
+                                                 enableMouseTracking: false,
+                                                }
+            }
+
+            return series;
+          }
+
+    analytics_report = make_report();  // instantiate
+
+    if (1){
+      $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+        analytics_report.process_data
+      );
+    }
+
+  "meta_info": {}
+  "name": |-
+    unique-users-by-date
+  "sql": |+
+    SELECT start_date,
+        count(user_id) as n_unique_users_new,
+        sum(n_unique_users_new) over (order by start_date) as n_unique_users_tot,
+    FROM (
+        SELECT user_id,
+            min(date(start_time)) as start_date,
+            count(course_id) as n_courses,
+            sum(case when certified then 1 else 0 end) as n_certified,
+        FROM {person_course}
+        WHERE start_time is not null
+        group by user_id
+        order by n_courses desc
+        )
+    GROUP BY start_date
+    ORDER BY start_date
+
+
+
+  "table_name": |-
+    stats_unique_users_by_date
+  "title": |-
+    Unique users by date
