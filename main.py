@@ -515,8 +515,11 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         ccontents = [x for x in caxis.values() if (x['chapter_mid']==chapter_mid) and (not x['category']=='vertical')]
         
         # problem stats
-        ps = self.compute_problem_stats(course_id)
-        pstats = ps['data_by_key']
+        try:
+            ps = self.compute_problem_stats(course_id)
+            pstats = ps['data_by_key']
+        except Exception as err:
+            pstats = {}
 
         # add nuser_views
         for caent in ccontents:
@@ -645,10 +648,13 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
     @auth_required
     def ajax_get_course_stats(self, org=None, number=None, semester=None):
         '''
-        single course analytics view - data only
+        single course analytics view - data only.  Provides table data for "content by chapter"
+        table in the one_course.html template.
         '''
         course_id = '/'.join([org, number, semester])
         caxis = self.load_course_axis(course_id)
+
+        #logging.info('chapters = %s' % [x['name'] for x in caxis.values() if x['category']=='chapter'])
 
         # get module usage counts
         self.compute_sm_usage(course_id)
@@ -988,3 +994,4 @@ ROUTES += CustomReportRoutes
 ROUTES += FileStorageRoutes
 
 application = webapp2.WSGIApplication(ROUTES, debug=True, config=config)
+
