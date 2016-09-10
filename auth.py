@@ -316,6 +316,8 @@ class AuthenticatedHandler(webapp2.RequestHandler, GeneralFunctions):
     def Authenticate(self):
         if 'google' in self.AUTH_METHOD:
             return self.GoogleAuthenticate()
+        elif self.AUTH_METHOD=='local':
+            return self.AUTHORIZED_USERS[0]
         # If the request contains a login ticket, try to validate it
         ticket = self.request.get('ticket', None)
         if ticket is None and ('ticket' in self.session):
