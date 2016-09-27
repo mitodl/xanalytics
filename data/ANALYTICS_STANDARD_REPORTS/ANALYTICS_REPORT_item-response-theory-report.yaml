@@ -73,7 +73,7 @@
       ];
 
       var make_url_for_problem = function(pdata){
-        var purl_name = pdata['problem_id'];
+        var purl_name = pdata['problem_id'] || pdata['CP_problem_id'];   // CP_problem_id is disparaged
         var plabel = pdata['problem_label'];
         var url = "/problem/" + course_id + '/' + purl_name;
         return url;
@@ -311,7 +311,7 @@
         );
       }
      });
-  "meta_info": 
+  "meta_info":
     !!python/unicode "require_table": !!python/unicode |-
       item_response_theory_report
   "name": |-
