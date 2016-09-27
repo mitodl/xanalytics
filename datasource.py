@@ -231,6 +231,9 @@ class DataSource(object):
                                            maxResults=maxResults, 
                                            allowLargeResults=allowLargeResults,
                                            **optargs)
+                if force_query or not table_date:
+                    table_date = bqutil.get_bq_table_last_modified_datetime(dataset, table, **optargs)
+                data['last_modified_date'] = table_date
             except Exception as err:
                 logging.error(err)
                 if raise_exception:

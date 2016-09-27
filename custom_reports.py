@@ -880,6 +880,7 @@ class CustomReportPages(auth.AuthenticatedHandler, DataStats, DataSource, Report
         data = self.common_data.copy()
         data.update({'data': bqdata['data'],
                      'draw': pdata['draw'],
+                     'last_modified_date': str(bqdata.get('last_modified_date')),
                      'fields': bqdata['fields'],
                      'recordsTotal': bqdata.get('numRows', 0),
                      'recordsFiltered': bqdata.get('numRows', 0),
