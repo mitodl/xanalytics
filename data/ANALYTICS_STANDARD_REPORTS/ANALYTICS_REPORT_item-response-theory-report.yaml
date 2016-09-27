@@ -311,7 +311,9 @@
         );
       }
      });
-  "meta_info": {}
+  "meta_info": 
+    !!python/unicode "require_table": !!python/unicode |-
+      item_response_theory_report
   "name": |-
     item-response-theory-report
   "sql": |
