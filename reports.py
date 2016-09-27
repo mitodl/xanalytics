@@ -121,6 +121,7 @@ class Reports(object):
                 parameters['orgname'] = other.ORGNAME
                 
                 if 'require_table' in (crm.meta_info or []):
+                    dataset = None
                     table = crm.meta_info['require_table']
                     if '{' in table:
                         try:
@@ -139,18 +140,21 @@ class Reports(object):
                                 raise 
                         else:
                             logging.info("Suppressing report %s because dataset not specifid in require_table %s" % (title, table))
-                            return ""
+                            dataset = None
                             
-                    try:
-                        tinfo = bqutil.get_bq_table_info(dataset, table) or None
-                    except Exception as err:
-                        tinfo = None
-                        if not "Not Found" in str(err):
-                            logging.error(err)
-                            logging.error(traceback.format_exc())
-                    if not tinfo:
-                        logging.info("Suppressing report %s because %s.%s doesn't exist" % (title, dataset, table))
-                        return ""
+                    if dataset is not None:
+                        try:
+                            tinfo = bqutil.get_bq_table_info(dataset, table) or None
+                        except Exception as err:
+                            tinfo = None
+                            if not "Not Found" in str(err):
+                                logging.error(err)
+                                logging.error(traceback.format_exc())
+                        if not tinfo:
+                            logging.info("Suppressing report %s because %s.%s doesn't exist" % (title, dataset, table))
+                            return ""
+                    else:
+                        logging.info("Skipping require_table check")
 
                 report_id = hashlib.sha224("%s %s" % (crm.name, json.dumps(pdata))).hexdigest()
                 if crm.description:
