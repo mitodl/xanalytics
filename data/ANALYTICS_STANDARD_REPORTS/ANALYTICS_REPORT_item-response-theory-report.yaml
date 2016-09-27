@@ -245,25 +245,33 @@
         // add_2pl_plot();
         add_irt_ab_plot(just_irt_data);
 
-        // classical test theory data
-        tcols_ctt = [
-          colent("Problem #", "problem_nid"),
-          colent("Chapter / Section / Name", "problem_label"),
-          colent("item-test correlation", "item_test", {fixed: 3}),
-          colent("item-rest correlation", "item_rest", {fixed: 3}),
-          colent("Cronbach's alpha", "alpha", {fixed: 3}),
-        ];
-        new_section("Classical Test Theory Data");
-        html2 = "These results are obtained using Stata using its 'alpha' analysis,";
-        html2 += "which provides item-test and item-rest correlation values, as well as ";
-        html2 += "<a href='https://en.wikipedia.org/wiki/Cronbach%27s_alpha'>Cronbach's alpha</a>,";
-        html2 += "a measure of the item reliability.";
-        html2 += "<br>Typically a good alpha is above 0.8.";
-        html2 += "<br>The item-test correlation gives a measure of how well performance on a single question";
-        html2 += "correlates with the total score, for each individual, averaged across individuals."
-        add_text(html2);
-        make_table(tcols_ctt, the_data.data);
-        add_irt_vs_avg_plot(just_irt_data);
+
+            alpha_check = the_data.data[0].alpha
+        if (alpha_check){
+          // classical test theory data
+          tcols_ctt = [
+            colent("Problem #", "problem_nid"),
+            colent("Chapter / Section / Name", "problem_label"),
+            colent("item-test correlation", "item_test", {fixed: 3}),
+            colent("item-rest correlation", "item_rest", {fixed: 3}),
+            colent("Cronbach's alpha", "alpha", {fixed: 3}),
+          ];
+          new_section("Classical Test Theory Data");
+          html2 = "These results are obtained using Stata using its 'alpha' analysis,";
+          html2 += "which provides item-test and item-rest correlation values, as well as ";
+          html2 += "<a href='https://en.wikipedia.org/wiki/Cronbach%27s_alpha'>Cronbach's alpha</a>,";
+          html2 += "a measure of the item reliability.";
+          html2 += "<br>Typically a good alpha is above 0.8.";
+          html2 += "<br>The item-test correlation gives a measure of how well performance on a single question";
+          html2 += "correlates with the total score, for each individual, averaged across individuals."
+          add_text(html2);
+          make_table(tcols_ctt, the_data.data);
+          add_irt_vs_avg_plot(just_irt_data);
+        }else{
+          new_section("Classical Test Theory Data");
+          html2 = "No classical test theory data available for this course.";
+          add_text(html2);
+        }
 
         // show big table of all the data
         tcols_all = [
