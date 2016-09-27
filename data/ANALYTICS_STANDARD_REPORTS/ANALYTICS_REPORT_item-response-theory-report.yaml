@@ -234,6 +234,9 @@
         html2 += "Please note that standard errors are also provided for discrimination and difficulty; these reflect";
         html2 += "the certainty (and uncertainty) inherent in those parameters; having a larger number of participants";
         html2 += "responding to a question typically gives lower errors.";
+        if (the_data.last_modified_date){
+          html2 += "<br/>These data were last modified " + the_data.last_modified_date + " UTC";
+        }
         add_text(html2);
         var just_irt_data = [];
         the_data.data.forEach(function(x){
