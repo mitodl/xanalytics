@@ -3,7 +3,7 @@
   "date": |-
     2015-10-24 03:20:46.612540
   "depends_on": |-
-    None
+    ["{dataset}.item_response_theory_report"]
   "description": "Report on all (\"capa\") problems in the course, giving classical\
     \ test theory statistics \r\n(e.g. item-test correlation, and Cronbach's alpha),\
     \ and item response theory 2PL parameters \r\n(item difficulty and discrimination)."
@@ -158,10 +158,14 @@
           console.log('error = ', ajax_data.error);
         }
         report_div.html(html);
+        if (0){
         // parse CSV
-        the_data = Papa.parse(ajax_data, {header:true,
-                                          skipEmptyLines: true,
-                                          dynamicTyping: true});
+          the_data = Papa.parse(ajax_data, {header:true,
+                                            skipEmptyLines: true,
+                                            dynamicTyping: true});
+        }else{ // bigquery data result
+          the_data = ajax_data;
+        }
 
             // add links to problems to problem-specific page in the dashboard
         the_data.data.forEach(function(x){
@@ -170,18 +174,39 @@
         });
 
         // make table columns
-        tcols = [];
-            the_data.meta.fields.forEach(function(x){
-          tcols.push(colent(x, x));
+        if (0){
+          tcols = [];
+          the_data.meta.fields.forEach(function(x){
+            tcols.push(colent(x, x));
+          });
+        }else{
+          tcols = the_data['tablecolumns'];
+        }
+
+        // fix datatypes for numbers
+        nfields = ["Discrimination", "Difficulty", "problem_nid","n_unique_users_attempted",
+                   "item_test", "item_rest", "alpha",
+                   "avg_problem_raw_score", "avg_problem_pct_score",
+                   "Discrimination_SE", "Difficulty_SE"
+                  ];
+        the_data.data.forEach(function(x){
+          nfields.forEach(function(fname){
+            x[fname] = Number(x[fname]);
+          });
         });
 
+
+        // IRT method
+        var irt_method = the_data.data[0].irt_method;
+
         tab_fields = ["problem_nid", "problem_short_id", "problem_label",
-                     "chapter",
+                      "chapter",
                       "assignment_type",
-                  "problem_id", "IRT item number",
-                  "avg_problem_raw_score", "avg_problem_pct_score",
-                  "n_unique_users_attempted", "item_test", "item_rest", "alpha",
-                  "Discrimination", "Difficulty"];
+                      "problem_id", "IRT item number",
+                      "avg_problem_raw_score", "avg_problem_pct_score",
+                      "n_unique_users_attempted", "item_test", "item_rest", "alpha",
+                      "Discrimination", "Difficulty",
+                      "Discrimination_SE", "Difficulty_SE"];
 
         // table with just IRT scores
         tcols_irt = [
@@ -190,14 +215,25 @@
           colent("Chapter / Section / Name", "problem_label"),
           colent("Discrimination", "Discrimination", {fixed: 3}),
           colent("Difficulty", "Difficulty", {fixed: 3}),
+          colent("Disc. Std. Err", "Discrimination_SE", {fixed: 3}),
+          colent("Diff. Std. Err", "Difficulty_SE", {fixed: 3}),
         ];
         new_section("IRT Data (for just problems where the data is available)");
-        var html2 = "These results are obtained using Stata using its ";
-        html2 += "<a href='http://www.stata.com/manuals14/irtirt2pl.pdf'>2PL IRT model</a>. ";
+        var html2 = "";
+        if (irt_method.includes("R")){
+          html2 += "These results are obtained using R using its ";
+          html2 += "<a href='https://cran.r-project.org/web/packages/mirt/mirt.pdf'>mirt graded response model</a>. ";
+        }else{
+          html2 += "These results are obtained using Stata using its ";
+          html2 += "<a href='http://www.stata.com/manuals14/irtirt2pl.pdf'>IRT graded response model</a>. ";
+        }
         html2 += "Some problems are dropped from this analysis, e.g. if responses do not vary sufficiently. ";
-        html2 += "Also, some multi-part problems may have been combined, to make the analysis robust. ";
-        html2 += "A dichotomoous model is employed, in which each item is deemed correct if the raw score";
-        html2 += "is greater than or equal to half of the maximum possible for the problem.";
+        // html2 += "Also, some multi-part problems may have been combined, to make the analysis robust. ";
+        html2 += "A graded response model is employed, in which cutpoints are established for each problem's scores,";
+        html2 += "and the discrimination and difficulty are computed for each cutpoint.";
+        html2 += "Please note that standard errors are also provided for discrimination and difficulty; these reflect";
+        html2 += "the certainty (and uncertainty) inherent in those parameters; having a larger number of participants";
+        html2 += "responding to a question typically gives lower errors.";
         add_text(html2);
         var just_irt_data = [];
         the_data.data.forEach(function(x){
@@ -206,7 +242,7 @@
         make_table(tcols_irt, just_irt_data);
         add_text("<div id='irt-2pl-plot'></div>");
         add_text("<div id='irt-ab-plot'></div>");
-        add_2pl_plot();
+        // add_2pl_plot();
         add_irt_ab_plot(just_irt_data);
 
         // classical test theory data
@@ -260,27 +296,27 @@
 
     }
 
-
     loadJS('/js/papaparse.min.js', function() {
       analytics_report = make_report("{{course_id}}");  // instantiate
 
-      parameters.filename = "item_response_theory_report.csv";
+      // parameters.filename = "item_response_theory_report.csv";
 
       if (1){
         $.get(
-          '/file/get/course/{{course_id}}',
-          {filename: parameters.filename},
+          // '/file/get/course/{{course_id}}',
+          // {filename: parameters.filename},
+         '/custom/get_report_data/{{report_name}}',
+          parameters,
           analytics_report.process_data
         );
       }
      });
-  "meta_info":
-    !!python/unicode "require_file": !!python/unicode |-
-      item_response_theory_report.csv
+  "meta_info": {}
   "name": |-
     item-response-theory-report
-  "sql": ""
+  "sql": |
+    SELECT * from [{dataset}.item_response_theory_report] order by problem_nid
   "table_name": |-
-    None
+    item_response_theory_report
   "title": |-
     Item Response Theory Report
