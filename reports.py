@@ -134,14 +134,19 @@ class Reports(object):
                         if course_id:
                             try:
                                 dataset = bqutil.course_id2dataset(course_id, use_dataset_latest=other.use_dataset_latest())
-                                tinfo = bqutil.get_bq_table_info(dataset, table)
                             except Exception as err:
-                                if "Not Found" in str(err):
-                                    logging.info("Suppressing report %s because %s.%s doesn't exist" % (title, dataset, table))
-                                    return ""
-                                logging.error(err)
-                                logging.error(traceback.format_exc())
-                                return ""
+                                logging.error("failed to get dataset for course_id=%s" % course_id)
+                                raise 
+                    try:
+                        tinfo = bqutil.get_bq_table_info(dataset, table) or None
+                    except Exception as err:
+                        tinfo = None
+                        if not "Not Found" in str(err):
+                            logging.error(err)
+                            logging.error(traceback.format_exc())
+                    if not tinfo:
+                        logging.info("Suppressing report %s because %s.%s doesn't exist" % (title, dataset, table))
+                        return ""
 
                 report_id = hashlib.sha224("%s %s" % (crm.name, json.dumps(pdata))).hexdigest()
                 if crm.description:
