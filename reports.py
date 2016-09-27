@@ -137,6 +137,10 @@ class Reports(object):
                             except Exception as err:
                                 logging.error("failed to get dataset for course_id=%s" % course_id)
                                 raise 
+                        else:
+                            logging.info("Suppressing report %s because dataset not specifid in require_table %s" % (title, table))
+                            return ""
+                            
                     try:
                         tinfo = bqutil.get_bq_table_info(dataset, table) or None
                     except Exception as err:
