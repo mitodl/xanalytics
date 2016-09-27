@@ -104,7 +104,11 @@ class AdminPages(auth.AuthenticatedHandler, DataStats, DataSource):
                 for fn in files:
                     msg += "<li>Standard Reports loading from %s<br/>" % (fn)
                     report_file_data = open(fn).read()
-                    msg += self.import_custom_report_from_file_data(report_file_data, overwrite=True)
+                    try:
+                        msg += self.import_custom_report_from_file_data(report_file_data, overwrite=True)
+                    except Exception as err:
+                        logging.error("Oops!  Error importing custom report from %s" % fn)
+                        raise
                     msg += "</li>"
                 msg += "</ul>"
             else:
