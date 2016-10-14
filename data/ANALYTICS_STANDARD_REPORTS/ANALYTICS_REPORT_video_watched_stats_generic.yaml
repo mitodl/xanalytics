@@ -1,5 +1,5 @@
 - "author": |-
-    None
+    G.Lopez
   "date": |-
     2015-05-22 19:30:58.027866
   "depends_on": |-
@@ -36,7 +36,7 @@
             if (data.error){ return; }
 
             // make data table
-            if (0) {
+            if (1) {
             var table = $('#table-{{report_name}}').DataTable({
                 dom: 'T<"clear">lfrtip',
                 "columns": data['tablecolumns'],
@@ -53,7 +53,8 @@
         var videos = [];
         var chaptername = [];
             data['data'].forEach(function(x){
-            videos.push(x.name);
+            vlink = '<a target="_new" href="https://www.youtube.com/watch?v=' + x.youtube_id +'">' + x.name + '</a>'
+            videos.push(vlink);
             //videos_watched.push(Number(x.videos_watched));
             srow1 = {completerate: String(x.video_completion_pct + '%'),
                      y: Number(x.videos_watched)}
@@ -125,8 +126,19 @@
   "meta_info": {}
   "name": |-
     video_watched_stats_generic
-  "sql": |-
-    SELECT index_chapter,
+  "sql": |
+    SELECT vs.index_chapter as index_chapter,
+           vs.index_video as index_video,
+           vs.name as name,
+           vs.video_id as video_id,
+           vs.chapter_name as chapter_name,
+           vs.videos_viewed as videos_viewed,
+           vs.videos_watched as videos_watched,
+           vs.video_completion_pct as video_completion_pct,
+           va.youtube_id as youtube_id,
+           va.video_length as video_length
+    FROM
+    (SELECT index_chapter,
             index_video,
             name,
             video_id,
@@ -134,8 +146,14 @@
             videos_viewed,
             videos_watched,
             ROUND(ROUND((videos_watched / videos_viewed)*100,2),2) as video_completion_pct
-    FROM [{dataset}.video_stats]
-    WHERE chapter_name is not null and index_chapter is not null and name is not null;
+    FROM [{dataset}.video_stats]) as vs
+    LEFT JOIN
+    (SELECT video_id,
+           youtube_id,
+           video_length
+    FROM [{dataset}.video_axis]) as va
+    ON va.video_id == vs.video_id
+    WHERE vs.chapter_name is not null and vs.index_chapter is not null and vs.name is not null
   "table_name": |-
     stats_videos_watched
   "title": |-
