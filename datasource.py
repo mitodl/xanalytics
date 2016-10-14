@@ -184,6 +184,7 @@ class DataSource(object):
         if project_id:
             optargs['project_id'] = project_id
 
+        table_date = None
         if depends_on is not None:
             # get the latest mod time of tables in depends_on:
             modtimes = [ bqutil.get_bq_table_last_modified_datetime(*(x.split('.',1)), **optargs) for x in depends_on]

@@ -302,7 +302,7 @@ class Dashboard(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
 
         data = {'table': data_by_cid.values(),
                 'tablecolumns': tablecolumns,
-                'last_updated': str(bqdata['lastModifiedTime']).rsplit(':',1)[0],
+                'last_updated': str(bqdata.get('lastModifiedTime', ':')).rsplit(':',1)[0],
                 'all_enrollment_series': [ {'name': x, 'data': y} for (x,y) in all_enrollment.items() ],
                 'enrollment_courses': all_courses,
                 # 'enrollment_series': [ {'name': 'Registrants', 'id': 'reg', 'data': reg_series} ],
