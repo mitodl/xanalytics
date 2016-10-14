@@ -25,6 +25,7 @@
       {% endif %}
             {{custom_report["time-on-task"]}}
             {{custom_report["item-response-theory-report"]}}
+            {{custom_report["course_problem_analysis"]}}
       {% if is_staff %}
             {{custom_report["individual-person-report-by-course"]}}
             {{custom_report["cohort-master-report"]}}
