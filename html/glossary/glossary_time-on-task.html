@@ -1,0 +1,69 @@
+<html>
+<head>
+  <title>Glossary: Time on Task</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Time on Task</h2>
+  All time-on-task calculations are computed using a 30 minute time-out threshold, established by the Interactive Advertising Bureau (2009) and Google (2013). 
+  Participant time is counted from the first logged event, or "session start", until the "session end", defined as the next 
+  logged event following which 30 minutes passes with no logged activity. Three events interspersed by 10 minutes will count as a 20-minute session.
+  A single event isoloated temporally by more than 30 minutes is not counted.
+<ul>
+<li>All Actions
+    <ul>
+	<li>Time on Task calculated for all user events within this course, including navigation, problem, video and forum events.
+    </ul>
+<li>Problem Time
+    <ul>
+	<li>Time on Task calculated for problem events within this course.
+    </ul>
+<li>Video Time
+    <ul>
+	<li>Time on Task calculated for video events within this course.
+    </ul>
+<li>Forum Time
+    <ul>
+	<li>Time on Task calculated for forum events within this course.
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

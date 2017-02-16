@@ -1,0 +1,93 @@
+<html>
+<head>
+  <title>Glossary: Usage Statistics</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Usage Statistics</h2>
+
+  Usage Statistics are calculated using a combination of the <a href='http://edx.readthedocs.io/projects/devdata/en/latest/internal_data_formats/sql_schema.html?highlight=studentmodule#courseware-progress-data' target='_html'>edX studentmodule table</a>
+  and tracking log data. Registered, Viewed, Explored are determined from the edX studentmodule table. Certification and Verified ID data are determined using <a href='http://edx.readthedocs.io/projects/devdata/en/latest/internal_data_formats/sql_schema.html?highlight=studentmodule#certificate-data' target='_html'>edX certficiates table</a>.
+  Male and Female statistics are determined using <a href='http://edx.readthedocs.io/projects/devdata/en/latest/internal_data_formats/sql_schema.html?highlight=studentmodule#columns-in-the-auth-userprofile-table' target='_html'>edX profile table</a>.
+<ul>
+<li>Registered
+    <ul>
+	<li>Number of participants who have at least registered in the course. This # includes participants who have registered, viewed, explored and certified.
+    </ul>
+<li>Viewed
+    <ul>
+	<li>Number of participants who have at least clicked once into the courseware. This # includes participants who registered and viewed the course.
+    </ul>
+<li>Explored
+    <ul>
+	<li>Number of participants who viewed at least half of the course chapters. For instance, if there are 10 chapters, and the user clicked once into 5 of the chapters, this user is marked as exploring the course. This does not necessarily indicate that the user explored half of the course materials. This # includes participants who registered, viewed and explored the course.
+    </ul>
+<li>Un-Registered
+    <ul>
+	<li>Number of participants who un-enrolled from the course. 
+    </ul>
+<li>Net Registered
+    <ul>
+	<li>Number of participants who are left after removing un-rollees.
+    </ul>
+<li>Certified
+    <ul>
+	<li>Number of participants who are certified in total so far. Note that prior to Dec 2015, this # included users who passed the course if the enrollment mode was honor/audit. Currently, only users who enrolled as ID verified can receive a certificate. Users who passed the course but did not enroll as ID verified are excluded. This # includes participants who registered, viewed, explored and certified for this course.
+    </ul>
+<li>Verified IDs
+    <ul>
+	<li>Number of participants who has verified IDs. 
+    </ul>
+<li>Certified and Verified
+    <ul>
+	<li>Number of participants who received certifications and verified IDs.
+    </ul>
+<li>Male
+    <ul>
+	<li>Number of participants who reported as male in the edX profile.
+    </ul>
+<li>Female
+    <ul>
+	<li>Number of participants who reported as female in the edX profile.
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

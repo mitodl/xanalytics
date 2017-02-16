@@ -1,0 +1,78 @@
+<html>
+<head>
+  <title>Glossary: Content by Chapter</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Content by Chapter</h2>
+
+<ul>
+<li>Time Index
+    <ul> <li>The order of which this content is added to the course.</ul>
+<li>Chapter Name
+    <ul> <li> The title of the chapter. </ul>
+<li>Start date
+    <ul> <li> The content chapter release date. </ul>
+<li>User Views
+    <ul> <li> The number of users viewed this chapter (i.e., clicked on the chapter title) </ul>
+<li>Module Category
+    <ul> <li> The category of content (e.g., video, html, problem)</ul>
+<li>Module Name
+    <ul> <li> The title of the content. </ul>
+<li>Submissions
+    <ul> <li> Total number of assignment submissions. </ul>
+<li> AVG Grade
+    <ul> <li> Average student grade for this problem.  </ul>
+<li> MAX Grade
+    <ul> <li> Maximum grade attained by students for this problem. </ul>
+<li> AVG Attempts
+    <ul> <li> Average number of attempts at solving problems in this chapter across all problems. </ul>
+<li> MAX Attempts
+    <ul> <li> Maximum attempts at solving problems in this chapter across all problems. </ul>
+<li> Start Date
+    <ul> <li> The content chapter release date. </ul>
+<li> User Views
+    <ul> <li> The number of users who viewed this chapter material. </ul>
+
+
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

@@ -1,0 +1,69 @@
+<html>
+<head>
+  <title>Glossary: Top Worldwide Countries Pie Charts</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Top Worldwide Countries Pie Charts</h2>
+  Geo-location information is obtained using a user's modal ip address. Note that edX profile location is not used. 
+  Additionally, not all ip addresses can be mapped to a location, but most are captured using multiple geo-location databases. 
+  Using IP addresses instead of open text fields is more consistent and readily available for a majority of the users that interact with the course.
+  Users who just registered and did not interact with the course (viewers) are not counted in this data.
+<ul>
+<li>Registrants by Country
+    <ul>
+	<li>Pie chart showing % of Registrants from the top countries.  This % of registrants includes users who at leasted registered for a course (thus including users who viewed, explored and certified).
+    </ul>
+<li>Viewers by Country
+    <ul>
+	<li>Pie chart showing % of Viewers from the top countries.  This % of viewers includes users who at least viewed a course (thus including users who may have also explored and certified).
+    </ul>
+<li>Certified by Country
+    <ul>
+	<li>Pie chart showing % of Certified from the top countries.  This % of certified includes users who certified in a course.
+    </ul>
+<li>ID Verified by Country
+    <ul>
+	<li>Pie chart showing % of ID Verified from the top countries.  This % of ID verified includes users does not indicate level of completion.
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

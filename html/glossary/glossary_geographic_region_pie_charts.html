@@ -1,0 +1,97 @@
+<html>
+<head>
+  <title>Glossary: Geographic Region Pie Charts</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Geographic Region Pie Charts</h2>
+  Geo-location information is obtained using a user's modal ip address. Note that edX profile location is not used. 
+  Additionally, not all ip addresses can be mapped to a location, but most are captured using multiple geo-location databases. 
+  Using IP addresses instead of open text fields is more consistent and readily available for a majority of the users that interact with the course.
+  Users who just registered and did not interact with the course (viewers) are not counted in this data.
+<ul>
+<li># registered
+    <ul>
+	<li>Number of participants who are registered by geographic region. 
+    </ul>
+<li># explored
+    <ul>
+	<li>Number of participants who explored by geographic region. 
+    </ul>
+<li># viewed
+    <ul>
+	<li>Number of participants who viewed by geographic region. 
+    </ul>
+<li># certified
+    <ul>
+	<li>Number of participants who are certified by geographic region. 
+    </ul>
+<li>% certified (of registered)
+    <ul>
+	<li>Percentage of registrants who are certified. 
+    </ul>
+<li>% certified (of viewed)
+    <ul>
+	<li>Percentage of learners who viewed the course and certified. 
+    </ul>
+<li>avg hours spent on course (registrants)
+    <ul>
+	<li>Average number of hours registrants spent in this course. 
+    </ul>
+<li>avg hours spent on course (certified)
+    <ul>
+	<li>Average number of hours certified learners spent in this course. 
+    </ul>
+<li># verified id
+    <ul>
+	<li>Number of participants who got verified ID by geographic region. 
+    </ul>
+<li># verified id certified
+    <ul>
+	<li>Number of participants who got verified ID and earned certification by geographic region. 
+    </ul>
+<li>% certified (of verified)
+    <ul>
+	<li>Percentage of certified users of those received verified IDs. 
+    </ul>
+</ul>	
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

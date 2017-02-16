@@ -1,0 +1,78 @@
+<html>
+<head>
+  <title>Glossary: TBD</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: TBD</h2>
+
+<ul>
+<li><a class="reference internal" href="#content_type" id="id17">chapter</a>
+    <ul>
+	<li>Number of chapters in the course. Chapters are top-level sections defined in the course outline. These can be viewed in the left navigation bar of the course page. 
+	</ul>
+<li>sequential
+<ul>
+<li>Number of sequentials in the course. Sequentials are embedded under chapters, and can be accessed through the left navigation bar in the course page. 
+</ul>
+<li>vertical	
+<ul>
+<li>Number of verticals in the course. Verticals are embedded under sequentials, and can be accessed through clicking on a vertical element. 
+</ul>
+<li>html	
+<ul>
+<li>Number of html pages in the course. Html pages are the page sections in vertical that do not include videos or problems 
+</ul>
+<li>video	
+<ul>
+<li>Number of videos in the course. 
+</ul>
+<li>problem	
+<ul>
+<li>Number of promblem assets in the course. Problems are a type of component. 
+</ul>
+<li>survey	
+<ul>
+<li>Number of surveys embedded in the course. Surveys are a type of components. 
+</ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

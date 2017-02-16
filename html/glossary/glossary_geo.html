@@ -1,0 +1,65 @@
+<html>
+<head>
+  <title>Glossary: Geographic distribution</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Geographic distribution</h2>
+  Geo-location information is obtained using a user's modal ip address. Note that edX profile location is not used. 
+  Additionally, not all ip addresses can be mapped to a location, but most are captured using multiple geo-location databases. 
+  Using IP addresses instead of open text fields is more consistent and readily available for a majority of the users that interact with the course.
+  Users who just registered and did not interact with the course (viewers) are not counted in this data.
+<ul>
+<li># registered
+    <ul>
+	<li>Number of participants who have registered in the course by country.
+    </ul>
+<li># certified
+    <ul>
+	<li>Number of participants who have certified in the course by country.	
+    </ul>
+<li>% certified
+    <ul>
+	<li>The percentage of participants who are certified in the course by country.	
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

@@ -864,6 +864,17 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
         self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
         self.response.out.write(template.render(data))
         
+    @auth_required
+    #def get_glossary(self, org=None, number=None, semester=None, type=None):
+    def get_glossary(self, type=None):
+        '''
+        Show Glossary data
+        '''
+
+        data = ''
+        template = JINJA_ENVIRONMENT.get_template('glossary/glossary_%s.html' % type)
+        self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        self.response.out.write(template.render(data))
 
     @auth_required
     def ajax_get_table_data(self, org=None, number=None, semester=None, table=None):
@@ -968,6 +979,8 @@ ROUTES = [
     webapp2.Route('/axis/<org>/<number>/<semester>', handler=MainPage, handler_method='get_axis'),
     webapp2.Route('/table/<org>/<number>/<semester>/<table>', handler=MainPage, handler_method='get_table'),
     webapp2.Route('/table/<database>/<table>', handler=MainPage, handler_method='get_table'),
+    webapp2.Route('/glossary/<type>', handler=MainPage, handler_method='get_glossary'),
+
 
     # ajax calls
 

@@ -1,0 +1,62 @@
+<html>
+<head>
+  <title>Glossary: Videos</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Videos</h2>
+ Video Statistics are calculated using the edX tracking log data from this course. The maximum video length (seconds) per video is obtained from the youtube API.
+<ul>
+<li>videos viewed
+    <ul>
+	<li>Number of participants who started viewing any part of the video. This includes users who may have just clicked on a video for a second.
+    </ul>
+<li>videos watched
+    <ul>
+	<li>Number of participants who viewed at least 95% of the videos. For each user, we obtain the maximum video position they reached for each video they viewed, and compare that to the maximum possible length for that video. If the user's video position reached at least 95% of the video, that user is counted as having watched the video. 
+    </ul>
+<li>completion rate
+    <ul>
+	<li>The rate of participants who watched at least 95% of the videos. This percentage is determined based on where in the video the curser was last ended. 
+    </ul>	
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

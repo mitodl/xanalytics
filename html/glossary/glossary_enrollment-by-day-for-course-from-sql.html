@@ -1,0 +1,62 @@
+<html>
+<head>
+  <title>Glossary: Enrollment by day for Course</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Enrollment by day for Course</h2>
+
+<ul>
+<li>Ever registered
+    <ul>
+	<li>This includes the cumulative number of registrants in total. It also includes people who un-enroll.
+    </ul>
+<li>Net registered
+    <ul>
+	<li>This includes the cumulative number of registrants without the number of registrants who un-enroll. Therefore, this number is smaller than "ever registered."
+    </ul>
+<li>Ever reg registered daily
+    <ul>
+	<li>This includes the number of registrants without the number of registrants who un-enroll by day. 
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

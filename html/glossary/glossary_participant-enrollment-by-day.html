@@ -1,0 +1,62 @@
+<html>
+<head>
+  <title>Glossary: Participant Enrollment by Day for course</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Participant Enrollment by Day for course</h2>
+
+<ul>
+<li>Ever participated
+    <ul>
+	<li>This includes the cumulative number of registrants who have clicked into the courseware at least once. It also includes people who un-enroll. 
+    </ul>
+<li>Net participated
+    <ul>
+	<li>This includes the cumulative number of registrants who have clicked into the courseware at least once without the number of registraints who un-enroll. Therefore, this number is smaller than "ever participated."
+    </ul>
+<li>Ever participated daily
+    <ul>
+	<li>This includes the number of participations daily in the course.
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

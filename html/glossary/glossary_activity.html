@@ -1,0 +1,66 @@
+<html>
+<head>
+  <title>Glossary: Activity by Day</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Activity by Day</h2>
+
+<ul>
+<li># Events
+    <ul>
+	<li>The total number of events per day. These incluse forum events, video events, problem events, as well as other events such as Navigation events. Consequently, this # may not add up when summing forum, problem and video events.
+    </ul>
+<li># Forum Events
+    <ul>
+	<li>The number of forum events per day. The edX tracking log data is used for this course.
+    </ul>
+<li>Video Events
+    <ul>
+	<li>The number of video events per day. The edX tracking log data is used for this course.
+    </ul>
+<li>Problem Check Events
+    <ul>
+	<li>The number of problem check events per day. The edX tracking log data is used for this course.
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+

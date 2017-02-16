@@ -2,7 +2,7 @@
   <span id="cr_container_{{id}}" style="display:none">
 {% endif %}
 {% if not do_embed %}
-    <h2>{{title}}</h2>
+    <h2>{{title}}<sub style="font-size: 14px;"><a href="/glossary/{{report.name}}" onClick="return popup(this, 'Glossary: {{title}}')">Glossary</A></sub></h2>
 {% endif %}
         <span  style="float:right">
             <button id="view-{{id}}" data-state="init" class="cr-view-button" data-name="{{report.name}}" data-id="{{id}}" 

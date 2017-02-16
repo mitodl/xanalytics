@@ -6,6 +6,21 @@
 
 <!-- table display -->
 
+<script type="text/javascript">
+
+  function popup(mylink, windowname) { 
+	      if (! window.focus)return true;
+	      var href;
+	      if (typeof(mylink) == 'string') href=mylink;
+	      else href=mylink.href; 
+	      window.open(href, windowname, 'width=600,height=400,scrollbars=yes'); 
+	      return false; 
+	    }
+
+
+</script>
+
+
   <script type='text/javascript'>
 
     $(document).ready( function () {
@@ -114,7 +129,7 @@ function format ( d ) {
 {% autoescape off %}{{ image }}{% endautoescape %} </span>
 
 <!-- ----------------------------------------------------------------------------- -->
-<h2>Usage statistics</h2>
+<h2>Usage statistics<sub style="font-size: 14px;"><a href="/glossary/usage" onClick="return popup(this, 'Glossary: Usage Statistics')">Glossary</A></sub></h2>
 
 {% if mode=="mooc" %}
 <table id="usage_stats" class="display" width="80%"></table>
@@ -170,17 +185,17 @@ $(document).ready(function() {
 {% endif %}
 
 <!-- ----------------------------------------------------------------------------- -->
-<h2>Content statistics</h2>
+<h2>Content statistics<sub style="font-size: 14px;"><a href="/glossary/contentstats" onClick="return popup(this, 'Glossary: Content Statistics')">Glossary</A></sub></h2></h2>
 
 <div id="stats_div">{% autoescape off %}{{ stats_table }}{% endautoescape %}</div>
 
-<h2>Content by chapter</h2>
+<h2>Content by chapter<sub style="font-size: 14px;"><a href="/glossary/contentchapter" onClick="return popup(this, 'Glossary: Content By Chapter')">Glossary</A></sub></h2></h2>
 
 <p id="caxis_date"></p>
 {% autoescape off %}{{ table }}{% endautoescape %}
 
 <!-- ----------------------------------------------------------------------------- -->
-<h2>Activity</h2>
+<h2>Activity<sub style="font-size: 14px;"><a href="/glossary/activity" onClick="return popup(this, 'Glossary: Activity')">Glossary</A></sub></h2></h2>
 
 <div id="activity_date"></div>
 
@@ -244,7 +259,7 @@ $(document).ready(function() {
 {% endif %}
 
 <!-- ----------------------------------------------------------------------------- -->
-<h2>Geographic distribution</h2>
+<h2>Geographic distribution<sub style="font-size: 14px;"><a href="/glossary/geo" onClick="return popup(this, 'Glossary: Geographic Distribution')">Glossary</A></sub></h2></h2>
 
 <div id="geodat_info"></div>
 

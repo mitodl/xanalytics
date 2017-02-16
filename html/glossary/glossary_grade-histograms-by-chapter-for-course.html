@@ -1,0 +1,74 @@
+<html>
+<head>
+  <title>Glossary: Grade histograms by chapter for course</title>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="/css/dataTables.tableTools.css">
+  
+<style>
+td.details-control {
+    background: url('/images/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+tr.shown td.details-control {
+    background: url('/images/details_close.png') no-repeat center center;
+}
+</style>
+
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="/js/dataTables.tableTools.js"></script>
+
+  <script type='text/javascript'
+     src='https://www.google.com/jsapi'></script>
+
+  <script type='text/javascript'>
+
+    $(document).ready( function () {
+	var table = $('#table_id').DataTable({
+              dom: 'T<"clear">lfrtip',
+              "order": [[ 1, "asc" ]],
+             });
+} );
+</script>
+
+</head>
+<body>
+  <h2>Glossary: Grade histograms by chapter for course</h2>
+
+<ul>
+<li>chapter_mid
+    <ul>
+	<li>module-id of chapter within which this module element exists
+    </ul>
+<li>chapter_name
+    <ul>
+	<li>human-readable name for this module element of the course
+    </ul>
+<li>due_date
+    <ul>
+	<li>due date for this problem
+    </ul>
+<li>course_axis_index
+    <ul>
+	<li>sequence index giving order in which this problem appears within the course
+    </ul>
+<li>chapter_max_grade
+    <ul>
+	<li>Maximum grade achievable within chapter of the course
+    </ul>
+<li>n_total
+    <ul>
+	<li>Total # of problems within the chapter
+    </ul>
+</ul>
+{% autoescape off %}{{ table }}{% endautoescape %}
+
+</body>
+</html>
+
+
