@@ -1,0 +1,110 @@
+- "author": |-
+    None
+  "date": |-
+    2018-03-12 18:46:23.372880
+  "depends_on": |-
+    ["{dataset}.person_course"]
+  "description": |-
+    Total number of videos watched by person
+  "group_tags":
+  - !!python/unicode ""
+  "html": |-
+    <div id="contain-{{report_name}}" style="min-width: 310px; margin: 0 auto">
+                                   <img src="/images/loading_icon.gif"/>
+    </div>
+  "icon": |-
+    None
+  "javascript": |+
+    parameters = {% autoescape off %}{{parameters}};{% endautoescape %}  // jshint ignore:line
+    parameters.get_table_columns = true;
+
+    var make_report = function() {
+
+      var ntables = 0;
+      var nplots = 0;
+      var data = {};
+
+      var report_name = "{{report_name}}";
+      var report_div = $('#contain-{{report_name}}');
+
+      var add_text = function(text){  report_div.append("<p>"+text+"</p>");  }
+      var new_section = function(title){ report_div.append("<br/><hr width='40%'/><h4>"+title+"</h4>"); }
+
+      // jshint ignore:start
+      {% autoescape off %} {{cr_js_library["tables"]}} {% endautoescape %}
+      {% autoescape off %} {{cr_js_library["plotting"]}} {% endautoescape %}
+      // jshint ignore:end
+
+      // main function called to process data from AJAX call
+      var process_data = function(ajax_data){
+        html = '';
+        // console.log("Processing data ", ajax_data);
+        if (ajax_data.error){
+          html = "Error!  " + ajax_data.error;
+          console.log('error = ', ajax_data.error);
+        }
+        report_div.html(html);
+        data['data'] = ajax_data['data'];
+        if (ajax_data.error){ return; }
+
+        // show big table of all the data
+        make_table(ajax_data['tablecolumns'], ajax_data['data']);
+      }
+
+      var get = function(x){ return eval(x); }  // jshint ignore:line
+
+      return {process_data: process_data,
+              self: this,
+              data: data,
+              get: get,
+             }
+
+    }
+
+    analytics_report = make_report();  // instantiate
+
+    if (1){
+      $.getJSON(
+        '/custom/get_report_data/{{report_name}}',
+        parameters,
+        analytics_report.process_data
+      );
+    }
+
+  "meta_info": {}
+  "name": |-
+    videos_by_person
+  "sql": |2-
+                      SELECT PC.username as username,
+                          count(*) n_unique_videos_watched,
+                          count(*) / n_total_videos as fract_total_videos_watched,
+                      FROM
+                      (
+                          SELECT PC.username, PC.user_id as user_id, UV.username as username,
+                              video_id,
+                              n_views,
+                              NV.n_total_videos as n_total_videos,
+                              certified,
+                              viewed,
+                              (mode=="verified") as verified,
+                          FROM
+                          (
+                              SELECT username, video_id, count(*) as n_views
+                              FROM [MITx__17_571r_2__2018_Spring.video_stats_day]
+                              GROUP BY username, video_id
+                          ) UV
+                          JOIN [MITx__17_571r_2__2018_Spring.person_course] PC
+                          on UV.username = PC.username
+                          CROSS JOIN
+                          (
+                              SELECT count(*) as n_total_videos
+                              FROM [MITx__17_571r_2__2018_Spring.video_axis]
+                          ) NV
+                         WHERE ((PC.roles = 'Student') OR (PC.roles is NULL))
+                      )
+                      GROUP BY username, user_id, certified, viewed, verified, n_total_videos
+                      order by user_id
+  "table_name": |-
+    videos_by_person
+  "title": |-
+    Videos watched totals by person
