@@ -442,10 +442,14 @@ class MainPage(auth.AuthenticatedHandler, DataStats, DataSource, Reports):
 
         def getrow(x, field, scale):
             #return [x[k] for k in ['date', 'nevents', 'nforum']]
-            (y,m,d) = map(int, x['date'].split('-'))
-            dt = datetime.datetime(y,m,d)
-            ts = self.datetime2milliseconds(dt)  # (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
-            cnt = int(x[field]) / scale
+            try:
+                (y,m,d) = map(int, x['date'].split('-'))
+                dt = datetime.datetime(y,m,d)
+                ts = self.datetime2milliseconds(dt)  # (dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000
+                cnt = int(x[field]) / scale
+            except Exception as err:
+                logging.error("failed in getrow, field=%s, x=%s, err=%s" % (field, x, err))
+                cnt = 0
             return [ts, cnt]
 
         def getseries(field):

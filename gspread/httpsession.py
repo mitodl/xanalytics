@@ -73,7 +73,8 @@ class HTTPSession(object):
 
         if response.status > 399:
             # raise HTTPError(response)
-            msg = "Error accessing spreadsheet, response=%s" % str(response)
+            msg = "Error accessing spreadsheet, status=%s, response=%s" % (response.status, str(response))
+            msg += ", read=%s" % str(response.read())
             raise Exception(msg)
         return response
 
