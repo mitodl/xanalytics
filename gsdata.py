@@ -10,19 +10,19 @@ import time
 import json
 import gspread
 import logging
+import traceback
 import local_config
+import auth_gspread
 from collections import OrderedDict
 
 from oauth2client.appengine import AppAssertionCredentials
 from google.appengine.api import memcache
-
 from google.appengine.api import urlfetch
 
 urlfetch.set_default_fetch_deadline(60)
-
 mem = memcache.Client()
 
-SCOPE = 'https://spreadsheets.google.com/feeds https://docs.google.com/feeds'
+SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://spreadsheets.google.com/feeds https://docs.google.com/feeds https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly'
 # logging.info('credentials = ', credentials)
 
 def cached_get_datasheet(fname, sheet, key=None, ignore_cache=False):
@@ -53,13 +53,24 @@ def cached_get_datasheet(fname, sheet, key=None, ignore_cache=False):
     return data
 
 def get_worksheet(fname, sheet):
-    credentials = AppAssertionCredentials(scope=SCOPE)
+    if hasattr(auth_gspread, "credentials"):
+        credentials = auth_gspread.credentials
+    else:
+        credentials = AppAssertionCredentials(scope=SCOPE)
     gc = gspread.authorize(credentials)
 
     try:
         wks = gc.open(fname).worksheet(sheet)
     except Exception as err:
-        logging.error("[get_datasehet] oops, failure getting fname=%s, sheet=%s" % (fname, sheet))
+        logging.error("[get_datasehet] oops, failure getting fname=%s, sheet=%s, traceback=%s" % (fname, sheet, traceback.format_exc()))
+        logging.error("[get_datasehet] credentials=%s, gc=%s, scope=%s" % (credentials.to_json(), gc, SCOPE))
+        try:
+            from google.appengine.api import app_identity
+            logging.error('[get_datasheet] Initializing with service account %s',
+                         app_identity.get_service_account_name())
+        except Exception as err2:
+            logging.error("[get_datasheet] could not get service account name, err=%s" % str(err2))
+        # logging.error("[get_datasehet] credentials email=%s" % str(credentials.service_account_email))
         raise
     return wks
 
